@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest'
+import { completerReglages, completerVideo, videoParDefaut } from './reglages'
+import type { ReglagesVideo } from './types'
+
+describe('completerVideo', () => {
+  it('rend les réglages par défaut quand il n’y a rien', () => {
+    expect(completerVideo(undefined)).toEqual(videoParDefaut())
+  })
+
+  /* C'est le vrai cas d'usage de cette fonction : un morceau importé avant qu'une
+     disposition, un thème ou un cadre n'existent, et qui doit s'ouvrir sans rien casser. */
+  it('complète un morceau d’avant les thèmes sans perdre ce qu’il avait', () => {
+    const ancien = { largeur: 1280, hauteur: 720, fps: 24, couleur: '#ff0000' }
+    const complet = completerVideo(ancien as Partial<ReglagesVideo>)
+    expect(complet.largeur).toBe(1280)
+    expect(complet.fps).toBe(24)
+    expect(complet.couleur).toBe('#ff0000')
+    expect(complet.disposition).toBe(videoParDefaut().disposition)
+    expect(complet.theme).toBe(videoParDefaut().theme)
+  })
+
+  it('ramène dans les bornes ce qui n’y est pas', () => {
+    const fou = completerVideo({
+      hauteurBande: 12,
+      teteX: -3,
+      opacite: 40,
+      compteAvantSec: 999,
+    } as Partial<ReglagesVideo>)
+    expect(fou.hauteurBande).toBeLessThanOrEqual(0.95)
+    expect(fou.teteX).toBeGreaterThanOrEqual(0.08)
+    expect(fou.opacite).toBeLessThanOrEqual(0.9)
+    expect(fou.compteAvantSec).toBeLessThanOrEqual(12)
+  })
+
+  it('refuse une disposition ou un cadre inventés', () => {
+    const complet = completerVideo({ disposition: 'diagonale', cadre: 'doré' } as never)
+    expect(complet.disposition).toBe(videoParDefaut().disposition)
+    expect(complet.cadre).toBe(videoParDefaut().cadre)
+  })
+
+  it('ne prend pas un NaN pour une valeur', () => {
+    expect(completerVideo({ fps: Number.NaN } as Partial<ReglagesVideo>).fps).toBe(
+      videoParDefaut().fps,
+    )
+  })
+})
+
+describe('completerReglages', () => {
+  it('donne à chaque type la moitié qui le concerne, et pas l’autre', () => {
+    expect(completerReglages(undefined, 'gp').gp).toBeDefined()
+    expect(completerReglages(undefined, 'gp').pdf).toBeUndefined()
+    expect(completerReglages(undefined, 'pdf').pdf).toBeDefined()
+    expect(completerReglages(undefined, 'pdf').gp).toBeUndefined()
+  })
+
+  it('garde le découpage d’un PDF, qui ne se retrouve pas tout seul', () => {
+    const systemes = [{ page: 0, x0: 0.1, x1: 0.9, y0: 0.2, y1: 0.3, mesures: 4 }]
+    const complet = completerReglages({ pdf: { systemes } } as never, 'pdf')
+    expect(complet.pdf?.systemes).toEqual(systemes)
+  })
+
+  it('remplace un découpage qui n’est pas une liste plutôt que de s’y fier', () => {
+    const complet = completerReglages({ pdf: { systemes: 'oui' } } as never, 'pdf')
+    expect(complet.pdf?.systemes).toEqual([])
+  })
+})

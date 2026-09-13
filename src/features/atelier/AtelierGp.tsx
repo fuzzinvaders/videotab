@@ -5,19 +5,24 @@ import { ErrorText, Field, Select } from '../../components/ui/Field'
 import { avecSilenceAvant } from '../../lib/audio'
 import {
   appliquerTempo,
+  appliquerTheme,
   collecteurDeTuiles,
+  colorerLesCordes,
   curseurGp,
+  etendueDesPortees,
   masquerEntete,
   pistesVisibles,
   preparerBande,
+  recadrer,
   reglagesAlphaTab,
   type BandeGp,
 } from '../../lib/gp'
 import { creerScene, type Feuille } from '../../lib/scene'
+import { themeParId } from '../../lib/themes'
 import type { Morceau, ReglagesGp } from '../../lib/types'
 import { Lecteur } from './Lecteur'
 import { PanneauExport } from './PanneauExport'
-import { PanneauVideo } from './PanneauVideo'
+import { PanneauMiseEnScene, PanneauVideo } from './PanneauVideo'
 import { useReglages } from './useReglages'
 
 /**
@@ -31,6 +36,8 @@ import { useReglages } from './useReglages'
 export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: ArrayBuffer }) {
   const { reglages, modifier, enregistre } = useReglages(morceau)
   const gp = reglages.gp
+  const video = reglages.video
+  const theme = themeParId(video.theme)
   const hote = useRef<HTMLDivElement>(null)
   const api = useRef<alphaTab.AlphaTabApi | null>(null)
   const tuiles = useRef(collecteurDeTuiles())
@@ -101,7 +108,15 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
         instance.settings,
       )
       appliquerTempo(score, gp.tempoPct)
+      colorerLesCordes(score, theme)
       instance.settings.display.staveProfile = profilDePortee(gp)
+      /* En défilement, c'est alphaTab lui-même qui met tout le morceau sur une seule ligne :
+         la scène n'a alors qu'à faire glisser cette bande. Recoller à la main des systèmes
+         mis en page pour une feuille A4 donnerait des raccords visibles à chaque retour à la
+         ligne, et une largeur de mesure qui change d'un système à l'autre. */
+      instance.settings.display.layoutMode =
+        video.disposition === 'defilement' ? alphaTab.LayoutMode.Horizontal : alphaTab.LayoutMode.Page
+      appliquerTheme(instance, theme)
       instance.metronomeVolume = gp.metronome ? 1 : 0
       instance.updateSettings()
       setPistes(score.tracks.map((piste) => piste.name || `Piste ${piste.index + 1}`))
@@ -112,7 +127,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
         err instanceof Error ? err.message : "Ce fichier n'a pas pu être lu comme une tablature.",
       )
     }
-  }, [octets, gp])
+  }, [octets, gp, theme, video.disposition])
 
   // ---- La bande-son et la table des tics ----
 
@@ -155,8 +170,11 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     const instance = api.current
     if (!instance?.score) return null
     const decalageMs = Math.max(0, reglages.video.compteAvantSec) * 1000
+    // Le rendu d'alphaTab porte au-dessus et en dessous des portées beaucoup de blanc. On
+    // cadre sur ce qui se lit, sinon la bande qu'on a demandée est aux trois quarts vide.
+    const etendue = etendueDesPortees(instance)
     return creerScene({
-      feuille,
+      feuille: etendue ? recadrer(feuille, etendue.y0, etendue.y1) : feuille,
       video: reglages.video,
       dureeMs: bande.dureeMs + decalageMs,
       titre: morceau.titre,
@@ -166,6 +184,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
         bande.reperes,
         pistesVisibles(instance.score, gp.piste),
         decalageMs,
+        etendue?.y0 ?? 0,
       ),
     })
   }, [feuille, bande, reglages.video, morceau.titre, morceau.artiste, gp])
@@ -263,8 +282,27 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
               onChange={(metronome) => modifier((r) => ({ ...r, gp: { ...gp, metronome } }))}
             />
           </div>
+
+          {/* Le cadrage de la vidéo coupe la mention que le moteur dessine sous la portée :
+              elle est rendue ici, où elle reste lisible. */}
+          <p className="border-t border-slate-800 pt-3 text-xs text-slate-500">
+            Partition lue, mise en page et jouée par{' '}
+            <a
+              href="https://alphatab.net"
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-400 underline hover:text-slate-200"
+            >
+              alphaTab
+            </a>
+            .
+          </p>
         </Card>
 
+        <PanneauMiseEnScene
+          video={reglages.video}
+          modifier={(mutation) => modifier((r) => ({ ...r, video: mutation(r.video) }))}
+        />
         <PanneauVideo
           video={reglages.video}
           modifier={(mutation) => modifier((r) => ({ ...r, video: mutation(r.video) }))}

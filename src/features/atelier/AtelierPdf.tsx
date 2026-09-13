@@ -7,6 +7,8 @@ import { messageOf } from '../../lib/api'
 import { avecSilenceAvant, decoderFichierAudio } from '../../lib/audio'
 import { construireMinutage, dureeTotaleMs, formaterDuree } from '../../lib/minutage'
 import {
+  bandeDepuisSystemes,
+  curseurBande,
   curseurPdf,
   detecterDansPages,
   feuilleDepuisPages,
@@ -16,11 +18,12 @@ import {
   type Placement,
 } from '../../lib/pdf'
 import { creerScene, type Feuille } from '../../lib/scene'
+import { themeParId } from '../../lib/themes'
 import type { Morceau } from '../../lib/types'
 import { EditeurSystemes } from './EditeurSystemes'
 import { Lecteur } from './Lecteur'
 import { PanneauExport } from './PanneauExport'
-import { PanneauVideo } from './PanneauVideo'
+import { PanneauMiseEnScene, PanneauVideo } from './PanneauVideo'
 import { useReglages } from './useReglages'
 
 /**
@@ -35,6 +38,8 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
   const { reglages, modifier, enregistre } = useReglages(morceau)
   const { deposerAudio, supprimerAudio } = useMorceaux()
   const pdf = reglages.pdf
+  const theme = themeParId(reglages.video.theme)
+  const defilement = reglages.video.disposition === 'defilement'
 
   const [pages, setPages] = useState<PageRendue[]>([])
   const [feuille, setFeuille] = useState<Feuille | null>(null)
@@ -101,18 +106,62 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
     [pdf, reglages.video.compteAvantSec],
   )
 
+  /* En défilement, les systèmes découpés sont détachés de leurs pages et recollés bout à
+     bout en une seule bande. C'est le seul travail que la disposition demande en plus — le
+     découpage, lui, sert aux deux, et se corrige une fois pour toutes. */
+  const bande = useMemo(
+    () =>
+      defilement && pdf
+        ? bandeDepuisSystemes(pages, pdf.systemes, {
+            encre: theme.detourerPdf ? theme.encre : null,
+          })
+        : null,
+    [defilement, pages, pdf, theme],
+  )
+
   const scene = useMemo(() => {
-    if (!feuille || !pdf || pdf.systemes.length === 0) return null
-    return creerScene({
-      feuille,
+    if (!pdf || pdf.systemes.length === 0) return null
+    const commun = {
       video: reglages.video,
       dureeMs: dureeTotaleMs(etapes),
       titre: morceau.titre,
       artiste: morceau.artiste,
+    }
+
+    if (defilement) {
+      if (!bande || bande.feuille.tuiles.length === 0) return null
+      return creerScene({
+        ...commun,
+        feuille: bande.feuille,
+        // L'encre a été détourée à la découpe : la bande n'a plus de papier à poser, et
+        // c'est ce qui la rend incrustable sur une vidéo.
+        papier: theme.detourerPdf ? null : theme.papier,
+        curseurA: curseurBande(etapes, bande.segments, bande.feuille.hauteur),
+      })
+    }
+
+    if (!feuille) return null
+    return creerScene({
+      ...commun,
+      feuille,
+      // En page, c'est la page entière qu'on montre, marges comprises : elle a besoin de son
+      // papier même sur un thème qui n'en prévoit pas, sinon elle flotte dans le noir.
+      papier: theme.papier ?? '#f7f6f3',
       trainee: true,
       curseurA: curseurPdf(pdf.systemes, etapes, placements),
     })
-  }, [feuille, pdf, etapes, placements, reglages.video, morceau.titre, morceau.artiste])
+  }, [
+    defilement,
+    bande,
+    feuille,
+    pdf,
+    etapes,
+    placements,
+    reglages.video,
+    theme,
+    morceau.titre,
+    morceau.artiste,
+  ])
 
   const bandeSon = useMemo(
     () =>
@@ -185,6 +234,19 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
             l'ajuster, change son nombre de mesures dans le coin. L'ordre de lecture suit la
             page, de haut en bas.
           </p>
+          <p className="text-xs text-slate-500">
+            Pages rendues par{' '}
+            <a
+              href="https://mozilla.github.io/pdf.js/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-400 underline hover:text-slate-200"
+            >
+              pdf.js
+            </a>
+            .
+          </p>
+
           {pages.length === 0 ? (
             <p className="text-slate-500">{etat}</p>
           ) : (
@@ -297,6 +359,10 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
           )}
         </Card>
 
+        <PanneauMiseEnScene
+          video={reglages.video}
+          modifier={(mutation) => modifier((r) => ({ ...r, video: mutation(r.video) }))}
+        />
         <PanneauVideo
           video={reglages.video}
           modifier={(mutation) => modifier((r) => ({ ...r, video: mutation(r.video) }))}

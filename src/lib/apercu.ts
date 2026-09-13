@@ -27,7 +27,9 @@ export function creerApercu(
 ): Apercu {
   canvas.width = scene.largeur
   canvas.height = scene.hauteur
-  const ctx = canvas.getContext('2d', { alpha: false })
+  // Même canal alpha que l'export : une scène transparente doit se voir transparente ici,
+  // sinon la case « fond transparent » ne montre rien de ce qu'elle fait.
+  const ctx = canvas.getContext('2d', { alpha: scene.transparente })
 
   let position = 0
   let source: AudioBufferSourceNode | null = null

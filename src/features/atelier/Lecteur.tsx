@@ -59,7 +59,21 @@ export function Lecteur({
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-      <div className="relative bg-black">
+      {/* Un damier derrière l'aperçu quand la scène est transparente : sans lui, on ne
+          distinguerait pas un fond transparent d'un fond noir, et la case correspondante
+          semblerait sans effet. */}
+      <div
+        className="relative bg-black"
+        style={
+          scene?.transparente
+            ? {
+                backgroundImage:
+                  'repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%)',
+                backgroundSize: '24px 24px',
+              }
+            : undefined
+        }
+      >
         <canvas ref={canvas} className="block h-auto w-full" />
         {!scene ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 p-6 text-center text-sm text-slate-400">

@@ -1,6 +1,7 @@
 import * as alphaTab from '@coderline/alphatab'
 import { bufferDepuisEntrelace, contexteAudio } from './audio'
 import type { Curseur, Feuille, Tuile } from './scene'
+import { couleurDeCorde, hexVersRgb, type Theme } from './themes'
 
 /**
  * Le pont avec alphaTab, qui fait ici tout le travail de musicien : lire un fichier
@@ -94,6 +95,67 @@ export function masquerEntete(api: alphaTab.AlphaTabApi): void {
   for (const element of caches) api.settings.notation.elements.set(element, false)
 }
 
+/** « #rrggbb » vers la couleur qu'alphaTab attend. */
+export function couleurAlphaTab(hex: string): alphaTab.model.Color {
+  const { r, g, b } = hexVersRgb(hex)
+  return new alphaTab.model.Color(r, g, b, 255)
+}
+
+/**
+ * Les couleurs du thème passées à alphaTab **avant** le rendu.
+ *
+ * On aurait pu repeindre après coup, en filtrant l'image rendue. Mais une portée n'est pas
+ * une image qu'on retouche : inverser ses couleurs retourne aussi les chiffres, et les
+ * teinter teinte le blanc entre les lignes. Le moteur sait dessiner en clair sur sombre, il
+ * suffit de le lui demander.
+ */
+export function appliquerTheme(api: alphaTab.AlphaTabApi, theme: Theme): void {
+  const r = api.settings.display.resources
+  r.staffLineColor = couleurAlphaTab(theme.lignes)
+  r.barSeparatorColor = couleurAlphaTab(theme.barres)
+  r.barNumberColor = couleurAlphaTab(theme.barres)
+  r.mainGlyphColor = couleurAlphaTab(theme.encre)
+  r.secondaryGlyphColor = couleurAlphaTab(theme.encreFaible)
+  r.scoreInfoColor = couleurAlphaTab(theme.texteFaible)
+}
+
+/**
+ * Une couleur par corde, posée note par note dans le modèle.
+ *
+ * C'est la lecture qu'on trouve sur les logiciels d'apprentissage : la couleur dit sur quelle
+ * corde jouer, le chiffre dit à quelle case. L'œil trouve la corde avant d'avoir lu le
+ * chiffre, ce qui est exactement ce qu'on veut quand la vidéo défile pendant qu'on joue.
+ *
+ * Le nombre de cordes est repris de l'accordage de la portée, pas supposé : une basse à
+ * quatre cordes et une guitare à sept doivent toutes deux avoir leur corde grave en rouge.
+ */
+export function colorerLesCordes(score: alphaTab.model.Score, theme: Theme): void {
+  if (!theme.cordes) return
+
+  for (const piste of score.tracks) {
+    for (const portee of piste.staves) {
+      const nombreDeCordes = portee.tuning.length || 6
+      for (const mesure of portee.bars) {
+        for (const voix of mesure.voices) {
+          for (const temps of voix.beats) {
+            for (const note of temps.notes) {
+              const couleur = couleurDeCorde(theme, note.string, nombreDeCordes)
+              if (!couleur) continue
+              // Le style n'existe pas tant qu'on n'a rien demandé : c'est ce qui permet à une
+              // partition non colorée de ne rien coûter en mémoire.
+              note.style ??= new alphaTab.model.NoteStyle()
+              note.style.colors.set(
+                alphaTab.model.NoteSubElement.GuitarTabFretNumber,
+                couleurAlphaTab(couleur),
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 /**
  * Les pistes à rendre, telles qu'alphaTab les attend.
  * `-1` veut dire « toutes », et c'est aussi ce qu'on renvoie quand la piste demandée
@@ -155,6 +217,45 @@ export function collecteurDeTuiles() {
     feuille(): Feuille {
       return { largeur, hauteur, tuiles: [...tuiles] }
     },
+  }
+}
+
+/**
+ * La hauteur réellement occupée par les portées, dans le rendu d'alphaTab.
+ *
+ * Le rendu ne s'arrête pas aux portées : il porte au-dessus l'indication de tempo et le nom
+ * de la section, en dessous la mention du moteur de rendu, et entre les deux beaucoup de
+ * blanc. Mettre *tout cela* à la hauteur de la bande reviendrait à réduire la tablature au
+ * tiers de la place qu'on lui a donnée — on demande 40 % de l'image et on obtient une portée
+ * minuscule au milieu du vide, sans comprendre pourquoi.
+ *
+ * On mesure donc ce qui compte, et la scène cadre là-dessus.
+ */
+export function etendueDesPortees(api: alphaTab.AlphaTabApi): { y0: number; y1: number } | null {
+  const bornes = api.boundsLookup
+  if (!bornes || bornes.staffSystems.length === 0) return null
+
+  let y0 = Number.POSITIVE_INFINITY
+  let y1 = Number.NEGATIVE_INFINITY
+  for (const systeme of bornes.staffSystems) {
+    y0 = Math.min(y0, systeme.visualBounds.y)
+    y1 = Math.max(y1, systeme.visualBounds.y + systeme.visualBounds.h)
+  }
+  if (!Number.isFinite(y0) || y1 <= y0) return null
+
+  // Une marge mesurée : les chiffres de doigté, les hampes et les indications de rythme
+  // débordent de la portée et ne doivent pas être coupés, mais chaque pixel donné au blanc
+  // est un pixel retiré à la tablature — c'est elle qu'on est venu regarder.
+  const marge = (y1 - y0) * 0.22
+  return { y0: Math.max(0, y0 - marge), y1: y1 + marge }
+}
+
+/** La même feuille, ramenée à la tranche utile — les tuiles remontent d'autant. */
+export function recadrer(feuille: Feuille, y0: number, y1: number): Feuille {
+  return {
+    largeur: feuille.largeur,
+    hauteur: Math.max(1, y1 - y0),
+    tuiles: feuille.tuiles.map((tuile) => ({ ...tuile, y: tuile.y - y0 })),
   }
 }
 
@@ -230,6 +331,9 @@ export function curseurGp(
   reperes: Repere[],
   pistes: number[],
   decalageMs: number,
+  // Le même recadrage que la feuille : le curseur vit dans le repère du rendu, et si la
+  // feuille remonte sans lui, il pointe une portée qui n'est plus là.
+  decalageY = 0,
 ): (tMs: number) => Curseur | null {
   const lookupPistes = new Set(pistes)
 
@@ -256,7 +360,7 @@ export function curseurGp(
 
     return {
       x,
-      y: systeme.y,
+      y: systeme.y - decalageY,
       h: systeme.h,
       bloc: { x: beat.visualBounds.x, w: beat.visualBounds.w },
     }

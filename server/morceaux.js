@@ -20,16 +20,26 @@ function reglagesParDefaut(type) {
     largeur: 1920,
     hauteur: 1080,
     fps: 30,
-    // L'ambre se voit sur du noir imprimé comme sur du papier jauni, ce que ni le rouge ni
-    // le bleu ne font des deux côtés à la fois.
-    couleur: "#f59e0b",
+    // Le défilement horizontal plutôt que la page : c'est la disposition qui sert à incruster
+    // une tablature dans une vidéo de reprise, et c'est ce pour quoi on vient ici.
+    disposition: "defilement",
+    theme: "cordes",
+    hauteurBande: 0.42,
+    // Un tiers de la largeur : assez de passé pour savoir où l'on est, assez d'avenir pour
+    // voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
+    teteX: 0.33,
+    cadre: "aucun",
+    fond: "theme",
+    couleur: "#4ade80",
     // Le surlignage situe le temps en cours, le trait vif dit où l'on en est dedans. Trop
     // opaque, il mangerait les chiffres de doigté qu'il est censé désigner.
-    opacite: 0.35,
+    opacite: 0.3,
     // Deux secondes avant la première note : le temps de voir où le morceau commence avant
     // qu'il commence, et de poser les doigts si on joue avec la vidéo.
     compteAvantSec: 2,
     fondu: true,
+    bandeau: true,
+    barreDeProgression: true,
   };
 
   if (type === "pdf") {

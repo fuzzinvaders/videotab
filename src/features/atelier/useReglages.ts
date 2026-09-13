@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMorceaux } from '../../hooks/useMorceaux'
+import { completerReglages } from '../../lib/reglages'
 import type { Morceau, Reglages } from '../../lib/types'
 
 /**
@@ -12,7 +13,9 @@ import type { Morceau, Reglages } from '../../lib/types'
  */
 export function useReglages(morceau: Morceau) {
   const { enregistrerReglages } = useMorceaux()
-  const [reglages, setReglages] = useState<Reglages>(morceau.reglages)
+  const [reglages, setReglages] = useState<Reglages>(() =>
+    completerReglages(morceau.reglages, morceau.type),
+  )
   const [enregistre, setEnregistre] = useState(true)
   const aEcrire = useRef<Reglages | null>(null)
 
@@ -20,8 +23,8 @@ export function useReglages(morceau: Morceau) {
   // l'état local — sauf si on a justement une écriture en attente, qui serait sinon
   // écrasée par la version qu'elle est en train de remplacer.
   useEffect(() => {
-    if (!aEcrire.current) setReglages(morceau.reglages)
-  }, [morceau.reglages])
+    if (!aEcrire.current) setReglages(completerReglages(morceau.reglages, morceau.type))
+  }, [morceau.reglages, morceau.type])
 
   useEffect(() => {
     if (!aEcrire.current) return

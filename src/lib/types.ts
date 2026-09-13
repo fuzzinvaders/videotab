@@ -16,14 +16,38 @@ export interface Invite {
  *  lui être apporté de l'extérieur. Presque tout l'atelier découle de cette différence. */
 export type TypeMorceau = 'gp' | 'pdf'
 
+/** Comment la partition traverse l'image. */
+export type Disposition = 'page' | 'defilement'
+
+export type Cadre = 'aucun' | 'carte' | 'lueur' | 'vignette' | 'bandes'
+
+/** Ce qu'il y a derrière la partition quand la vidéo doit être incrustée ailleurs. */
+export type FondVideo = 'theme' | 'chroma' | 'transparent'
+
 export interface ReglagesVideo {
   largeur: number
   hauteur: number
   fps: number
+  /**
+   * « page » : la partition défile verticalement, le curseur parcourt chaque ligne.
+   * « defilement » : une seule bande horizontale glisse sous une tête de lecture fixe.
+   * C'est la seconde qu'on veut pour incruster la tablature dans une vidéo de reprise —
+   * elle tient dans un bandeau, et le regard n'a jamais à changer d'endroit.
+   */
+  disposition: Disposition
+  theme: string
+  /** Part de la hauteur de l'image occupée par la bande, en mode défilement. */
+  hauteurBande: number
+  /** Où se tient la tête de lecture, en fraction de largeur (mode défilement). */
+  teteX: number
+  cadre: Cadre
+  fond: FondVideo
   couleur: string
   opacite: number
   compteAvantSec: number
   fondu: boolean
+  bandeau: boolean
+  barreDeProgression: boolean
 }
 
 export interface ReglagesGp {

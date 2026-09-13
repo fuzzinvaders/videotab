@@ -46,9 +46,22 @@ const FORMATS = [
   'video/mp4',
 ]
 
-export function formatSupporte(): string | null {
+/* Pour une vidéo à fond transparent, le VP8 passe avant le VP9 : c'est le codec dont le canal
+   alpha traverse le plus sûrement `MediaRecorder`, et une incrustation qui perd sa
+   transparence ne vaut rien. Le mp4 ne sait pas la transporter du tout — sur un navigateur
+   qui n'a que lui, l'export sera opaque, et l'interface le dit avant qu'on appuie. */
+const FORMATS_ALPHA = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm']
+
+export function formatSupporte(alpha = false): string | null {
   if (typeof MediaRecorder === 'undefined') return null
-  return FORMATS.find((f) => MediaRecorder.isTypeSupported(f)) ?? null
+  const candidats = alpha ? [...FORMATS_ALPHA, ...FORMATS] : FORMATS
+  return candidats.find((f) => MediaRecorder.isTypeSupported(f)) ?? null
+}
+
+/** Vrai si ce navigateur sait garder un canal alpha dans la vidéo qu'il encode. */
+export function alphaPossible(): boolean {
+  if (typeof MediaRecorder === 'undefined') return false
+  return FORMATS_ALPHA.some((f) => MediaRecorder.isTypeSupported(f))
 }
 
 export function extensionDe(type: string): '.webm' | '.mp4' {
@@ -64,7 +77,7 @@ export async function enregistrer(
   scene: Scene,
   options: OptionsEnregistrement,
 ): Promise<Enregistrement> {
-  const type = formatSupporte()
+  const type = formatSupporte(scene.transparente)
   if (!type) {
     throw new Error(
       "Ce navigateur ne sait pas enregistrer de vidéo (MediaRecorder absent). Firefox, Chrome, Edge et Safari récents le savent.",
@@ -74,7 +87,9 @@ export async function enregistrer(
   const canvas = document.createElement('canvas')
   canvas.width = scene.largeur
   canvas.height = scene.hauteur
-  const ctx = canvas.getContext('2d', { alpha: false })
+  // Le canvas n'a de canal alpha que si la scène en veut un : sans transparence à garder,
+  // `alpha: false` laisse le navigateur composer plus vite, image après image.
+  const ctx = canvas.getContext('2d', { alpha: scene.transparente })
   if (!ctx) throw new Error('Impossible de préparer le canvas de rendu.')
 
   const flux = canvas.captureStream(options.fps)

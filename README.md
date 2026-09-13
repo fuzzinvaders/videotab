@@ -2,12 +2,13 @@
 
 *[Version française](README.fr.md)* · *[Changelog](CHANGELOG.md)*
 
-Drop in a tablature, walk away with a video where a cursor follows the music. A Guitar Pro
-file brings its own notes, tempo and layout: the cursor lands exactly on the beat being
-played, and the soundtrack comes out of the synthesizer. A PDF is only a picture: the workshop
-finds the tab staves on it, you give it a tempo, and the cursor sweeps them — with the
-recording of the piece underneath if you have one. **Self-hosted**: a single Docker container,
-no external database, no third-party account, and nothing that leaves your machine.
+Drop in a tablature, walk away with a video where a cursor follows the music — usually a
+horizontal strip sliding under a fixed playhead, made to be laid over a cover video. A Guitar
+Pro file brings its own notes, tempo and layout: the cursor lands exactly on the beat being
+played, the soundtrack comes out of the synthesizer, and each string can have its own colour.
+A PDF is only a picture: the workshop finds the tab staves on it, cuts them out, glues them
+into a single strip, and all that is left to give is a tempo. **Self-hosted**: a single Docker
+container, no external database, no third-party account, and nothing that leaves your machine.
 
 ## Run with Docker (recommended)
 
@@ -74,10 +75,41 @@ covers timing, staff detection, server-side validation and the library operation
 - **A PDF's soundtrack** — a PDF holds no note a machine could play. You can attach the
   recording of the piece (mp3, wav, ogg, m4a, flac) and line up the start with the *décalage*:
   the time that passes before the first note.
+- **Layout** — *horizontal scroll* (the default): a single strip sliding under a fixed
+  playhead, whose height and position you choose. The eye stops moving and waits for the music
+  to arrive, and the whole thing fits in a band at the bottom of a cover video. *Page*: the
+  whole score scrolling downwards, to work on a piece rather than to illustrate it.
+- **Themes** — five of them, including **Cordes colorées** (coloured strings): dark background,
+  grey staff lines, one colour per string. The colour says which string to play, the number
+  says which fret; the eye finds the string before it has read the number. The order starts
+  from the lowest string, so a four-string bass and a seven-string guitar read the same way.
+  Also: Papier, Ardoise, Néon, Craie.
+- **Framing** — none, a rounded card, a coloured halo, translucent bands, or a vignette. Both
+  ends of the strip always fade out: a bar appearing abruptly at the edge of the frame catches
+  the eye at the wrong moment.
 - **Video** — 1080p, 720p or a vertical format for phones; 24, 30 or 60 frames per second;
-  cursor colour and opacity; a count-in; a fade.
+  cursor colour and opacity; a count-in; a fade; title and progress bar you can switch off.
 - **Export** — the video is made in the tab and **in real time** (see below). It downloads, and
   it is kept on the server if you tick the box — to find it again from another machine.
+
+## Laying the tablature over a cover
+
+This is what the application exists for. Three settings are enough:
+
+1. **Layout: horizontal scroll.** The tablature becomes a band, not a page.
+2. **Background: transparent** — or **chroma green** if the editing software prefers it.
+   Transparent produces a VP8 WebM with an alpha channel; it is cleaner, but not every browser
+   encodes it and not every editor reads it, and the interface says so before you press.
+   Green works everywhere.
+3. **Title and progress bar switched off**, if the cover video already carries its own.
+
+The rest — strip height, playhead position, theme — is set by watching the preview, which is
+the exact picture that will be encoded.
+
+For a PDF, the ink is lifted off the paper automatically on themes without paper: the white of
+the page becomes transparent and the strokes take the theme's colour. This is **not** an
+inversion — inverting would make the paper black and opaque, and the tablature would arrive
+inside a black rectangle sitting on top of the cover.
 
 ## Exporting happens in the browser
 
@@ -149,8 +181,15 @@ history. Every open session is closed; restart the container for it to take effe
   that alone rules out `../`, characters a filesystem refuses, and collisions between two
   people uploading "tablature.pdf".
 - **One scene for two worlds** ([src/lib/scene.ts](src/lib/scene.ts)). Guitar Pro and PDF
-  reduce to the same object — one tall image and a rectangle moving over it through time. The
-  preview and the video call the same `dessiner(ctx, t)`.
+  reduce to the same object — an image, and a rectangle moving over it through time. The
+  preview and the video call the same `dessiner(ctx, t)`. The file's only real fork is the
+  layout: in page mode the cursor is followed on `y` with smoothing, in scroll mode it is held
+  on `x` without any — that position is already continuous, and smoothing it would only add a
+  delay between sound and picture.
+- **Themes** ([src/lib/themes.ts](src/lib/themes.ts)) act at three distinct moments: the
+  colours the scene paints itself, the ones alphaTab receives **before** drawing (a staff is
+  not a picture you retouch afterwards), and the colour of each string, set note by note in
+  the model through `NoteStyle`.
 - **Guitar Pro** ([src/lib/gp.ts](src/lib/gp.ts)): alphaTab draws the score *and* plays it.
   What ties the two together is the tick table, built during the audio export — with every
   chunk it produces, the synthesizer states which tick and which millisecond it is at. Picture

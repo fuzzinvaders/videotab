@@ -2,13 +2,14 @@
 
 *[English version](README.md)* · *[Journal des changements](CHANGELOG.md)*
 
-Déposer une tablature, repartir avec une vidéo où un curseur suit la musique. Un fichier
-Guitar Pro apporte ses notes, son tempo et son découpage : le curseur se pose exactement sur
-le temps joué, et la bande-son sort du synthétiseur. Un PDF n'est qu'une image : l'atelier y
-détecte les lignes de tablature, on lui donne un tempo, et le curseur les balaie — avec, si
-on veut, l'enregistrement du morceau en fond. **Auto-hébergée** : un seul conteneur Docker,
-aucune base de données externe, aucun compte à créer chez un tiers, et rien qui ne quitte ta
-machine.
+Déposer une tablature, repartir avec une vidéo où un curseur suit la musique — le plus souvent
+une bande horizontale qui glisse sous une tête de lecture fixe, à incruster au bas d'une vidéo
+de reprise. Un fichier Guitar Pro apporte ses notes, son tempo et son découpage : le curseur
+se pose exactement sur le temps joué, la bande-son sort du synthétiseur, et chaque corde peut
+avoir sa couleur. Un PDF n'est qu'une image : l'atelier y détecte les lignes de tablature, les
+découpe, les recolle en une seule bande, et il ne reste qu'à donner un tempo. **Auto-hébergée** :
+un seul conteneur Docker, aucune base de données externe, aucun compte à créer chez un tiers,
+et rien qui ne quitte ta machine.
 
 ## Lancer avec Docker (recommandé)
 
@@ -77,11 +78,44 @@ opérations de bibliothèque.
 - **Bande-son d'un PDF** — un PDF ne contient aucune note qu'une machine puisse jouer. On peut
   donc y joindre l'enregistrement du morceau (mp3, wav, ogg, m4a, flac), et caler le départ
   avec le **décalage** : le temps qui passe avant la première note.
+- **Disposition** — *défilement horizontal* (par défaut) : une seule bande qui glisse sous une
+  tête de lecture fixe, dont on choisit la hauteur et la position. Le regard ne bouge plus, il
+  attend que la musique arrive, et ça tient dans un bandeau au bas d'une vidéo de reprise.
+  *Page* : la partition entière qui défile vers le bas, pour travailler un morceau plutôt que
+  pour l'illustrer.
+- **Thèmes** — cinq, dont **Cordes colorées** : fond sombre, lignes grises, et une couleur par
+  corde. La couleur dit sur quelle corde jouer, le chiffre dit à quelle case ; l'œil trouve la
+  corde avant d'avoir lu le chiffre. L'ordre part du grave (mi rouge, la jaune, ré bleu…), ce
+  qui fait qu'une basse à quatre cordes et une guitare à sept se lisent pareil. Et aussi :
+  Papier, Ardoise, Néon, Craie.
+- **Encadrement** — aucun, carte à coins arrondis, halo coloré, bandes translucides, ou
+  vignette. Les deux bouts de la bande s'effacent toujours en dégradé : une mesure qui
+  apparaît d'un coup au bord de l'image attire l'œil au mauvais moment.
 - **Vidéo** — 1080p, 720p ou format vertical pour un téléphone ; 24, 30 ou 60 images par
-  seconde ; couleur et opacité du curseur ; décompte avant le départ ; fondu.
+  seconde ; couleur et opacité du curseur ; décompte avant le départ ; fondu ; titre et barre
+  de progression qu'on peut couper.
 - **Exporter** — la vidéo est fabriquée dans l'onglet et **en temps réel** (voir plus bas).
   Elle se télécharge, et se garde sur le serveur si on coche la case — pour la retrouver
   depuis une autre machine.
+
+## Incruster la tablature dans une reprise
+
+C'est ce pour quoi l'application existe. Trois réglages y suffisent :
+
+1. **Disposition : défilement horizontal.** La tablature devient un bandeau, pas une page.
+2. **Fond : transparent** — ou **vert d'incrustation** si le logiciel de montage préfère.
+   Transparent produit un WebM VP8 à canal alpha ; c'est plus propre, mais tous les navigateurs
+   ne l'encodent pas et tous les montages ne le lisent pas, et l'interface le dit avant qu'on
+   appuie. Le vert, lui, marche partout.
+3. **Titre et barre de progression coupés**, si la vidéo de reprise porte déjà les siens.
+
+Le reste — hauteur de la bande, position de la tête de lecture, thème — se règle en regardant
+l'aperçu, qui est l'image exacte qui sera encodée.
+
+Pour un PDF, le détourage se fait tout seul sur les thèmes sans papier : le blanc de la page
+devient transparent et les traits prennent la couleur du thème. Ce n'est **pas** une inversion
+— une inversion rendrait le papier noir et opaque, et la tablature arriverait dans un
+rectangle noir posé sur la reprise.
 
 ## L'export se fait dans le navigateur
 
@@ -154,8 +188,15 @@ que ce soit pris en compte.
   envoyé par le navigateur : c'est ce qui écarte d'un coup les `../`, les caractères interdits
   et les collisions entre deux « tablature.pdf ».
 - **Une seule scène pour deux mondes** ([src/lib/scene.ts](src/lib/scene.ts)). Guitar Pro et
-  PDF se réduisent au même objet — une grande image verticale et un rectangle qui s'y déplace
-  au fil du temps. L'aperçu et la vidéo appellent le même `dessiner(ctx, t)`.
+  PDF se réduisent au même objet — une image, et un rectangle qui s'y déplace au fil du temps.
+  L'aperçu et la vidéo appellent le même `dessiner(ctx, t)`. La seule vraie bifurcation du
+  fichier est la disposition : en page on suit le curseur en `y` avec un lissage, en
+  défilement on le maintient en `x` sans lissage — la position y est déjà continue, et la
+  lisser n'ajouterait qu'un retard entre le son et l'image.
+- **Les thèmes** ([src/lib/themes.ts](src/lib/themes.ts)) agissent à trois moments distincts :
+  les couleurs que la scène peint, celles qu'alphaTab reçoit **avant** de dessiner (une portée
+  n'est pas une image qu'on retouche après coup), et la couleur de chaque corde, posée note
+  par note dans le modèle via `NoteStyle`.
 - **Guitar Pro** ([src/lib/gp.ts](src/lib/gp.ts)) : alphaTab dessine la partition *et* la
   joue. Le lien entre les deux est la table des tics, construite pendant l'export audio — à
   chaque tranche produite, le synthétiseur dit à quel tic et à quelle milliseconde il en est.

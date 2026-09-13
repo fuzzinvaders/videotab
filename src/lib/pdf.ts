@@ -2,8 +2,9 @@ import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import type { Etape } from './minutage'
 import { positionA } from './minutage'
-import type { Curseur, Feuille } from './scene'
+import type { Curseur, Feuille, Tuile } from './scene'
 import { bornesHorizontales, detecterSystemes, profilEncre } from './systemes'
+import { hexVersRgb } from './themes'
 import type { SystemePdf } from './types'
 
 /**
@@ -134,6 +135,157 @@ export function detecterDansPages(pages: PageRendue[], mesuresParDefaut: number)
   }
 
   return systemes
+}
+
+/** Le morceau de bande qu'occupe un système, une fois tous les systèmes mis bout à bout. */
+export interface Segment {
+  x: number
+  w: number
+}
+
+/**
+ * Les systèmes découpés dans les pages et recollés en une seule bande horizontale.
+ *
+ * C'est ce qui permet à un PDF — qui n'est qu'une image de partition en colonnes — de défiler
+ * comme une tablature continue sous une tête de lecture fixe. Chaque tuile ne prend qu'un
+ * rectangle de sa page, celui que le découpage a désigné, et les rectangles sont posés côte à
+ * côte dans l'ordre de lecture.
+ *
+ * Les systèmes n'ont pas tous la même hauteur (une ligne qui porte des indications de rythme
+ * déborde plus qu'une autre). Ils sont donc centrés sur la hauteur du plus grand plutôt que
+ * mis à une hauteur commune : les étirer déformerait les chiffres d'une ligne sur deux.
+ */
+export function bandeDepuisSystemes(
+  pages: PageRendue[],
+  systemes: SystemePdf[],
+  options: { encre?: string | null } = {},
+): { feuille: Feuille; segments: Segment[] } {
+  const morceaux = systemes
+    .map((systeme) => {
+      const page = pages[systeme.page]
+      if (!page) return null
+      const rect = {
+        x: systeme.x0 * page.largeur,
+        y: systeme.y0 * page.hauteur,
+        w: Math.max(1, (systeme.x1 - systeme.x0) * page.largeur),
+        h: Math.max(1, (systeme.y1 - systeme.y0) * page.hauteur),
+      }
+      return { rect, canvas: decouper(page, rect, options.encre ?? null) }
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null)
+
+  if (morceaux.length === 0) return { feuille: { largeur: 0, hauteur: 0, tuiles: [] }, segments: [] }
+
+  const hauteur = Math.max(...morceaux.map((m) => m.rect.h))
+  // Un blanc entre deux lignes : sans lui, la fin d'un système et le début du suivant se
+  // touchent, et la colonne de clef qui ouvre chaque ligne semble tomber au milieu d'une
+  // mesure. Pour l'enlever, il suffit de resserrer les rectangles dans l'éditeur.
+  const ecart = Math.round(hauteur * 0.28)
+
+  const tuiles: Tuile[] = []
+  const segments: Segment[] = []
+  let curseur = 0
+
+  for (const morceau of morceaux) {
+    tuiles.push({
+      x: curseur,
+      y: (hauteur - morceau.rect.h) / 2,
+      w: morceau.rect.w,
+      h: morceau.rect.h,
+      source: morceau.canvas,
+    })
+    segments.push({ x: curseur, w: morceau.rect.w })
+    curseur += morceau.rect.w + ecart
+  }
+
+  return {
+    feuille: { largeur: Math.max(0, curseur - ecart), hauteur, tuiles },
+    segments,
+  }
+}
+
+/* Découper coûte une recopie de pixels, et détourer une passe de plus. Déplacer un rectangle
+   dans l'éditeur redemande la bande à chaque mouvement de souris : sans ce cache, on
+   repasserait sur *tous* les systèmes à chaque pixel parcouru, alors qu'un seul a bougé. */
+const DECOUPES = new Map<string, HTMLCanvasElement>()
+const DECOUPES_MAX = 64
+
+function decouper(
+  page: PageRendue,
+  rect: { x: number; y: number; w: number; h: number },
+  encre: string | null,
+): HTMLCanvasElement {
+  const clef = [
+    page.index,
+    Math.round(rect.x),
+    Math.round(rect.y),
+    Math.round(rect.w),
+    Math.round(rect.h),
+    page.largeur,
+    encre ?? 'brut',
+  ].join('|')
+  const connu = DECOUPES.get(clef)
+  if (connu) return connu
+
+  const cible = document.createElement('canvas')
+  cible.width = Math.max(1, Math.round(rect.w))
+  cible.height = Math.max(1, Math.round(rect.h))
+  const ctx = cible.getContext('2d', { willReadFrequently: Boolean(encre) })!
+  ctx.drawImage(page.canvas, rect.x, rect.y, rect.w, rect.h, 0, 0, cible.width, cible.height)
+
+  if (encre) detourerLEncre(ctx, cible.width, cible.height, encre)
+
+  if (DECOUPES.size >= DECOUPES_MAX) {
+    const plusAncienne = DECOUPES.keys().next().value
+    if (plusAncienne !== undefined) DECOUPES.delete(plusAncienne)
+  }
+  DECOUPES.set(clef, cible)
+  return cible
+}
+
+/**
+ * L'encre extraite du papier.
+ *
+ * Chaque pixel garde sa *noirceur* comme opacité et prend la couleur du thème : le blanc de
+ * la page devient transparent, le noir des traits devient opaque, et les gris de
+ * l'anticrénelage gardent leur demi-teinte — ce qui donne des bords lisses au lieu d'un
+ * escalier.
+ *
+ * On aurait pu se contenter d'inverser l'image, ce qui est une ligne de CSS. Mais une
+ * inversion rend le papier **noir et opaque** : posée sur une vidéo de reprise, la tablature
+ * arriverait dans un rectangle noir qui cacherait l'image. Ici, il ne reste que les traits.
+ */
+function detourerLEncre(
+  ctx: CanvasRenderingContext2D,
+  largeur: number,
+  hauteur: number,
+  encre: string,
+): void {
+  const { r, g, b } = hexVersRgb(encre)
+  const image = ctx.getImageData(0, 0, largeur, hauteur)
+  const pixels = image.data
+  for (let i = 0; i < pixels.length; i += 4) {
+    const luminance = (pixels[i] * 299 + pixels[i + 1] * 587 + pixels[i + 2] * 114) / 1000
+    pixels[i] = r
+    pixels[i + 1] = g
+    pixels[i + 2] = b
+    pixels[i + 3] = 255 - luminance
+  }
+  ctx.putImageData(image, 0, 0)
+}
+
+/** Le curseur sur la bande : la tête de lecture traverse chaque système de gauche à droite. */
+export function curseurBande(
+  etapes: Etape[],
+  segments: Segment[],
+  hauteur: number,
+): (tMs: number) => Curseur | null {
+  return (tMs: number) => {
+    const { index, progression } = positionA(etapes, tMs)
+    const segment = segments[index]
+    if (index < 0 || !segment) return null
+    return { x: segment.x + segment.w * progression, y: 0, h: hauteur }
+  }
 }
 
 /**

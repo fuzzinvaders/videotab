@@ -51,6 +51,13 @@ export interface ReglagesVideo {
    * du zoom — et donc, par ricochet, de la hauteur de la bande.
    */
   mesuresVisibles: number
+  /**
+   * Air laissé au-dessus et en dessous de la tablature, en fraction de sa hauteur. C'est de la
+   * mise en page, pas une contrainte : le recadrage, lui, garde déjà ce qu'il ne faut pas
+   * couper. Une tablature collée au bord de sa bande étouffe, et sur une incrustation elle se
+   * confond avec ce qui passe derrière.
+   */
+  margeBande: number
   /** Plafond de hauteur de la bande, en fraction de l'image. N'agit que s'il est atteint. */
   hauteurMax: number
   /** Où se tient la tête de lecture, en fraction de largeur (mode défilement). */

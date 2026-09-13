@@ -9,6 +9,7 @@ function demande(surcharge: Partial<Parameters<typeof echelleDefilement>[0]> = {
     hauteurMaxBande: 486,
     largeurMesure: 300,
     mesuresVisibles: 4,
+    margeRelative: 0,
     feuille,
     ...surcharge,
   })
@@ -56,10 +57,36 @@ describe('echelleDefilement', () => {
       hauteurMaxBande: 0,
       largeurMesure: 0,
       mesuresVisibles: 0,
+      margeRelative: 0,
       feuille: { largeur: 0, hauteur: 0 },
     })
     expect(vide.echelle).toBeGreaterThan(0)
     expect(vide.hauteurBande).toBeGreaterThan(0)
+  })
+})
+
+describe('l’air autour de la tablature', () => {
+  it('s’ajoute de part et d’autre, sans changer le zoom', () => {
+    // Plafond large exprès : on veut isoler l'effet de l'air, pas le voir buter contre lui.
+    const sans = demande({ hauteurMaxBande: 4000 })
+    const avec = demande({ hauteurMaxBande: 4000, margeRelative: 0.5 })
+    // Le zoom ne bouge pas : l'air entoure la tablature, il ne la rétrécit pas.
+    expect(avec.echelle).toBeCloseTo(sans.echelle, 5)
+    expect(avec.mesuresVisibles).toBeCloseTo(4, 5)
+    // Une demi-hauteur de chaque côté, donc une bande deux fois plus haute.
+    expect(avec.hauteurBande).toBeCloseTo(sans.hauteurBande * 2, 0)
+    expect(avec.marge).toBeCloseTo(sans.hauteurBande / 2, 0)
+  })
+
+  /* Sans cette prise en compte, demander beaucoup d'air ferait déborder une bande qui se
+     croyait dans les clous : le plafond aurait validé la tablature seule. */
+  it('compte dans le plafond, au lieu de le déborder en douce', () => {
+    const { hauteurBande } = demande({ mesuresVisibles: 1, margeRelative: 1.5 })
+    expect(hauteurBande).toBeLessThanOrEqual(486)
+  })
+
+  it('ne laisse aucun air quand on n’en demande pas', () => {
+    expect(demande().marge).toBe(0)
   })
 })
 

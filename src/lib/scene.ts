@@ -120,6 +120,7 @@ export function creerScene(options: OptionsScene): Scene {
         hauteurMaxBande: Math.min(libre, hauteur * video.hauteurMax),
         largeurMesure: feuille.largeurMesure ?? 0,
         mesuresVisibles: video.mesuresVisibles,
+        margeRelative: video.margeBande,
         feuille,
       })
     : null
@@ -270,7 +271,10 @@ export function creerScene(options: OptionsScene): Scene {
     }
 
     c.save()
-    if (defilement) c.translate(-etat.scroll, 0)
+    // L'air demandé décale la tablature vers le bas dans sa bande : ce qui dépassait du
+    // recadrage — hampes, rythmes, nom de section — redevient visible dedans plutôt que
+    // rogné au bord.
+    if (defilement) c.translate(-etat.scroll, mise ? mise.marge : 0)
     else c.translate(0, -etat.scroll)
     c.scale(echelle, echelle)
 

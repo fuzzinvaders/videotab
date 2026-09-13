@@ -24,6 +24,9 @@ export function videoParDefaut(): ReglagesVideo {
     theme: THEME_PAR_DEFAUT,
     // Quatre mesures : assez pour voir venir la phrase, assez peu pour lire les chiffres.
     mesuresVisibles: 4,
+    // Un tiers de la hauteur de la tablature de chaque côté : de quoi la décoller du bord sans
+    // que la bande cesse d'être un bandeau.
+    margeBande: 0.35,
     // Un plafond, pas une cible : la bande est aussi courte que la tablature le permet, et
     // cette valeur ne sert qu'à l'empêcher de manger l'image sur une partition très haute.
     hauteurMax: 0.45,
@@ -64,6 +67,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     disposition: parmi(video.disposition, ['page', 'defilement'] as const, d.disposition),
     theme: typeof video.theme === 'string' ? video.theme : d.theme,
     mesuresVisibles: nombre(video.mesuresVisibles, d.mesuresVisibles, 1, 32),
+    margeBande: nombre(video.margeBande, d.margeBande, 0, 1.5),
     hauteurMax: nombre(video.hauteurMax, d.hauteurMax, 0.1, 0.95),
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),

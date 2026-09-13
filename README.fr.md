@@ -81,7 +81,7 @@ opérations de bibliothèque.
 - **Disposition** — *défilement horizontal* (par défaut) : une seule bande qui glisse sous une
   tête de lecture fixe. Le zoom se règle en **mesures à l'écran** — quatre par défaut — et la
   hauteur de la bande en découle, aussi courte que la tablature l'exige : tout ce qu'elle ne
-  prend pas reste visible de la vidéo posée dessous. Le regard ne bouge plus, il
+  prend pas reste visible de la vidéo posée dessous. L'air laissé autour se règle à part. Le regard ne bouge plus, il
   attend que la musique arrive, et ça tient dans un bandeau au bas d'une vidéo de reprise.
   *Page* : la partition entière qui défile vers le bas, pour travailler un morceau plutôt que
   pour l'illustrer.

@@ -148,6 +148,18 @@ export function PanneauMiseEnScene({
             onChange={(mesuresVisibles) => modifier((v) => ({ ...v, mesuresVisibles }))}
           />
           <Curseur
+            label="Air autour de la tablature"
+            valeur={video.margeBande}
+            min={0}
+            max={1.5}
+            pas={0.05}
+            affichage={
+              video.margeBande === 0 ? 'au ras' : `${Math.round(video.margeBande * 100)} %`
+            }
+            aide="De l’espace au-dessus et en dessous, en proportion de la tablature. À zéro elle touche les bords de la bande ; en ouvrant, on laisse revenir ce qui dépasse — hampes, rythmes, nom de section."
+            onChange={(margeBande) => modifier((v) => ({ ...v, margeBande }))}
+          />
+          <Curseur
             label="Hauteur maximale"
             valeur={video.hauteurMax}
             min={0.1}

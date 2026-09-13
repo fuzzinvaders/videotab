@@ -25,21 +25,35 @@ export interface DemandeEchelle {
   /** Largeur d'une mesure dans le repère de la partition, ou 0 si on ne la connaît pas. */
   largeurMesure: number
   mesuresVisibles: number
+  /**
+   * Air laissé au-dessus et en dessous de la tablature, en fraction de sa hauteur.
+   *
+   * À ne pas confondre avec la marge du recadrage, qui est une contrainte technique — ne pas
+   * couper les hampes ni les indications de rythme. Celle-ci est un choix de mise en page :
+   * une tablature collée au bord de sa bande étouffe, et sur une incrustation elle se confond
+   * avec ce qui passe derrière.
+   */
+  margeRelative: number
   /** La partition rendue, dans son propre repère. */
   feuille: { largeur: number; hauteur: number }
 }
 
 export interface Echelle {
   echelle: number
-  /** Hauteur que la bande occupe réellement, une fois l'échelle décidée. */
+  /** Hauteur totale de la bande, air compris. */
   hauteurBande: number
+  /** Air au-dessus de la tablature, en pixels de vidéo — et autant en dessous. */
+  marge: number
   /** Mesures réellement visibles — plus que demandé si le plafond a joué. */
   mesuresVisibles: number
 }
 
 export function echelleDefilement(d: DemandeEchelle): Echelle {
   const hauteurFeuille = Math.max(1, d.feuille.hauteur)
-  const plafond = Math.max(1, d.hauteurMaxBande) / hauteurFeuille
+  // L'air compte dans le plafond : sinon, en demander beaucoup ferait déborder une bande qui
+  // se croyait dans les clous.
+  const facteur = 1 + 2 * Math.max(0, d.margeRelative)
+  const plafond = Math.max(1, d.hauteurMaxBande) / (hauteurFeuille * facteur)
 
   // Sans largeur de mesure connue — une partition vide, un découpage pas encore fait — on
   // retombe sur le plafond, ce qui donne la plus grande bande permise plutôt que rien.
@@ -52,9 +66,13 @@ export function echelleDefilement(d: DemandeEchelle): Echelle {
   const mesuresVisibles =
     d.largeurMesure > 0 ? d.largeurZone / (echelle * d.largeurMesure) : d.mesuresVisibles
 
+  const hauteurTablature = hauteurFeuille * echelle
+  const marge = Math.round(hauteurTablature * Math.max(0, d.margeRelative))
+
   return {
     echelle,
-    hauteurBande: Math.max(24, Math.round(hauteurFeuille * echelle)),
+    hauteurBande: Math.max(24, Math.round(hauteurTablature) + 2 * marge),
+    marge,
     mesuresVisibles,
   }
 }

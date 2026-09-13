@@ -78,7 +78,7 @@ covers timing, staff detection, server-side validation and the library operation
 - **Layout** — *horizontal scroll* (the default): a single strip sliding under a fixed
   playhead. The zoom is set in **bars on screen** — four by default — and the height of the
   strip follows from it, as short as the tablature requires: whatever it does not take stays
-  visible of the video underneath. The eye stops moving and waits for the music
+  visible of the video underneath. The breathing room around it is a separate setting. The eye stops moving and waits for the music
   to arrive, and the whole thing fits in a band at the bottom of a cover video. *Page*: the
   whole score scrolling downwards, to work on a piece rather than to illustrate it.
 - **Themes** — five of them, including **Cordes colorées** (coloured strings): dark background,

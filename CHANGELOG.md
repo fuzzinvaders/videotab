@@ -9,6 +9,13 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The air around the tablature is now a setting.** Two margins were being conflated: the crop
+  margin, which is a technical constraint — do not cut the stems or the rhythm marks — and the
+  breathing room one deliberately leaves, which is a layout choice. Only the first existed, and
+  it was fixed, so the strip came out cramped: the tablature touched both edges of its band,
+  which on an overlay makes it blur into whatever passes behind. The second is now a slider,
+  counted in proportion of the tablature's own height so it scales with the zoom, and it counts
+  against the ceiling instead of quietly overflowing it.
 - **The zoom is now set in bars, not in pixels.** "How many bars do I want on screen" is the
   question one actually asks — two to work a passage, four to follow, eight to keep the piece
   in view — and it is the only one with a musical meaning. The height of the strip is no longer

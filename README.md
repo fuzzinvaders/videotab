@@ -76,7 +76,9 @@ covers timing, staff detection, server-side validation and the library operation
   recording of the piece (mp3, wav, ogg, m4a, flac) and line up the start with the *décalage*:
   the time that passes before the first note.
 - **Layout** — *horizontal scroll* (the default): a single strip sliding under a fixed
-  playhead, whose height and position you choose. The eye stops moving and waits for the music
+  playhead. The zoom is set in **bars on screen** — four by default — and the height of the
+  strip follows from it, as short as the tablature requires: whatever it does not take stays
+  visible of the video underneath. The eye stops moving and waits for the music
   to arrive, and the whole thing fits in a band at the bottom of a cover video. *Page*: the
   whole score scrolling downwards, to work on a piece rather than to illustrate it.
 - **Themes** — five of them, including **Cordes colorées** (coloured strings): dark background,

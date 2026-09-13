@@ -1,3 +1,4 @@
+import { echelleDefilement } from './echelle'
 import { formaterDuree } from './minutage'
 import { themeParId, type Theme } from './themes'
 import type { ReglagesVideo, StyleCurseur } from './types'
@@ -34,6 +35,11 @@ export interface Feuille {
   largeur: number
   hauteur: number
   tuiles: Tuile[]
+  /**
+   * Largeur d'une mesure dans ce repère, si on la connaît. C'est elle qui permet de régler le
+   * zoom en mesures plutôt qu'en pixels — le seul réglage qui ait un sens musical.
+   */
+  largeurMesure?: number
 }
 
 export interface Curseur {
@@ -95,16 +101,36 @@ export function creerScene(options: OptionsScene): Scene {
   const bandeauH = video.bandeau && (titre || artiste) ? Math.round(hauteur * 0.09) : 0
   const barreH = video.barreDeProgression ? Math.max(3, Math.round(hauteur * 0.012)) : 0
 
-  /* La zone est la fenêtre par laquelle on regarde la partition. En page elle occupe tout ce
-     qui reste entre le bandeau et la barre ; en défilement elle traverse l'image de bord à
-     bord, sur la hauteur qu'on lui a donnée, et le reste de l'image est laissé libre — c'est
-     là qu'on posera la vidéo de reprise. */
-  const zone = defilement
-    ? (() => {
-        const h = Math.max(40, Math.round(hauteur * video.hauteurBande))
-        const libre = hauteur - bandeauH - barreH
-        return { x: 0, y: bandeauH + Math.round((libre - h) / 2), w: largeur, h }
-      })()
+  /* La zone est la fenêtre par laquelle on regarde la partition, et les deux dispositions la
+     calculent dans l'ordre inverse l'une de l'autre.
+
+     En page, la place disponible est donnée et l'échelle s'y ajuste : la partition est mise à
+     la largeur, parce qu'une tablature se lit ligne par ligne et que la rogner sur les côtés
+     reviendrait à couper des mesures.
+
+     En défilement, c'est l'échelle qui est donnée — tant de mesures à l'écran — et la hauteur
+     de la bande en découle. La bande est alors aussi courte que la tablature l'exige, ce qui
+     est exactement ce qu'on attend d'une incrustation : tout le reste de l'image demeure
+     libre pour la vidéo qu'on posera dessous. */
+  const libre = hauteur - bandeauH - barreH
+
+  const mise = defilement
+    ? echelleDefilement({
+        largeurZone: largeur,
+        hauteurMaxBande: Math.min(libre, hauteur * video.hauteurMax),
+        largeurMesure: feuille.largeurMesure ?? 0,
+        mesuresVisibles: video.mesuresVisibles,
+        feuille,
+      })
+    : null
+
+  const zone = mise
+    ? {
+        x: 0,
+        y: bandeauH + Math.round((libre - mise.hauteurBande) / 2),
+        w: largeur,
+        h: mise.hauteurBande,
+      }
     : {
         x: marge,
         y: bandeauH + Math.round(marge / 2),
@@ -112,16 +138,7 @@ export function creerScene(options: OptionsScene): Scene {
         h: hauteur - bandeauH - marge - barreH * 2,
       }
 
-  // En page, la partition est toujours mise à la largeur : une tablature se lit ligne par
-  // ligne, et la rogner sur les côtés reviendrait à couper des mesures. En défilement, c'est
-  // la hauteur de la bande qui commande — la largeur, elle, est infinie par construction.
-  const echelle = defilement
-    ? feuille.hauteur > 0
-      ? zone.h / feuille.hauteur
-      : 1
-    : feuille.largeur > 0
-      ? zone.w / feuille.largeur
-      : 1
+  const echelle = mise ? mise.echelle : feuille.largeur > 0 ? zone.w / feuille.largeur : 1
 
   const scrollMax = Math.max(0, feuille.hauteur * echelle - zone.h)
   const teteX = Math.round(zone.w * video.teteX)

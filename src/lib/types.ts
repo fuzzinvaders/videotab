@@ -46,8 +46,13 @@ export interface ReglagesVideo {
    */
   disposition: Disposition
   theme: string
-  /** Part de la hauteur de l'image occupée par la bande, en mode défilement. */
-  hauteurBande: number
+  /**
+   * Combien de mesures tiennent à l'écran, en mode défilement. C'est ce réglage qui décide
+   * du zoom — et donc, par ricochet, de la hauteur de la bande.
+   */
+  mesuresVisibles: number
+  /** Plafond de hauteur de la bande, en fraction de l'image. N'agit que s'il est atteint. */
+  hauteurMax: number
   /** Où se tient la tête de lecture, en fraction de largeur (mode défilement). */
   teteX: number
   cadre: Cadre

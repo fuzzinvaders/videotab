@@ -114,6 +114,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
       defilement && pdf
         ? bandeDepuisSystemes(pages, pdf.systemes, {
             encre: theme.detourerPdf ? theme.encre : null,
+            mesuresParDefaut: pdf.mesuresParSysteme,
           })
         : null,
     [defilement, pages, pdf, theme],

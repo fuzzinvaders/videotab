@@ -24,7 +24,10 @@ function reglagesParDefaut(type) {
     // une tablature dans une vidéo de reprise, et c'est ce pour quoi on vient ici.
     disposition: "defilement",
     theme: "cordes",
-    hauteurBande: 0.42,
+    // Quatre mesures à l'écran : c'est le zoom qui se règle, et la hauteur de la bande en
+    // découle — aussi courte que la tablature l'exige, ce qu'on veut d'une incrustation.
+    mesuresVisibles: 4,
+    hauteurMax: 0.45,
     // Un tiers de la largeur : assez de passé pour savoir où l'on est, assez d'avenir pour
     // voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
     teteX: 0.33,

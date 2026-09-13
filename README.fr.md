@@ -79,7 +79,9 @@ opérations de bibliothèque.
   donc y joindre l'enregistrement du morceau (mp3, wav, ogg, m4a, flac), et caler le départ
   avec le **décalage** : le temps qui passe avant la première note.
 - **Disposition** — *défilement horizontal* (par défaut) : une seule bande qui glisse sous une
-  tête de lecture fixe, dont on choisit la hauteur et la position. Le regard ne bouge plus, il
+  tête de lecture fixe. Le zoom se règle en **mesures à l'écran** — quatre par défaut — et la
+  hauteur de la bande en découle, aussi courte que la tablature l'exige : tout ce qu'elle ne
+  prend pas reste visible de la vidéo posée dessous. Le regard ne bouge plus, il
   attend que la musique arrive, et ça tient dans un bandeau au bas d'une vidéo de reprise.
   *Page* : la partition entière qui défile vers le bas, pour travailler un morceau plutôt que
   pour l'illustrer.

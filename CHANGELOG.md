@@ -7,8 +7,25 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ## Unreleased
 
+### Changed
+
+- **The zoom is now set in bars, not in pixels.** "How many bars do I want on screen" is the
+  question one actually asks — two to work a passage, four to follow, eight to keep the piece
+  in view — and it is the only one with a musical meaning. The height of the strip is no longer
+  a setting at all: it follows from the zoom, and the band ends up as short as the tablature
+  requires. That is exactly what an overlay wants, since every pixel it does not take is a
+  pixel of the cover video left visible. A ceiling remains as a safety valve, and when it bites
+  it is the bar count that gives way rather than the image that overflows.
+
 ### Fixed
 
+- **The score was cropped on the wrong bounds, so it was not really cropped at all.**
+  alphaTab's bounds come in three nested levels and the first two are misleading: a staff
+  system and a master bar both declare the height of everything orbiting the music — tempo
+  marking, section name, instrument name, engine credit. Only the third level covers "the
+  region of the staff". On a bass tablature the staff is a quarter of what the system claims,
+  so the strip was carrying three quarters of air: 220 pixels where 56 were needed, and a band
+  four times taller than necessary for the same legibility.
 - **String colours were upside down.** alphaTab documents string 1 as *the lowest string and
   the bottom line of the tablature*; the mapping assumed the opposite and counted from the
   treble. Every note came out with its neighbour's colour — a bug that breaks nothing, renders

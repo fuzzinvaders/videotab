@@ -1,5 +1,6 @@
 import * as alphaTab from '@coderline/alphatab'
 import { bufferDepuisEntrelace, contexteAudio } from './audio'
+import { largeurMedianeDeMesure } from './echelle'
 import type { Curseur, Feuille, Tuile } from './scene'
 import { couleurDeCorde, hexVersRgb, type Theme } from './themes'
 
@@ -235,11 +236,25 @@ export function etendueDesPortees(api: alphaTab.AlphaTabApi): { y0: number; y1: 
   const bornes = api.boundsLookup
   if (!bornes || bornes.staffSystems.length === 0) return null
 
+  /* Il faut descendre jusqu'aux bornes d'une mesure **d'une portée**, et pas s'arrêter plus
+     haut. La hiérarchie d'alphaTab compte trois niveaux, et les deux premiers sont trompeurs :
+     le système et la mesure-maîtresse déclarent tous deux la hauteur de tout ce qui gravite
+     autour de la musique — indication de tempo, nom de section, nom d'instrument, mention du
+     moteur de rendu. Seul le troisième niveau, documenté comme couvrant « the region of the
+     staff », donne la portée elle-même.
+
+     La différence n'est pas un détail de quelques pixels : sur une tablature de basse, la
+     portée fait le quart de ce que le système déclare. Recadrer sur les mauvaises bornes
+     revenait à ne pas recadrer du tout, et la bande emportait trois quarts d'air. */
   let y0 = Number.POSITIVE_INFINITY
   let y1 = Number.NEGATIVE_INFINITY
   for (const systeme of bornes.staffSystems) {
-    y0 = Math.min(y0, systeme.visualBounds.y)
-    y1 = Math.max(y1, systeme.visualBounds.y + systeme.visualBounds.h)
+    for (const mesureMaitresse of systeme.bars) {
+      for (const mesure of mesureMaitresse.bars) {
+        y0 = Math.min(y0, mesure.visualBounds.y)
+        y1 = Math.max(y1, mesure.visualBounds.y + mesure.visualBounds.h)
+      }
+    }
   }
   if (!Number.isFinite(y0) || y1 <= y0) return null
 
@@ -253,10 +268,28 @@ export function etendueDesPortees(api: alphaTab.AlphaTabApi): { y0: number; y1: 
 /** La même feuille, ramenée à la tranche utile — les tuiles remontent d'autant. */
 export function recadrer(feuille: Feuille, y0: number, y1: number): Feuille {
   return {
-    largeur: feuille.largeur,
+    ...feuille,
     hauteur: Math.max(1, y1 - y0),
     tuiles: feuille.tuiles.map((tuile) => ({ ...tuile, y: tuile.y - y0 })),
   }
+}
+
+/**
+ * La largeur d'une mesure dans le rendu, mesurée sur le rendu lui-même.
+ *
+ * Elle ne se déduit d'aucun réglage : alphaTab donne à chaque mesure la largeur que réclame
+ * son contenu, si bien qu'une mesure de rondes et une mesure de doubles-croches n'occupent pas
+ * la même place. C'est pourtant cette largeur qu'il faut pour répondre à « je veux quatre
+ * mesures à l'écran », d'où la médiane sur toutes les mesures rendues.
+ */
+export function largeurDeMesure(api: alphaTab.AlphaTabApi): number {
+  const bornes = api.boundsLookup
+  if (!bornes) return 0
+  const largeurs: number[] = []
+  for (const systeme of bornes.staffSystems) {
+    for (const mesure of systeme.bars) largeurs.push(mesure.realBounds.w)
+  }
+  return largeurMedianeDeMesure(largeurs)
 }
 
 /**

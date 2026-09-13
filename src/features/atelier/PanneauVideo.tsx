@@ -138,14 +138,24 @@ export function PanneauMiseEnScene({
       {defilement ? (
         <>
           <Curseur
-            label="Taille de la tablature"
-            valeur={video.hauteurBande}
-            min={0.15}
+            label="Mesures à l’écran"
+            valeur={video.mesuresVisibles}
+            min={1}
+            max={16}
+            pas={1}
+            affichage={`${video.mesuresVisibles} mesure${video.mesuresVisibles > 1 ? 's' : ''}`}
+            aide="C’est ce réglage qui fait le zoom : moins de mesures, des chiffres plus gros, une bande plus haute. La hauteur suit toute seule."
+            onChange={(mesuresVisibles) => modifier((v) => ({ ...v, mesuresVisibles }))}
+          />
+          <Curseur
+            label="Hauteur maximale"
+            valeur={video.hauteurMax}
+            min={0.1}
             max={0.9}
             pas={0.01}
-            affichage={`${Math.round(video.hauteurBande * 100)} % de la hauteur`}
-            aide="Plus la bande est haute, plus les chiffres sont gros — et moins il y a de mesures visibles d’avance."
-            onChange={(hauteurBande) => modifier((v) => ({ ...v, hauteurBande }))}
+            affichage={`${Math.round(video.hauteurMax * 100)} % de l’image`}
+            aide="Un plafond, pas une cible : la bande reste aussi courte que la tablature l’exige. Il ne s’applique que si elle le dépasse, et on voit alors plus de mesures que demandé."
+            onChange={(hauteurMax) => modifier((v) => ({ ...v, hauteurMax }))}
           />
           <Curseur
             label="Tête de lecture"

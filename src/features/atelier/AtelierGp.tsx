@@ -10,6 +10,7 @@ import {
   colorerLesCordes,
   curseurGp,
   etendueDesPortees,
+  largeurDeMesure,
   masquerEntete,
   pistesVisibles,
   preparerBande,
@@ -173,8 +174,12 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     // Le rendu d'alphaTab porte au-dessus et en dessous des portées beaucoup de blanc. On
     // cadre sur ce qui se lit, sinon la bande qu'on a demandée est aux trois quarts vide.
     const etendue = etendueDesPortees(instance)
+    // La largeur d'une mesure vient du rendu, pas d'un réglage : c'est elle qui permet de
+    // demander « quatre mesures à l'écran » plutôt qu'une hauteur en pixels.
+    const avecMesure = { ...feuille, largeurMesure: largeurDeMesure(instance) }
+    const cadree = etendue ? recadrer(avecMesure, etendue.y0, etendue.y1) : avecMesure
     return creerScene({
-      feuille: etendue ? recadrer(feuille, etendue.y0, etendue.y1) : feuille,
+      feuille: cadree,
       video: reglages.video,
       dureeMs: bande.dureeMs + decalageMs,
       titre: morceau.titre,

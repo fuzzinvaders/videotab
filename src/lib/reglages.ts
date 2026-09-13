@@ -22,7 +22,11 @@ export function videoParDefaut(): ReglagesVideo {
     // tablature dans une vidéo de reprise, et c'est de loin l'usage le plus fréquent.
     disposition: 'defilement',
     theme: THEME_PAR_DEFAUT,
-    hauteurBande: 0.42,
+    // Quatre mesures : assez pour voir venir la phrase, assez peu pour lire les chiffres.
+    mesuresVisibles: 4,
+    // Un plafond, pas une cible : la bande est aussi courte que la tablature le permet, et
+    // cette valeur ne sert qu'à l'empêcher de manger l'image sur une partition très haute.
+    hauteurMax: 0.45,
     // Un tiers de la largeur : assez de passé pour comprendre où l'on est, assez d'avenir
     // pour voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
     teteX: 0.33,
@@ -59,7 +63,8 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     fps: nombre(video.fps, d.fps, 12, 60),
     disposition: parmi(video.disposition, ['page', 'defilement'] as const, d.disposition),
     theme: typeof video.theme === 'string' ? video.theme : d.theme,
-    hauteurBande: nombre(video.hauteurBande, d.hauteurBande, 0.12, 0.95),
+    mesuresVisibles: nombre(video.mesuresVisibles, d.mesuresVisibles, 1, 32),
+    hauteurMax: nombre(video.hauteurMax, d.hauteurMax, 0.1, 0.95),
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
     fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),

@@ -21,12 +21,14 @@ describe('completerVideo', () => {
 
   it('ramène dans les bornes ce qui n’y est pas', () => {
     const fou = completerVideo({
-      hauteurBande: 12,
+      mesuresVisibles: 900,
+      hauteurMax: 12,
       teteX: -3,
       opacite: 40,
       compteAvantSec: 999,
     } as Partial<ReglagesVideo>)
-    expect(fou.hauteurBande).toBeLessThanOrEqual(0.95)
+    expect(fou.mesuresVisibles).toBeLessThanOrEqual(32)
+    expect(fou.hauteurMax).toBeLessThanOrEqual(0.95)
     expect(fou.teteX).toBeGreaterThanOrEqual(0.08)
     expect(fou.opacite).toBeLessThanOrEqual(0.9)
     expect(fou.compteAvantSec).toBeLessThanOrEqual(12)

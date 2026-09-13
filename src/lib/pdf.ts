@@ -1,5 +1,6 @@
 import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import { largeurMedianeDeMesure } from './echelle'
 import type { Etape } from './minutage'
 import { positionA } from './minutage'
 import type { Curseur, Feuille, Tuile } from './scene'
@@ -158,7 +159,7 @@ export interface Segment {
 export function bandeDepuisSystemes(
   pages: PageRendue[],
   systemes: SystemePdf[],
-  options: { encre?: string | null } = {},
+  options: { encre?: string | null; mesuresParDefaut?: number } = {},
 ): { feuille: Feuille; segments: Segment[] } {
   const morceaux = systemes
     .map((systeme) => {
@@ -170,7 +171,8 @@ export function bandeDepuisSystemes(
         w: Math.max(1, (systeme.x1 - systeme.x0) * page.largeur),
         h: Math.max(1, (systeme.y1 - systeme.y0) * page.hauteur),
       }
-      return { rect, canvas: decouper(page, rect, options.encre ?? null) }
+      const mesures = systeme.mesures > 0 ? systeme.mesures : (options.mesuresParDefaut ?? 4)
+      return { rect, mesures, canvas: decouper(page, rect, options.encre ?? null) }
     })
     .filter((m): m is NonNullable<typeof m> => m !== null)
 
@@ -198,8 +200,14 @@ export function bandeDepuisSystemes(
     curseur += morceau.rect.w + ecart
   }
 
+  /* La largeur d'une mesure ne se mesure pas sur l'image : rien dans un PDF ne dit où sont les
+     barres de mesure. On la déduit donc de ce que l'utilisateur a déclaré — tel système porte
+     tant de mesures — en prenant la médiane, parce qu'un système à moitié vide en fin de
+     morceau donnerait sinon des mesures deux fois trop larges à tout le reste. */
+  const largeurMesure = largeurMedianeDeMesure(morceaux.map((m) => m.rect.w / m.mesures))
+
   return {
-    feuille: { largeur: Math.max(0, curseur - ecart), hauteur, tuiles },
+    feuille: { largeur: Math.max(0, curseur - ecart), hauteur, tuiles, largeurMesure },
     segments,
   }
 }

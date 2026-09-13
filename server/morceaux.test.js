@@ -121,18 +121,21 @@ describe("attacherVideo / detacherVideo", () => {
 });
 
 describe("supprimerMorceau", () => {
-  it("sort le morceau de la liste et dit quoi effacer derrière", () => {
+  it("sort le morceau de la liste et dit quelle source effacer derrière", () => {
     const data = bibliothequeAvec("gp");
     const id = data.morceaux[0].id;
-    attacherVideo(data, id, { ext: ".webm", taille: 10, dureeMs: 1000 });
+    attacherVideo(data, id, { nom: `${id}-abc.webm`, ext: ".webm", taille: 10, dureeMs: 1000 });
     const result = supprimerMorceau(data, id);
     expect(data.morceaux).toHaveLength(0);
     expect(result.fichiers.source).toEqual({ id, ext: ".gp5" });
-    expect(result.fichiers.video).toEqual({ id, ext: ".webm" });
   });
 
-  it("n'annonce aucune vidéo à effacer quand il n'y en a jamais eu", () => {
+  /* Les vidéos ne sont volontairement pas énumérées : chaque export porte un nom neuf, un
+     morceau peut donc en avoir laissé plusieurs derrière lui, et c'est un balayage du dossier
+     qui s'en charge. Les nommer une par une reviendrait à oublier celles qu'on n'a pas pu
+     effacer sur le moment. */
+  it("ne prétend pas connaître les vidéos, qui se balaient par le dossier", () => {
     const data = bibliothequeAvec("pdf");
-    expect(supprimerMorceau(data, data.morceaux[0].id).fichiers.video).toBeNull();
+    expect(supprimerMorceau(data, data.morceaux[0].id).fichiers.video).toBeUndefined();
   });
 });

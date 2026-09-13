@@ -176,6 +176,30 @@ function readJsonBody(req) {
   });
 }
 
+/* Le rename final, rendu obstiné.
+
+   Sous Windows, renommer par-dessus un fichier que quelqu'un est en train de lire échoue
+   avec EPERM — et un fichier servi à un navigateur reste ouvert un court instant après que
+   celui-ci a fini. Les vidéos évitent le problème en portant un nom neuf à chaque export,
+   mais les autres envois écrasent bien leur prédécesseur. On efface donc d'abord, et on
+   réessaie quelques fois : la poignée qui bloque se relâche en général dans la milliseconde,
+   et perdre un envoi pour une demi-seconde d'attente serait absurde. */
+async function deplacer(tmp, target) {
+  for (let essai = 0; ; essai++) {
+    try {
+      store.removeQuietly(target);
+      fs.renameSync(tmp, target);
+      return;
+    } catch (err) {
+      const occupe = err?.code === "EPERM" || err?.code === "EBUSY" || err?.code === "EACCES";
+      if (!occupe || essai >= 10) throw err;
+      // L'attente rend la main au serveur : les autres requêtes continuent d'être servies
+      // pendant qu'on patiente, ce qu'une boucle d'attente active interdirait.
+      await new Promise((suite) => setTimeout(suite, 50));
+    }
+  }
+}
+
 /* Les fichiers arrivent en corps brut, pas en multipart : l'interface n'envoie jamais
    qu'un fichier à la fois, et écrire un analyseur multipart correct sans dépendance pour
    ce seul besoin serait beaucoup de code délicat pour rien. Le nom voyage en paramètre
@@ -220,13 +244,12 @@ function receiveFile(req, target, maxBytes) {
         reject(new Error("empty body"));
         return;
       }
-      try {
-        fs.renameSync(tmp, target);
-        resolve({ taille: size });
-      } catch (err) {
-        store.removeQuietly(tmp);
-        reject(err);
-      }
+      deplacer(tmp, target)
+        .then(() => resolve({ taille: size }))
+        .catch((err) => {
+          store.removeQuietly(tmp);
+          reject(err);
+        });
     });
 
     req.pipe(out);
@@ -237,6 +260,16 @@ function receiveFile(req, target, maxBytes) {
    de lecture, et refuse tout bonnement de le laisser déplacer si le serveur ne sait pas
    répondre à un Range. Trente lignes pour que la relecture d'un export se comporte comme
    n'importe quelle vidéo, c'est un bon marché. */
+/* Le flux de lecture est refermé dès que la réponse l'est, y compris quand le navigateur
+   coupe en cours de route — ce qu'il fait tout le temps sur une vidéo qu'on déplace ou
+   qu'on quitte. Sans cela, chaque lecture interrompue laisse un fichier ouvert derrière
+   elle, et ces poignées finissent par empêcher de le remplacer. */
+function servirFlux(res, flux) {
+  res.on("close", () => flux.destroy());
+  flux.on("error", () => res.destroy());
+  return flux.pipe(res);
+}
+
 function sendFile(req, res, file, { type, download }) {
   let stat;
   try {
@@ -278,13 +311,13 @@ function sendFile(req, res, file, { type, download }) {
     headers["content-length"] = fin - debut + 1;
     res.writeHead(206, headers);
     if (req.method === "HEAD") return res.end();
-    return fs.createReadStream(file, { start: debut, end: fin }).pipe(res);
+    return servirFlux(res, fs.createReadStream(file, { start: debut, end: fin }));
   }
 
   headers["content-length"] = stat.size;
   res.writeHead(200, headers);
   if (req.method === "HEAD") return res.end();
-  return fs.createReadStream(file).pipe(res);
+  return servirFlux(res, fs.createReadStream(file));
 }
 
 // Protection CSRF minimale, active seulement si ORIGIN est configuré (déploiement derrière
@@ -402,6 +435,13 @@ function applyLibrary(res, mutate) {
 
 function segments(pathname) {
   return pathname.split("/").filter(Boolean);
+}
+
+/* Le nom de la vidéo sur le disque. Les exports d'avant les noms uniques n'en portent pas :
+   ils s'appelaient d'après l'identifiant du morceau, et c'est ce qu'on reconstitue ici plutôt
+   que de leur demander une migration. */
+function nomDeVideo(morceau) {
+  return morceau.video?.nom ?? `${morceau.id}${morceau.video?.ext ?? ".webm"}`;
 }
 
 function query(req) {
@@ -590,9 +630,9 @@ async function handleApi(req, res, pathname) {
       // Les fichiers partent après la sauvegarde, jamais avant : si l'écriture du JSON
       // échoue, la bibliothèque pointe encore vers des fichiers qui existent toujours.
       store.removeQuietly(store.sourcePath(result.fichiers.source.id, result.fichiers.source.ext));
-      if (result.fichiers.video) {
-        store.removeQuietly(store.videoPath(result.fichiers.video.id, result.fichiers.video.ext));
-      }
+      // Toutes les vidéos du morceau, pas seulement la dernière : un export qu'on n'avait pas
+      // pu effacer sur le moment traînerait sinon indéfiniment.
+      store.balayerVideos(morceau.id);
       if (morceau.reglages?.pdf?.audio) {
         store.removeQuietly(store.audioPath(morceau.id, morceau.reglages.pdf.audio.ext));
       }
@@ -623,7 +663,7 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" || req.method === "HEAD") {
       if (!morceau.video) return sendJson(res, 404, { error: "Aucune vidéo enregistrée." });
       const nom = `${morceau.titre || "videotab"}${morceau.video.ext}`;
-      return sendFile(req, res, store.videoPath(morceau.id, morceau.video.ext), {
+      return sendFile(req, res, store.videoPath(nomDeVideo(morceau)), {
         type: MIME_TYPES[morceau.video.ext] || "video/webm",
         download: query(req).get("telecharger") ? nom : null,
       });
@@ -634,23 +674,31 @@ async function handleApi(req, res, pathname) {
       const ext = q.get("ext") === ".mp4" ? ".mp4" : ".webm";
       const duree = validateDuree(q.get("duree"));
       if (!duree.ok) return sendJson(res, 400, { error: duree.error });
-      const cible = store.videoPath(morceau.id, ext);
-      const { taille } = await receiveFile(req, cible, VIDEO_MAX_BYTES);
-      // Un second export peut changer de conteneur (Safari produit du mp4 là où Chrome
-      // produit du webm) : l'ancien fichier ne porte alors pas le même nom et ne serait
-      // jamais remplacé par l'écriture ci-dessus.
-      if (morceau.video && morceau.video.ext !== ext) {
-        store.removeQuietly(store.videoPath(morceau.id, morceau.video.ext));
-      }
-      return applyLibrary(res, (data) =>
-        attacherVideo(data, id.value, { ext, taille, dureeMs: duree.value }),
+
+      /* Un nom neuf à chaque export, jamais celui d'avant. Le navigateur est encore en train
+         de lire la vidéo précédente au moment où il envoie la nouvelle — le lecteur du
+         panneau d'export pointe dessus —, et Windows refuse de renommer par-dessus un fichier
+         ouvert. Trois minutes d'encodage se perdaient alors sur un EPERM au dernier mètre. */
+      const nom = store.nomVideo(morceau.id, ext);
+      const { taille } = await receiveFile(req, store.videoPath(nom), VIDEO_MAX_BYTES);
+
+      const resultat = store.updateLibrary((data) =>
+        attacherVideo(data, id.value, { nom, ext, taille, dureeMs: duree.value }),
       );
+      if (resultat.ok === false) {
+        store.removeQuietly(store.videoPath(nom));
+        return sendJson(res, 400, { error: resultat.error });
+      }
+      // Les exports précédents partent seulement une fois le nouveau enregistré. Celui qui
+      // résiste encore parce qu'on le lit sera balayé au prochain passage.
+      store.balayerVideos(morceau.id, nom);
+      return sendJson(res, 200, { ...store.readLibrary(), morceau: resultat.morceau });
     }
 
     if (req.method === "DELETE") {
       const result = store.updateLibrary((data) => detacherVideo(data, id.value));
       if (result.ok === false) return sendJson(res, 400, { error: result.error });
-      if (result.ancienne) store.removeQuietly(store.videoPath(id.value, result.ancienne.ext));
+      store.balayerVideos(id.value);
       return sendJson(res, 200, { ...store.readLibrary(), morceau: result.morceau });
     }
   }

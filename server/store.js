@@ -341,8 +341,34 @@ function sourcePath(id, ext) {
   return path.join(SOURCES_DIR, `${id}${ext}`);
 }
 
-function videoPath(id, ext) {
-  return path.join(VIDEOS_DIR, `${id}${ext}`);
+/* Chaque export reçoit un nom neuf, et c'est délibéré.
+
+   Réécrire toujours le même fichier paraissait plus propre, mais c'est une course perdue
+   d'avance : au moment où l'on envoie une nouvelle vidéo, le navigateur est en train de lire
+   la précédente — le lecteur du panneau d'export pointe dessus pendant les trois minutes
+   d'encodage. Windows refuse alors de renommer par-dessus (EPERM), et l'export se perdait au
+   dernier mètre après trois minutes d'attente. Un nom neuf ne peut entrer en collision avec
+   rien ; l'ancien fichier part ensuite, et s'il résiste il sera balayé plus tard. */
+function nomVideo(id, ext) {
+  return `${id}-${Date.now().toString(36)}${ext}`;
+}
+
+function videoPath(nom) {
+  return path.join(VIDEOS_DIR, nom);
+}
+
+/** Efface les vidéos d'un morceau, sauf celle qu'on vient de déposer. */
+function balayerVideos(id, sauf = null) {
+  let fichiers;
+  try {
+    fichiers = fs.readdirSync(VIDEOS_DIR);
+  } catch {
+    return;
+  }
+  for (const nom of fichiers) {
+    if (!nom.startsWith(id) || nom === sauf) continue;
+    removeQuietly(path.join(VIDEOS_DIR, nom));
+  }
 }
 
 // La bande-son facultative d'un PDF dort à côté de sa partition : ce sont les deux
@@ -386,7 +412,9 @@ export {
   writeLibrary,
   updateLibrary,
   sourcePath,
+  nomVideo,
   videoPath,
+  balayerVideos,
   audioPath,
   removeQuietly,
 };

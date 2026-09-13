@@ -152,19 +152,17 @@ function detacherVideo(data, id) {
   return { ok: true, morceau, ancienne };
 }
 
-/* La suppression renvoie ce qu'il reste à effacer sur le disque plutôt que de s'en
-   charger : ce fichier ne connaît pas les chemins, et c'est ce qui permet de le tester
-   sans rien écrire nulle part. */
+/* La suppression renvoie ce qu'il reste à effacer sur le disque plutôt que de s'en charger :
+   ce fichier ne connaît pas les chemins, et c'est ce qui permet de le tester sans rien écrire
+   nulle part. Les vidéos n'y figurent pas — un morceau peut en avoir laissé plusieurs, et
+   c'est un balayage du dossier qui s'en occupe. */
 function supprimerMorceau(data, id) {
   const morceau = trouver(data, id);
   if (!morceau) return { ok: false, error: "Morceau introuvable." };
   data.morceaux = data.morceaux.filter((m) => m.id !== id);
   return {
     ok: true,
-    fichiers: {
-      source: { id: morceau.id, ext: morceau.fichier.ext },
-      video: morceau.video ? { id: morceau.id, ext: morceau.video.ext } : null,
-    },
+    fichiers: { source: { id: morceau.id, ext: morceau.fichier.ext } },
   };
 }
 

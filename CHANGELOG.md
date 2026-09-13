@@ -32,6 +32,15 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **An export could be lost at the very last step.** Re-exporting a piece that already had a
+  video failed with a bare "Erreur serveur" after the full encoding time — three minutes of
+  waiting thrown away. The cause was a rename onto a file that was still open: the export
+  panel shows the previous video in a player pointing at the server, and it is still reading
+  it when the new one arrives. Windows refuses to rename over an open file. Each export now
+  gets a name of its own, so there is nothing to overwrite and no race to lose; the earlier
+  files are swept once the new one is safely recorded, and any that resist are swept later.
+  Read streams are also closed as soon as the response is, which they were not — every
+  interrupted playback used to leave a file handle behind.
 - **The scroll no longer stutters.** Measured, the position advanced one pixel per frame for
   over a second, then caught up in a seventeen-pixel jump — a sixteen-fold gap between the
   slowest and the fastest moment. The culprit was the interpolation between one beat and the

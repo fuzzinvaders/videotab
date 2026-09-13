@@ -28,7 +28,10 @@ export function videoParDefaut(): ReglagesVideo {
     teteX: 0.33,
     cadre: 'aucun',
     fond: 'theme',
-    couleur: '#4ade80',
+    // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
+    // choisi une, et continue de la suivre à chaque changement de thème.
+    couleur: null,
+    curseurStyle: 'les-deux',
     opacite: 0.3,
     compteAvantSec: 2,
     fondu: true,
@@ -60,7 +63,12 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
     fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),
-    couleur: typeof video.couleur === 'string' ? video.couleur : d.couleur,
+    couleur: typeof video.couleur === 'string' ? video.couleur : null,
+    curseurStyle: parmi(
+      video.curseurStyle,
+      ['trait', 'surlignage', 'les-deux'] as const,
+      d.curseurStyle,
+    ),
     opacite: nombre(video.opacite, d.opacite, 0, 0.9),
     compteAvantSec: nombre(video.compteAvantSec, d.compteAvantSec, 0, 12),
     fondu: video.fondu ?? d.fondu,

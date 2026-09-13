@@ -1,6 +1,6 @@
 import { formaterDuree } from './minutage'
 import { themeParId, type Theme } from './themes'
-import type { ReglagesVideo } from './types'
+import type { ReglagesVideo, StyleCurseur } from './types'
 
 /**
  * La scène : ce qu'on voit, image par image.
@@ -84,6 +84,9 @@ export function creerScene(options: OptionsScene): Scene {
   const { feuille, video, titre, artiste } = options
   const theme = themeParId(video.theme)
   const papier = options.papier !== undefined ? options.papier : theme.papier
+  // Le curseur prend la couleur du thème tant que personne n'en a choisi une. Résolu ici,
+  // une fois : plus bas, plus personne n'a à se demander d'où vient la teinte.
+  const couleur = video.couleur ?? theme.curseur
   const { largeur, hauteur } = video
   const compteAvantMs = Math.max(0, video.compteAvantSec) * 1000
   const defilement = video.disposition === 'defilement'
@@ -177,9 +180,9 @@ export function creerScene(options: OptionsScene): Scene {
 
     if (couche2d) {
       composerLaBande(couche2d, { curseur, scroll })
-      dessinerCadreDerriere(ctx, { zone, video, theme })
+      dessinerCadreDerriere(ctx, { zone, video, theme, couleur })
       ctx.drawImage(couche, zone.x, zone.y)
-      dessinerCadreDevant(ctx, { zone, video, theme, largeur, hauteur })
+      dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur })
     }
 
     if (bandeauH > 0) {
@@ -192,7 +195,7 @@ export function creerScene(options: OptionsScene): Scene {
         barreH,
         tMs,
         dureeMs: options.dureeMs,
-        couleur: video.couleur,
+        couleur,
         theme,
       })
     }
@@ -203,7 +206,7 @@ export function creerScene(options: OptionsScene): Scene {
         y: hauteur / 2,
         taille: Math.round(hauteur * (defilement ? 0.2 : 0.28)),
         restantMs: compteAvantMs - tMs,
-        couleur: video.couleur,
+        couleur,
       })
     }
 
@@ -269,7 +272,14 @@ export function creerScene(options: OptionsScene): Scene {
       c.drawImage(tuile.source, tuile.x, tuile.y, tuile.w, tuile.h)
     }
 
-    if (etat.curseur) dessinerCurseur(c, etat.curseur, video, Boolean(options.trainee))
+    if (etat.curseur) {
+      dessinerCurseur(c, etat.curseur, {
+        couleur,
+        opacite: video.opacite,
+        style: video.curseurStyle,
+        trainee: Boolean(options.trainee),
+      })
+    }
     c.restore()
 
     if (defilement) effacerLesBords(c, zone.w, zone.h)
@@ -311,14 +321,19 @@ function effacerLesBords(c: CanvasRenderingContext2D, w: number, h: number) {
 
 function dessinerCadreDerriere(
   ctx: CanvasRenderingContext2D,
-  o: { zone: { x: number; y: number; w: number; h: number }; video: ReglagesVideo; theme: Theme },
+  o: {
+    zone: { x: number; y: number; w: number; h: number }
+    video: ReglagesVideo
+    theme: Theme
+    couleur: string
+  },
 ) {
   if (o.video.cadre !== 'lueur') return
   const rayon = Math.min(o.zone.h * 0.12, 28)
   ctx.save()
   // Le halo est peint *sous* la bande : dessiné par-dessus, il voilerait les chiffres qu'il
   // est censé mettre en valeur.
-  ctx.shadowColor = o.video.couleur
+  ctx.shadowColor = o.couleur
   ctx.shadowBlur = Math.round(o.zone.h * 0.22)
   ctx.fillStyle = o.theme.papier ?? o.theme.fond
   ctx.beginPath()
@@ -333,6 +348,7 @@ function dessinerCadreDevant(
     zone: { x: number; y: number; w: number; h: number }
     video: ReglagesVideo
     theme: Theme
+    couleur: string
     largeur: number
     hauteur: number
   },
@@ -340,7 +356,7 @@ function dessinerCadreDevant(
   if (o.video.cadre === 'carte' || o.video.cadre === 'lueur') {
     const rayon = Math.min(o.zone.h * 0.12, 28)
     ctx.save()
-    ctx.strokeStyle = o.video.cadre === 'lueur' ? o.video.couleur : o.theme.lignes
+    ctx.strokeStyle = o.video.cadre === 'lueur' ? o.couleur : o.theme.lignes
     ctx.globalAlpha = o.video.cadre === 'lueur' ? 0.8 : 0.5
     ctx.lineWidth = Math.max(2, Math.round(o.hauteur * 0.0025))
     ctx.beginPath()
@@ -352,7 +368,7 @@ function dessinerCadreDevant(
 
   if (o.video.cadre === 'bandes') {
     ctx.save()
-    ctx.fillStyle = o.video.couleur
+    ctx.fillStyle = o.couleur
     ctx.globalAlpha = 0.65
     const trait = Math.max(2, Math.round(o.hauteur * 0.003))
     ctx.fillRect(o.zone.x, o.zone.y - trait, o.zone.w, trait)
@@ -384,28 +400,40 @@ function dessinerCadreDevant(
 function dessinerCurseur(
   ctx: CanvasRenderingContext2D,
   curseur: Curseur,
-  video: ReglagesVideo,
-  trainee: boolean,
+  o: { couleur: string; opacite: number; style: StyleCurseur; trainee: boolean },
 ) {
+  const surlignage = o.trainee ? curseur.ligne : curseur.bloc
+  const montrerSurlignage = o.style !== 'trait' && Boolean(surlignage)
+  /* Le trait est montré sauf quand on a demandé le surlignage seul — et même dans ce cas, on
+     le garde s'il n'y a rien à surligner. Un PDF en défilement n'a ni temps ni ligne à
+     désigner : sans cette réserve, « surlignage seul » y donnerait un curseur invisible,
+     c'est-à-dire un réglage qui a l'air cassé. */
+  const montrerTrait = o.style !== 'surlignage' || !montrerSurlignage
+
   ctx.save()
-  ctx.fillStyle = video.couleur
-  if (trainee && curseur.ligne) {
-    // Sur un PDF, on ne sait pas où sont les notes : surligner « le temps en cours » serait
-    // un mensonge. La traînée ne dit que ce qu'on sait — on en est là dans la ligne.
-    ctx.globalAlpha = video.opacite * 0.45
-    ctx.fillRect(curseur.ligne.x0, curseur.y, curseur.x - curseur.ligne.x0, curseur.h)
-  } else if (curseur.bloc) {
-    ctx.globalAlpha = video.opacite
-    ctx.fillRect(curseur.bloc.x, curseur.y, Math.max(curseur.bloc.w, 2), curseur.h)
+  ctx.fillStyle = o.couleur
+
+  if (montrerSurlignage) {
+    if (o.trainee && curseur.ligne) {
+      // Sur un PDF, on ne sait pas où sont les notes : surligner « le temps en cours » serait
+      // un mensonge. La traînée ne dit que ce qu'on sait — on en est là dans la ligne.
+      ctx.globalAlpha = o.opacite * 0.45
+      ctx.fillRect(curseur.ligne.x0, curseur.y, curseur.x - curseur.ligne.x0, curseur.h)
+    } else if (curseur.bloc) {
+      ctx.globalAlpha = o.opacite
+      ctx.fillRect(curseur.bloc.x, curseur.y, Math.max(curseur.bloc.w, 2), curseur.h)
+    }
   }
 
-  /* Le trait vif : c'est lui qu'on suit des yeux, le surlignage ne fait que le situer.
-     Son épaisseur est prise sur la hauteur du système plutôt que fixée en pixels — on
-     dessine ici dans le repère de la partition, que la scène met ensuite à l'échelle, et
-     un trait de trois pixels finirait invisible sur une partition très large. */
-  const epaisseur = Math.max(2, curseur.h * 0.035)
-  ctx.globalAlpha = 1
-  ctx.fillRect(curseur.x - epaisseur / 2, curseur.y, epaisseur, curseur.h)
+  if (montrerTrait) {
+    /* Le trait vif : c'est lui qu'on suit des yeux, le surlignage ne fait que le situer.
+       Son épaisseur est prise sur la hauteur du système plutôt que fixée en pixels — on
+       dessine ici dans le repère de la partition, que la scène met ensuite à l'échelle, et
+       un trait de trois pixels finirait invisible sur une partition très large. */
+    const epaisseur = Math.max(2, curseur.h * 0.035)
+    ctx.globalAlpha = 1
+    ctx.fillRect(curseur.x - epaisseur / 2, curseur.y, epaisseur, curseur.h)
+  }
   ctx.restore()
 }
 

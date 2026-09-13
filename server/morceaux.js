@@ -30,7 +30,10 @@ function reglagesParDefaut(type) {
     teteX: 0.33,
     cadre: "aucun",
     fond: "theme",
-    couleur: "#4ade80",
+    // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
+    // choisi une, et continue de la suivre quand on change de thème.
+    couleur: null,
+    curseurStyle: "les-deux",
     // Le surlignage situe le temps en cours, le trait vif dit où l'on en est dedans. Trop
     // opaque, il mangerait les chiffres de doigté qu'il est censé désigner.
     opacite: 0.3,

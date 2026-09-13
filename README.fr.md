@@ -91,9 +91,12 @@ opérations de bibliothèque.
 - **Encadrement** — aucun, carte à coins arrondis, halo coloré, bandes translucides, ou
   vignette. Les deux bouts de la bande s'effacent toujours en dégradé : une mesure qui
   apparaît d'un coup au bord de l'image attire l'œil au mauvais moment.
+- **Curseur** — le trait à l'instant exact, le surlignage du temps en cours, ou les deux. Sur
+  une tablature serrée les deux disent la même chose et se gênent ; sur une vidéo regardée de
+  loin, les deux valent mieux qu'un. La couleur suit le thème tant qu'on n'en choisit pas une,
+  et le bouton **Auto** l'y ramène.
 - **Vidéo** — 1080p, 720p ou format vertical pour un téléphone ; 24, 30 ou 60 images par
-  seconde ; couleur et opacité du curseur ; décompte avant le départ ; fondu ; titre et barre
-  de progression qu'on peut couper.
+  seconde ; décompte avant le départ ; fondu ; titre et barre de progression qu'on peut couper.
 - **Exporter** — la vidéo est fabriquée dans l'onglet et **en temps réel** (voir plus bas).
   Elle se télécharge, et se garde sur le serveur si on coche la case — pour la retrouver
   depuis une autre machine.

@@ -32,10 +32,24 @@ describe('completerVideo', () => {
     expect(fou.compteAvantSec).toBeLessThanOrEqual(12)
   })
 
-  it('refuse une disposition ou un cadre inventés', () => {
-    const complet = completerVideo({ disposition: 'diagonale', cadre: 'doré' } as never)
+  it('refuse une disposition, un cadre ou un style de curseur inventés', () => {
+    const complet = completerVideo({
+      disposition: 'diagonale',
+      cadre: 'doré',
+      curseurStyle: 'clignotant',
+    } as never)
     expect(complet.disposition).toBe(videoParDefaut().disposition)
     expect(complet.cadre).toBe(videoParDefaut().cadre)
+    expect(complet.curseurStyle).toBe(videoParDefaut().curseurStyle)
+  })
+
+  /* La couleur absente doit le rester : c'est elle qui fait suivre le thème. Lui donner une
+     valeur par défaut recréerait le bug qu'on vient de corriger — un curseur figé sur la
+     teinte d'un thème essayé une fois, et qui ne suit plus jamais les suivants. */
+  it('laisse la couleur du curseur à null plutôt que d’en inventer une', () => {
+    expect(completerVideo({ theme: 'neon' } as never).couleur).toBeNull()
+    expect(completerVideo({ couleur: 42 } as never).couleur).toBeNull()
+    expect(completerVideo({ couleur: '#123456' } as never).couleur).toBe('#123456')
   })
 
   it('ne prend pas un NaN pour une valeur', () => {

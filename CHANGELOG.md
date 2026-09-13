@@ -7,7 +7,21 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ## Unreleased
 
+### Fixed
+
+- **The cursor colour no longer gets stuck on a theme you merely tried out.** It used to look
+  the current colour up in the swatch palette to guess whether it had been chosen on purpose —
+  a guess that failed for every theme whose colour was not in that palette, and the magenta of
+  the neon theme then stayed glued to all the others. The colour is now simply absent until
+  someone picks one, and an **Auto** chip puts it back. A colour pinned from elsewhere gets its
+  own swatch in the row, so something is always visibly selected.
+
 ### Added
+
+- **The cursor can show the line, the beat highlight, or both.** On a tight tablature the two
+  say the same thing twice and the line falls in the middle of the block it is crossing. Where
+  there is no beat to highlight — a PDF scrolling horizontally — the line comes back on its
+  own rather than leaving an invisible cursor.
 
 - **Horizontal scrolling, and it is now the default.** The whole piece becomes one strip
   gliding under a fixed playhead, instead of a page scrolling downwards. The eye stops moving

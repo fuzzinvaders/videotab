@@ -87,8 +87,12 @@ covers timing, staff detection, server-side validation and the library operation
 - **Framing** — none, a rounded card, a coloured halo, translucent bands, or a vignette. Both
   ends of the strip always fade out: a bar appearing abruptly at the edge of the frame catches
   the eye at the wrong moment.
-- **Video** — 1080p, 720p or a vertical format for phones; 24, 30 or 60 frames per second;
-  cursor colour and opacity; a count-in; a fade; title and progress bar you can switch off.
+- **Cursor** — the line at the exact instant, the highlight over the current beat, or both.
+  On a tight tablature the two say the same thing and get in each other's way; on a video
+  watched from a distance, both beat one. The colour follows the theme until you pick one, and
+  an **Auto** button brings it back.
+- **Video** — 1080p, 720p or a vertical format for phones; 24, 30 or 60 frames per second; a
+  count-in; a fade; title and progress bar you can switch off.
 - **Export** — the video is made in the tab and **in real time** (see below). It downloads, and
   it is kept on the server if you tick the box — to find it again from another machine.
 

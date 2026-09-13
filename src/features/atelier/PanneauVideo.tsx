@@ -1,7 +1,13 @@
 import { Card } from '../../components/ui/Card'
 import { Field, Select } from '../../components/ui/Field'
 import { THEMES, themeParId } from '../../lib/themes'
-import type { Cadre, Disposition, FondVideo, ReglagesVideo } from '../../lib/types'
+import type {
+  Cadre,
+  Disposition,
+  FondVideo,
+  ReglagesVideo,
+  StyleCurseur,
+} from '../../lib/types'
 import { alphaPossible } from '../../lib/video'
 
 /* Trois définitions, pas douze. 1080p pour publier, 720p quand la machine peine à encoder en
@@ -31,6 +37,24 @@ const CADRES: Array<{ id: Cadre; nom: string }> = [
   { id: 'lueur', nom: 'Lueur — halo de la couleur du curseur' },
   { id: 'bandes', nom: 'Bandes — fond translucide et liserés' },
   { id: 'vignette', nom: 'Vignette — bords assombris' },
+]
+
+const STYLES: Array<{ id: StyleCurseur; nom: string; aide: string }> = [
+  {
+    id: 'les-deux',
+    nom: 'Trait et surlignage',
+    aide: 'Le trait pour l’instant exact, le surlignage pour le temps en cours.',
+  },
+  {
+    id: 'trait',
+    nom: 'Trait seul',
+    aide: 'Rien que la barre verticale. Le plus lisible sur une tablature serrée, où le surlignage se confond avec le trait qui le traverse.',
+  },
+  {
+    id: 'surlignage',
+    nom: 'Surlignage seul',
+    aide: 'Rien que le temps en cours, comme une partition qu’on annoterait au fluo. Sans temps à désigner — un PDF en défilement — le trait revient tout seul.',
+  },
 ]
 
 const COULEURS = ['#4ade80', '#f59e0b', '#ef4444', '#38bdf8', '#a855f7', '#ec4899', '#ffffff']
@@ -77,16 +101,12 @@ export function PanneauMiseEnScene({
       <Field label="Thème" hint={theme.description}>
         <Select
           value={video.theme}
-          onChange={(e) => {
-            const choisi = themeParId(e.target.value)
-            // La couleur du curseur suit le thème tant qu'on n'y a pas touché soi-même :
-            // un curseur ambre sur un thème néon violet est un oubli, pas un choix.
-            modifier((v) => ({
-              ...v,
-              theme: choisi.id,
-              couleur: COULEURS.includes(v.couleur) ? choisi.curseur : v.couleur,
-            }))
-          }}
+          /* Rien d'autre à faire que changer le thème : la couleur du curseur le suit d'elle-
+             même tant qu'elle vaut `null`. C'est tout l'intérêt de ne pas la stocker — la
+             version précédente cherchait l'ancienne couleur dans la palette pour deviner si
+             elle avait été choisie, et se trompait dès qu'un thème en proposait une qui n'y
+             figurait pas : le violet du thème Néon restait ensuite collé à tous les autres. */
+          onChange={(e) => modifier((v) => ({ ...v, theme: themeParId(e.target.value).id }))}
         >
           {THEMES.map((t) => (
             <option key={t.id} value={t.id}>
@@ -163,6 +183,7 @@ export function PanneauVideo({
   video: ReglagesVideo
   modifier: (mutation: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
+  const theme = themeParId(video.theme)
   const definition =
     DEFINITIONS.find((d) => d.largeur === video.largeur && d.hauteur === video.hauteur)?.label ??
     DEFINITIONS[0].label
@@ -219,9 +240,37 @@ export function PanneauVideo({
         </Select>
       </Field>
 
+      <Field label="Curseur" hint={STYLES.find((s) => s.id === video.curseurStyle)?.aide}>
+        <Select
+          value={video.curseurStyle}
+          onChange={(e) =>
+            modifier((v) => ({ ...v, curseurStyle: e.target.value as StyleCurseur }))
+          }
+        >
+          {STYLES.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nom}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
       <div>
         <span className="mb-1 block text-sm font-medium text-slate-300">Couleur du curseur</span>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* « Automatique » est une valeur à part entière, pas l'absence de choix : c'est
+              elle qui fait suivre le thème, et c'est elle qu'on retrouve pour se dépanner
+              après avoir essayé les couleurs une à une. */}
+          <button
+            onClick={() => modifier((v) => ({ ...v, couleur: null }))}
+            style={{ backgroundColor: theme.curseur }}
+            className={`flex h-8 items-center rounded-full px-3 text-xs font-medium text-slate-950 ring-offset-2 ring-offset-slate-900 transition-all ${
+              video.couleur === null ? 'ring-2 ring-slate-100' : ''
+            }`}
+            title="Reprendre la couleur du thème"
+          >
+            Auto
+          </button>
           {COULEURS.map((couleur) => (
             <button
               key={couleur}
@@ -233,18 +282,31 @@ export function PanneauVideo({
               aria-label={`Curseur ${couleur}`}
             />
           ))}
+          {/* Une couleur figée venue d'ailleurs (un thème d'avant, un JSON à la main) a droit
+              à sa pastille : sans elle, aucune ne serait entourée et l'écran donnerait à
+              croire que le réglage ne répond plus. */}
+          {video.couleur && !COULEURS.includes(video.couleur) ? (
+            <button
+              onClick={() => modifier((v) => ({ ...v, couleur: video.couleur }))}
+              style={{ backgroundColor: video.couleur }}
+              className="h-8 w-8 rounded-full ring-2 ring-slate-100 ring-offset-2 ring-offset-slate-900"
+              aria-label={`Curseur ${video.couleur}`}
+            />
+          ) : null}
         </div>
       </div>
 
-      <Curseur
-        label="Surlignage"
-        valeur={video.opacite}
-        min={0}
-        max={0.8}
-        pas={0.05}
-        affichage={`${Math.round(video.opacite * 100)} %`}
-        onChange={(opacite) => modifier((v) => ({ ...v, opacite }))}
-      />
+      {video.curseurStyle !== 'trait' ? (
+        <Curseur
+          label="Opacité du surlignage"
+          valeur={video.opacite}
+          min={0}
+          max={0.8}
+          pas={0.05}
+          affichage={`${Math.round(video.opacite * 100)} %`}
+          onChange={(opacite) => modifier((v) => ({ ...v, opacite }))}
+        />
+      ) : null}
 
       <Curseur
         label="Décompte avant le départ"

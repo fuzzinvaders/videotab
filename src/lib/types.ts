@@ -21,6 +21,16 @@ export type Disposition = 'page' | 'defilement'
 
 export type Cadre = 'aucun' | 'carte' | 'lueur' | 'vignette' | 'bandes'
 
+/**
+ * Ce que le curseur montre.
+ *
+ * Les deux disent la même chose de deux façons, et sur une tablature serrée ils se gênent :
+ * le trait tombe au milieu du temps qu'on vient de surligner. D'où le choix — le trait seul
+ * pour suivre l'instant exact, le surlignage seul pour lire le temps en cours comme sur une
+ * partition annotée, les deux quand la vidéo est regardée de loin.
+ */
+export type StyleCurseur = 'trait' | 'surlignage' | 'les-deux'
+
 /** Ce qu'il y a derrière la partition quand la vidéo doit être incrustée ailleurs. */
 export type FondVideo = 'theme' | 'chroma' | 'transparent'
 
@@ -42,7 +52,17 @@ export interface ReglagesVideo {
   teteX: number
   cadre: Cadre
   fond: FondVideo
-  couleur: string
+  /**
+   * Couleur du curseur, ou `null` pour prendre celle du thème.
+   *
+   * Le `null` est le point important : sans lui, il faudrait deviner si la couleur en place
+   * a été choisie ou seulement héritée, et la seule façon de deviner — la chercher dans la
+   * palette — se trompe dès qu'un thème propose une teinte qui n'y figure pas. Une valeur
+   * absente ne peut pas, elle, se désynchroniser de son thème.
+   */
+  couleur: string | null
+  /** Le trait à l'instant exact, le surlignage du temps en cours, ou les deux. */
+  curseurStyle: StyleCurseur
   opacite: number
   compteAvantSec: number
   fondu: boolean

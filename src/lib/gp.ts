@@ -126,20 +126,20 @@ export function appliquerTheme(api: alphaTab.AlphaTabApi, theme: Theme): void {
  * corde jouer, le chiffre dit à quelle case. L'œil trouve la corde avant d'avoir lu le
  * chiffre, ce qui est exactement ce qu'on veut quand la vidéo défile pendant qu'on joue.
  *
- * Le nombre de cordes est repris de l'accordage de la portée, pas supposé : une basse à
- * quatre cordes et une guitare à sept doivent toutes deux avoir leur corde grave en rouge.
+ * La numérotation des cordes d'alphaTab part de la plus grave, si bien qu'une basse à quatre
+ * cordes et une guitare à sept ont toutes deux leur corde grave en premier — rien à compter,
+ * rien à retourner.
  */
 export function colorerLesCordes(score: alphaTab.model.Score, theme: Theme): void {
   if (!theme.cordes) return
 
   for (const piste of score.tracks) {
     for (const portee of piste.staves) {
-      const nombreDeCordes = portee.tuning.length || 6
       for (const mesure of portee.bars) {
         for (const voix of mesure.voices) {
           for (const temps of voix.beats) {
             for (const note of temps.notes) {
-              const couleur = couleurDeCorde(theme, note.string, nombreDeCordes)
+              const couleur = couleurDeCorde(theme, note.string)
               if (!couleur) continue
               // Le style n'existe pas tant qu'on n'a rien demandé : c'est ce qui permet à une
               // partition non colorée de ne rien coûter en mémoire.

@@ -9,6 +9,12 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **String colours were upside down.** alphaTab documents string 1 as *the lowest string and
+  the bottom line of the tablature*; the mapping assumed the opposite and counted from the
+  treble. Every note came out with its neighbour's colour — a bug that breaks nothing, renders
+  fine and is invisible until you compare against a reference. Found on a real four-string bass
+  file, which is exactly the case the earlier synthetic fixtures could not catch. The
+  convention is now quoted in the code and pinned by a test.
 - **The cursor colour no longer gets stuck on a theme you merely tried out.** It used to look
   the current colour up in the swatch palette to guess whether it had been chosen on purpose —
   a guess that failed for every theme whose colour was not in that palette, and the magenta of

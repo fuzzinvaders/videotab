@@ -151,21 +151,23 @@ export function hexVersRgb(hex: string): { r: number; g: number; b: number } {
 }
 
 /**
- * La couleur d'une corde, comptée depuis la plus grave.
+ * La couleur d'une corde.
  *
- * C'est le sens qu'il faut : sur une guitare à six cordes comme sur une basse à quatre, la
- * corde du bas est le mi grave. Compter depuis l'aigu donnerait au sol d'une basse la couleur
- * du mi aigu d'une guitare, et deux instruments côte à côte ne se liraient plus pareil.
+ * La numérotation est celle d'alphaTab, et elle mérite d'être citée parce qu'elle est
+ * contre-intuitive et que s'en écarter retourne toute la palette :
+ *
+ *   « 1 is the lowest string on the guitar and the bottom line on the tablature. »
+ *
+ * Autrement dit la corde 1 est la plus **grave**, celle du bas de la tablature, et le numéro
+ * monte vers l'aigu. La palette part donc du grave elle aussi, ce qui a l'avantage de donner
+ * au mi grave la même couleur sur une guitare à six cordes et sur une basse à quatre — sur
+ * les deux, c'est la corde 1.
  */
-export function couleurDeCorde(
-  theme: Theme,
-  numeroDeCorde: number,
-  nombreDeCordes: number,
-): string | null {
+export function couleurDeCorde(theme: Theme, numeroDeCorde: number): string | null {
   if (!theme.cordes) return null
-  const depuisLeGrave = nombreDeCordes - numeroDeCorde
+  const depuisLeGrave = numeroDeCorde - 1
   if (depuisLeGrave < 0) return null
-  // Une guitare sept ou huit cordes déborde de la palette : les cordes graves supplémentaires
-  // reprennent la couleur du mi, plutôt que de laisser un trou noir en bas de la portée.
+  // Une guitare sept ou huit cordes déborde de la palette : les cordes aiguës supplémentaires
+  // reprennent la dernière couleur, plutôt que de rester sans couleur du tout.
   return theme.cordes[Math.min(depuisLeGrave, theme.cordes.length - 1)]
 }

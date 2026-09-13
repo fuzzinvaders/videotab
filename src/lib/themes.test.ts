@@ -25,23 +25,32 @@ describe('themeParId', () => {
 })
 
 describe('couleurDeCorde', () => {
-  it('donne la même couleur au mi grave d’une guitare et d’une basse', () => {
-    // Corde 6 sur six, corde 4 sur quatre : c'est le mi grave dans les deux cas.
-    expect(couleurDeCorde(cordes, 6, 6)).toBe(couleurDeCorde(cordes, 4, 4))
+  /* Le test qui compte. alphaTab documente « 1 is the lowest string on the guitar and the
+     bottom line on the tablature » : la corde 1 est la plus grave. Prendre la convention à
+     l'envers retourne toute la palette sans rien casser d'autre — la vidéo sort, elle est
+     jolie, et chaque note est de la mauvaise couleur. Ce test-là est le seul garde-fou. */
+  it('donne la première couleur à la corde 1, qui est la plus grave', () => {
+    expect(couleurDeCorde(cordes, 1)).toBe(cordes.cordes![0])
   })
 
-  it('remonte la palette depuis le grave vers l’aigu', () => {
-    const guitare = [6, 5, 4, 3, 2, 1].map((corde) => couleurDeCorde(cordes, corde, 6))
+  it('monte dans la palette à mesure qu’on monte vers l’aigu', () => {
+    const guitare = [1, 2, 3, 4, 5, 6].map((corde) => couleurDeCorde(cordes, corde))
     expect(guitare).toEqual(cordes.cordes)
   })
 
-  it('ne laisse pas les cordes d’une sept-cordes sans couleur', () => {
-    expect(couleurDeCorde(cordes, 7, 7)).toBe(cordes.cordes![0])
-    expect(couleurDeCorde(cordes, 1, 7)).toBeTypeOf('string')
+  it('donne la même couleur au mi grave d’une guitare et d’une basse', () => {
+    // Sur les deux, le mi grave est la corde 1 : rien à compter, rien à retourner.
+    expect(couleurDeCorde(cordes, 1)).toBe(couleurDeCorde(cordes, 1))
+    // Et la corde la plus aiguë d'une basse (4) n'est pas celle d'une guitare (6).
+    expect(couleurDeCorde(cordes, 4)).not.toBe(couleurDeCorde(cordes, 6))
+  })
+
+  it('ne laisse pas la septième corde sans couleur', () => {
+    expect(couleurDeCorde(cordes, 7)).toBe(cordes.cordes![cordes.cordes!.length - 1])
   })
 
   it('ne colore rien sur un thème qui ne colore pas les cordes', () => {
-    expect(couleurDeCorde(ardoise, 3, 6)).toBeNull()
+    expect(couleurDeCorde(ardoise, 3)).toBeNull()
   })
 })
 

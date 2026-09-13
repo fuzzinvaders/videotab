@@ -1,0 +1,62 @@
+# Déploiement derrière Traefik, en HTTPS, sur un réseau Docker partagé.
+#
+#   docker network create proxy   # si le réseau n'existe pas encore
+#   docker compose -f docker-compose.traefik.yml up -d
+#   # Mise à jour :
+#   docker compose -f docker-compose.traefik.yml pull && \
+#     docker compose -f docker-compose.traefik.yml up -d
+#
+# Deux valeurs viennent d'un fichier .env placé à côté de ce fichier (voir .env.example) :
+# DOMAIN (obligatoire) et AUTH_SECRET (recommandé).
+#
+# ATTENTION si Traefik gère plusieurs domaines avec résolution ACME en DNS-01 : le resolver
+# est lié à UN SEUL fournisseur DNS. Si ${DOMAIN} est chez un autre fournisseur que celui déjà
+# configuré, ajoute un second resolver dans Traefik et référence son nom dans `certresolver`
+# ci-dessous — sinon Traefik sert son certificat auto-signé par défaut à la place du vrai.
+
+name: videotab
+
+services:
+  videotab:
+    # Image PUBLIQUE par défaut : rien à builder, rien à configurer, aucun login.
+    # Surcharge possible via VIDEOTAB_IMAGE (registre privé, tag figé...).
+    image: ${VIDEOTAB_IMAGE:-ghcr.io/fuzzinvaders/videotab:latest}
+    container_name: videotab
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      # Origine publique EXACTE de l'app (schéma + domaine) : obligatoire pour que les
+      # requêtes d'écriture ne soient pas rejetées comme inter-sites.
+      ORIGIN: https://${DOMAIN:?Définis DOMAIN=ton-domaine.tld dans .env}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      VIDEO_MAX_MB: ${VIDEO_MAX_MB:-512}
+    volumes:
+      - videotab-data:/data
+    # Pas de "ports:" ici : Traefik route le trafic via le réseau partagé, pas besoin
+    # d'exposer le port sur l'hôte.
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      # Utile dès qu'un conteneur voit plusieurs réseaux : indique lequel joindre.
+      - traefik.docker.network=proxy
+      # La règle attend des accents graves autour de l'hôte, pas des guillemets.
+      - 'traefik.http.routers.videotab.rule=Host(`${DOMAIN:?Définis DOMAIN=ton-domaine.tld dans .env}`)'
+      - traefik.http.routers.videotab.entrypoints=websecure
+      - traefik.http.routers.videotab.tls=true
+      # Nom du resolver ACME configuré dans Traefik pour le fournisseur DNS qui gère CE
+      # domaine précisément (voir l'avertissement en haut de fichier).
+      # - traefik.http.routers.videotab.tls.certresolver=letsencrypt
+      - traefik.http.services.videotab.loadbalancer.server.port=3000
+      # Une vidéo de plusieurs centaines de mégaoctets arrive en une seule requête : sans ce
+      # relèvement, Traefik la coupe bien avant la fin et l'export se perd au dernier mètre.
+      - traefik.http.middlewares.videotab-gros.buffering.maxRequestBodyBytes=536870912
+      - traefik.http.middlewares.videotab-gros.buffering.memRequestBodyBytes=2097152
+      - traefik.http.routers.videotab.middlewares=videotab-gros
+
+volumes:
+  videotab-data:
+
+networks:
+  proxy:
+    external: true

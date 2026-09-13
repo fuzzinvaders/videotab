@@ -9,6 +9,12 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The exported video can be cropped to the strip itself.** A 1920×1080 file carrying eight
+  hundred pixels of nothing above and below the tablature is heavy for what it shows, and at
+  editing time it has to be positioned by guesswork. "Hauteur de la bande" makes the video as
+  tall as the band — 1920×230 on a bass tablature at four bars — so it weighs what it shows and
+  drops into place. The height is rounded to an even number, which several encoders require.
+
 - **The air around the tablature is now a setting.** Two margins were being conflated: the crop
   margin, which is a technical constraint — do not cut the stems or the rhythm marks — and the
   breathing room one deliberately leaves, which is a layout choice. Only the first existed, and
@@ -26,6 +32,19 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **The scroll no longer stutters.** Measured, the position advanced one pixel per frame for
+  over a second, then caught up in a seventeen-pixel jump — a sixteen-fold gap between the
+  slowest and the fastest moment. The culprit was the interpolation between one beat and the
+  next, asked for afresh on every frame. Rather than repair that computation, it is no longer
+  used: the position of each beat is now surveyed once, taking from the tick lookup only what
+  it states without error — *which* beat is playing — and reading the exact instant from the
+  tick table that produced the audio. Between two beats a monotone Hermite curve decides, which
+  passes through every beat exactly, keeps its velocity continuous, and can never overshoot —
+  a guarantee that matters here, since an overshoot would make the tablature slide backwards.
+- **The export is now paced by the screen refresh** rather than by a timer. A timer delivers
+  frames at uneven intervals, which the recorder timestamps as it receives them and the eye
+  reads as judder. The timer stays as a backstop, since a backgrounded tab suspends the refresh
+  entirely — the video then loses its smoothness but still finishes.
 - **The score was cropped on the wrong bounds, so it was not really cropped at all.**
   alphaTab's bounds come in three nested levels and the first two are misleading: a staff
   system and a master bar both declare the height of everything orbiting the music — tempo

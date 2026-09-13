@@ -155,14 +155,31 @@ export async function enregistrer(
   try {
     await new Promise<void>((resolve) => {
       const pas = 1000 / options.fps
-      let prochaine = 0
+      let rafId = 0
+      let veille = 0
+
+      /* Le rythme vient de l'écran, l'instant vient du son. Le premier donne une cadence
+         régulière — un rendu par rafraîchissement, aligné sur le balayage — et c'est ce qui
+         manquait : un minuteur seul livre ses images à des intervalles inégaux, que le
+         magnétophone horodate tels quels et que l'œil lit comme des à-coups.
+
+         Le minuteur reste en second rideau, parce qu'un onglet passé en arrière-plan suspend
+         complètement le rafraîchissement. La vidéo y perd en fluidité, mais elle continue et
+         elle se termine. */
+      function planifier() {
+        rafId = requestAnimationFrame(image)
+        veille = window.setTimeout(image, Math.max(64, pas * 3))
+      }
 
       function image() {
+        cancelAnimationFrame(rafId)
+        clearTimeout(veille)
         if (interrompu) return resolve()
+
         const tMs = maintenantMs()
         if (tMs >= scene.dureeMs) {
-          // Une dernière image à la durée exacte : la barre de progression doit finir
-          // pleine, et le fondu de sortie arriver au bout de sa course.
+          // Une dernière image à la durée exacte : la barre de progression doit finir pleine,
+          // et le fondu de sortie arriver au bout de sa course.
           scene.dessiner(ctx!, scene.dureeMs)
           options.onProgression?.(1, scene.dureeMs)
           resolve()
@@ -172,16 +189,10 @@ export async function enregistrer(
           scene.dessiner(ctx!, tMs)
           options.onProgression?.(tMs / scene.dureeMs, tMs)
         }
-        // Le prochain rendez-vous est calculé depuis le départ, pas depuis maintenant :
-        // sinon chaque retard s'ajoute au suivant et la cadence s'effondre doucement.
-        prochaine += pas
-        // `setTimeout` plutôt que `requestAnimationFrame` : un onglet passé en arrière-plan
-        // suspend complètement le second, alors que le premier continue au ralenti. La
-        // vidéo y perd en fluidité, mais elle reste synchrone et elle se termine.
-        setTimeout(image, Math.max(0, prochaine - maintenantMs()))
+        planifier()
       }
 
-      image()
+      planifier()
     })
   } finally {
     options.signal?.removeEventListener('abort', onAbort)

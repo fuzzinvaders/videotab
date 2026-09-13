@@ -2,6 +2,7 @@ import { Card } from '../../components/ui/Card'
 import { Field, Select } from '../../components/ui/Field'
 import { THEMES, themeParId } from '../../lib/themes'
 import type {
+  Cadrage,
   Cadre,
   Disposition,
   FondVideo,
@@ -237,6 +238,24 @@ export function PanneauVideo({
           <option value="24">24</option>
           <option value="30">30</option>
           <option value="60">60</option>
+        </Select>
+      </Field>
+
+      <Field
+        label="Cadrage"
+        hint={
+          video.cadrage === 'bande'
+            ? 'La vidéo fait la hauteur de la bande, et rien de plus. Elle pèse ce qu’elle montre et se pose au montage sans chercher où est la tablature dedans.'
+            : 'Le format annoncé ci-dessus, la bande au milieu.'
+        }
+      >
+        <Select
+          value={video.cadrage}
+          onChange={(e) => modifier((v) => ({ ...v, cadrage: e.target.value as Cadrage }))}
+          disabled={video.disposition !== 'defilement'}
+        >
+          <option value="image">Image entière</option>
+          <option value="bande">Hauteur de la bande</option>
         </Select>
       </Field>
 

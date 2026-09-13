@@ -34,6 +34,7 @@ function reglagesParDefaut(type) {
     // voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
     teteX: 0.33,
     cadre: "aucun",
+    cadrage: "image",
     fond: "theme",
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
     // choisi une, et continue de la suivre quand on change de thème.

@@ -34,6 +34,9 @@ export function videoParDefaut(): ReglagesVideo {
     // pour voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
     teteX: 0.33,
     cadre: 'aucun',
+    // L'image entière par défaut : c'est le format qu'on attend d'une vidéo, et le cadrage sur
+    // la bande ne prend son sens qu'une fois qu'on sait qu'on va l'incruster.
+    cadrage: 'image',
     fond: 'theme',
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
     // choisi une, et continue de la suivre à chaque changement de thème.
@@ -71,6 +74,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     hauteurMax: nombre(video.hauteurMax, d.hauteurMax, 0.1, 0.95),
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
+    cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),
     couleur: typeof video.couleur === 'string' ? video.couleur : null,
     curseurStyle: parmi(

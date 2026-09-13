@@ -6,9 +6,10 @@ import { avecSilenceAvant } from '../../lib/audio'
 import {
   appliquerTempo,
   appliquerTheme,
+  ancresDeDefilement,
   collecteurDeTuiles,
   colorerLesCordes,
-  curseurGp,
+  curseurDepuisAncres,
   etendueDesPortees,
   largeurDeMesure,
   masquerEntete,
@@ -184,12 +185,15 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       dureeMs: bande.dureeMs + decalageMs,
       titre: morceau.titre,
       artiste: morceau.artiste,
-      curseurA: curseurGp(
-        instance,
-        bande.reperes,
-        pistesVisibles(instance.score, gp.piste),
+      curseurA: curseurDepuisAncres(
+        ancresDeDefilement(
+          instance,
+          bande.reperes,
+          pistesVisibles(instance.score, gp.piste),
+          bande.dureeMs,
+          etendue?.y0 ?? 0,
+        ),
         decalageMs,
-        etendue?.y0 ?? 0,
       ),
     })
   }, [feuille, bande, reglages.video, morceau.titre, morceau.artiste, gp])

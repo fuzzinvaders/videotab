@@ -1,5 +1,6 @@
 import * as alphaTab from '@coderline/alphatab'
 import { bufferDepuisEntrelace, contexteAudio } from './audio'
+import { courbeMonotone } from './courbe'
 import { largeurMedianeDeMesure } from './echelle'
 import type { Curseur, Feuille, Tuile } from './scene'
 import { couleurDeCorde, hexVersRgb, type Theme } from './themes'
@@ -359,43 +360,102 @@ export function tickA(reperes: Repere[], tempsMs: number): number {
  * en revanche jamais vers un temps qui a changé de ligne — sinon il traverserait la page
  * en diagonale à chaque fin de système.
  */
-export function curseurGp(
+/** L'instant où l'on joue ce tic — l'inverse exact de tickA, sur la même table. */
+export function tempsA(reperes: Repere[], tick: number): number {
+  if (reperes.length === 0) return 0
+  if (tick <= reperes[0].tick) return reperes[0].tempsMs
+
+  let bas = 0
+  let haut = reperes.length - 1
+  while (bas < haut) {
+    const milieu = (bas + haut + 1) >> 1
+    if (reperes[milieu].tick <= tick) bas = milieu
+    else haut = milieu - 1
+  }
+  const debut = reperes[bas]
+  const suivant = reperes[bas + 1]
+  if (!suivant) return debut.tempsMs
+  const part = (tick - debut.tick) / Math.max(1, suivant.tick - debut.tick)
+  return debut.tempsMs + (suivant.tempsMs - debut.tempsMs) * part
+}
+
+export interface AncreDefilement {
+  tempsMs: number
+  /** Position du trait au moment où ce temps est joué. */
+  x: number
+  y: number
+  h: number
+  bloc: { x: number; w: number }
+}
+
+/**
+ * Où se trouve le curseur à chaque temps du morceau, relevé une fois pour toutes.
+ *
+ * On demandait auparavant la position à chaque image, et on interpolait entre le temps en
+ * cours et le suivant avec les tics que la table de recherche annonce. Cette interpolation
+ * était fausse : mesurée, la position avançait d'un pixel par image pendant plus d'une
+ * seconde, puis rattrapait d'un bond de dix-sept. Un rapport de seize entre la vitesse la
+ * plus lente et la plus rapide — c'est cela qu'on voyait saccader.
+ *
+ * Plutôt que de réparer ce calcul, on cesse de s'en servir. Le relevé ci-dessous ne retient
+ * de la table de recherche que ce qu'elle sait dire sans se tromper — *quel* temps est joué —
+ * et prend l'instant exact dans la table des tics, celle-là même qui a produit le son. Entre
+ * deux temps, c'est une courbe monotone qui décide, et non plus une règle.
+ */
+export function ancresDeDefilement(
   api: alphaTab.AlphaTabApi,
   reperes: Repere[],
   pistes: number[],
-  decalageMs: number,
+  dureeMs: number,
   // Le même recadrage que la feuille : le curseur vit dans le repère du rendu, et si la
   // feuille remonte sans lui, il pointe une portée qui n'est plus là.
   decalageY = 0,
-): (tMs: number) => Curseur | null {
+  pasMs = 10,
+): AncreDefilement[] {
+  const cache = api.tickCache
+  const bornes = api.boundsLookup
+  if (!cache || !bornes) return []
+
   const lookupPistes = new Set(pistes)
+  const ancres: AncreDefilement[] = []
+  let dernierTemps: unknown = null
 
-  return (tMs: number) => {
-    const cache = api.tickCache
-    const bornes = api.boundsLookup
-    if (!cache || !bornes) return null
-
-    const tick = tickA(reperes, Math.max(0, tMs - decalageMs))
-    const trouve = cache.findBeat(lookupPistes, tick)
-    if (!trouve) return null
+  for (let t = 0; t <= dureeMs; t += pasMs) {
+    const trouve = cache.findBeat(lookupPistes, tickA(reperes, t))
+    if (!trouve || trouve.beat === dernierTemps) continue
+    dernierTemps = trouve.beat
 
     const beat = bornes.findBeat(trouve.beat)
-    if (!beat) return null
+    if (!beat) continue
     const systeme = beat.barBounds.masterBarBounds.visualBounds
 
-    let x = beat.onNotesX
-    const suivant = trouve.nextBeat ? bornes.findBeat(trouve.nextBeat.beat) : null
-    if (suivant && suivant.barBounds.masterBarBounds.visualBounds.y === systeme.y) {
-      const duree = Math.max(1, trouve.end - trouve.start)
-      const part = Math.min(1, Math.max(0, (tick - trouve.start) / duree))
-      x += (suivant.onNotesX - beat.onNotesX) * part
-    }
-
-    return {
-      x,
+    ancres.push({
+      // L'instant vient des tics, pas de l'échantillonnage : le pas ne sert qu'à repérer les
+      // changements de temps, il ne détermine pas leur date.
+      tempsMs: tempsA(reperes, trouve.start),
+      x: beat.onNotesX,
       y: systeme.y - decalageY,
       h: systeme.h,
       bloc: { x: beat.visualBounds.x, w: beat.visualBounds.w },
-    }
+    })
+  }
+
+  return ancres
+}
+
+export function curseurDepuisAncres(
+  ancres: AncreDefilement[],
+  decalageMs: number,
+): (tMs: number) => Curseur | null {
+  if (ancres.length === 0) return () => null
+  const courbe = courbeMonotone(ancres.map((a) => ({ t: a.tempsMs + decalageMs, v: a.x })))
+
+  return (tMs: number) => {
+    if (tMs < decalageMs) return null
+    // La position s'interpole, le reste non : un surlignage à cheval sur deux temps ne
+    // voudrait rien dire, et la portée ne se déplace pas entre deux notes.
+    const ancre = ancres[courbe.indexA(tMs)]
+    if (!ancre) return null
+    return { x: courbe(tMs), y: ancre.y, h: ancre.h, bloc: ancre.bloc }
   }
 }

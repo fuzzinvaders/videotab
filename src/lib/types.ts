@@ -34,6 +34,15 @@ export type StyleCurseur = 'trait' | 'surlignage' | 'les-deux'
 /** Ce qu'il y a derrière la partition quand la vidéo doit être incrustée ailleurs. */
 export type FondVideo = 'theme' | 'chroma' | 'transparent'
 
+/**
+ * Ce que l'image exportée contient.
+ *
+ * « image » garde le format annoncé — du 1080p où la bande flotte au milieu. « bande » réduit
+ * la hauteur de la vidéo à celle de la bande : le fichier ne contient plus que la tablature,
+ * il pèse ce qu'il montre, et il se pose au montage sans avoir à deviner où est le vide.
+ */
+export type Cadrage = 'image' | 'bande'
+
 export interface ReglagesVideo {
   largeur: number
   hauteur: number
@@ -63,6 +72,7 @@ export interface ReglagesVideo {
   /** Où se tient la tête de lecture, en fraction de largeur (mode défilement). */
   teteX: number
   cadre: Cadre
+  cadrage: Cadrage
   fond: FondVideo
   /**
    * Couleur du curseur, ou `null` pour prendre celle du thème.

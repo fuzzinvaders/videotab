@@ -112,7 +112,10 @@ C'est ce pour quoi l'application existe. Trois réglages y suffisent :
    Transparent produit un WebM VP8 à canal alpha ; c'est plus propre, mais tous les navigateurs
    ne l'encodent pas et tous les montages ne le lisent pas, et l'interface le dit avant qu'on
    appuie. Le vert, lui, marche partout.
-3. **Titre et barre de progression coupés**, si la vidéo de reprise porte déjà les siens.
+3. **Cadrage : hauteur de la bande.** La vidéo ne fait plus que la hauteur de la tablature —
+   1920×230 sur une tablature de basse à quatre mesures — donc elle pèse ce qu'elle montre et
+   se pose au montage sans qu'on cherche où est la tablature dedans.
+4. **Titre et barre de progression coupés**, si la vidéo de reprise porte déjà les siens.
 
 Le reste — hauteur de la bande, position de la tête de lecture, thème — se règle en regardant
 l'aperçu, qui est l'image exacte qui sera encodée.

@@ -125,10 +125,19 @@ export function creerScene(options: OptionsScene): Scene {
       })
     : null
 
+  /* Cadrer sur la bande, c'est réduire la vidéo à ce qu'elle montre : le fichier ne porte
+     plus les huit cents pixels de vide au-dessus et en dessous, il pèse ce qu'il vaut, et au
+     montage il se pose sans qu'on ait à deviner où est la tablature dedans. La hauteur est
+     arrondie au pair — plusieurs encodeurs refusent les dimensions impaires. */
+  const cadreSurBande = Boolean(mise) && video.cadrage === 'bande'
+  const hauteurImage = cadreSurBande
+    ? 2 * Math.ceil((bandeauH + mise!.hauteurBande + barreH) / 2)
+    : hauteur
+
   const zone = mise
     ? {
         x: 0,
-        y: bandeauH + Math.round((libre - mise.hauteurBande) / 2),
+        y: cadreSurBande ? bandeauH : bandeauH + Math.round((libre - mise.hauteurBande) / 2),
         w: largeur,
         h: mise.hauteurBande,
       }
@@ -187,20 +196,20 @@ export function creerScene(options: OptionsScene): Scene {
 
     ctx.save()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.clearRect(0, 0, largeur, hauteur)
+    ctx.clearRect(0, 0, largeur, hauteurImage)
     if (video.fond === 'theme') {
       ctx.fillStyle = theme.fond
-      ctx.fillRect(0, 0, largeur, hauteur)
+      ctx.fillRect(0, 0, largeur, hauteurImage)
     } else if (video.fond === 'chroma') {
       ctx.fillStyle = CHROMA
-      ctx.fillRect(0, 0, largeur, hauteur)
+      ctx.fillRect(0, 0, largeur, hauteurImage)
     }
 
     if (couche2d) {
       composerLaBande(couche2d, { curseur, scroll })
       dessinerCadreDerriere(ctx, { zone, video, theme, couleur })
       ctx.drawImage(couche, zone.x, zone.y)
-      dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur })
+      dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur: hauteurImage })
     }
 
     if (bandeauH > 0) {
@@ -209,7 +218,7 @@ export function creerScene(options: OptionsScene): Scene {
     if (barreH > 0) {
       dessinerProgression(ctx, {
         largeur,
-        hauteur,
+        hauteur: hauteurImage,
         barreH,
         tMs,
         dureeMs: options.dureeMs,
@@ -221,7 +230,7 @@ export function creerScene(options: OptionsScene): Scene {
     if (compteAvantMs > 0 && tMs < compteAvantMs) {
       dessinerDecompte(ctx, {
         x: defilement ? zone.x + teteX : largeur / 2,
-        y: hauteur / 2,
+        y: hauteurImage / 2,
         taille: Math.round(hauteur * (defilement ? 0.2 : 0.28)),
         restantMs: compteAvantMs - tMs,
         couleur,
@@ -239,7 +248,7 @@ export function creerScene(options: OptionsScene): Scene {
         ctx.globalCompositeOperation = video.fond === 'transparent' ? 'destination-out' : 'source-over'
         ctx.globalAlpha = voile
         ctx.fillStyle = video.fond === 'transparent' ? '#000000' : '#000000'
-        ctx.fillRect(0, 0, largeur, hauteur)
+        ctx.fillRect(0, 0, largeur, hauteurImage)
         ctx.globalCompositeOperation = 'source-over'
         ctx.globalAlpha = 1
       }
@@ -309,7 +318,7 @@ export function creerScene(options: OptionsScene): Scene {
 
   return {
     largeur,
-    hauteur,
+    hauteur: hauteurImage,
     dureeMs: options.dureeMs,
     transparente: video.fond === 'transparent',
     reinitialiser,

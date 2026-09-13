@@ -107,7 +107,10 @@ This is what the application exists for. Three settings are enough:
    Transparent produces a VP8 WebM with an alpha channel; it is cleaner, but not every browser
    encodes it and not every editor reads it, and the interface says so before you press.
    Green works everywhere.
-3. **Title and progress bar switched off**, if the cover video already carries its own.
+3. **Framing: height of the strip.** The video is then only as tall as the tablature —
+   1920×230 on a four-bar bass tablature — so it weighs what it shows and drops into place at
+   editing time.
+4. **Title and progress bar switched off**, if the cover video already carries its own.
 
 The rest — strip height, playhead position, theme — is set by watching the preview, which is
 the exact picture that will be encoded.

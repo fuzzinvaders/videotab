@@ -78,6 +78,28 @@ export async function decoderFichierAudio(octets: ArrayBuffer): Promise<AudioBuf
 }
 
 /**
+ * La même bande-son, amputée de son début.
+ *
+ * Un fichier Guitar Pro commence là où le morceau commence, pas là où l'instrument entre :
+ * une basse qui attend deux mesures donne une vidéo qui s'ouvre sur deux mesures muettes.
+ * Rien n'est faux là-dedans — c'est ce que dit le fichier — mais on filme rarement le silence
+ * de quelqu'un d'autre.
+ */
+export function depuis(buffer: AudioBuffer, msDebut: number): AudioBuffer {
+  const images = Math.round((msDebut / 1000) * buffer.sampleRate)
+  if (images <= 0) return buffer
+  const restant = Math.max(1, buffer.length - images)
+  const ctx = contexteAudio()
+  const sortie = ctx.createBuffer(buffer.numberOfChannels, restant, buffer.sampleRate)
+  for (let canal = 0; canal < buffer.numberOfChannels; canal++) {
+    // La copie part de l'image demandée : `copyFromChannel` sait le faire sans tampon
+    // intermédiaire, ce qui évite d'allouer deux fois trois minutes de son.
+    buffer.copyFromChannel(sortie.getChannelData(canal), canal, images)
+  }
+  return sortie
+}
+
+/**
  * Une copie de la bande-son précédée de silence.
  *
  * Le décompte du début de la vidéo décale toute la musique d'autant. Plutôt que d'apprendre

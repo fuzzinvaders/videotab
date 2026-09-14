@@ -149,6 +149,14 @@ export interface ReglagesGp {
    * le rythme, et le répéter deux fois n'apprend rien.
    */
   rythme: boolean
+  /**
+   * Commencer la vidéo à la première note plutôt qu'à la première mesure.
+   *
+   * Un fichier commence là où le morceau commence, pas là où l'instrument entre : une basse
+   * qui attend deux mesures ouvre la vidéo sur deux mesures muettes. Rien n'est faux — c'est
+   * ce que dit le fichier — mais on filme rarement le silence de quelqu'un d'autre.
+   */
+  demarrerALaPremiereNote: boolean
 }
 
 /** Un système, c'est une ligne de tablature sur la page — les six cordes qui se lisent

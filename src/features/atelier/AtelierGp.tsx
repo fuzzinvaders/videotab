@@ -2,7 +2,7 @@ import * as alphaTab from "@coderline/alphatab";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { ErrorText, Field, Select } from "../../components/ui/Field";
-import { avecSilenceAvant } from "../../lib/audio";
+import { avecSilenceAvant, depuis } from "../../lib/audio";
 import {
   appliquerTempo,
   appliquerTheme,
@@ -197,14 +197,37 @@ export function AtelierGp({
 
   // ---- La scène, et donc l'aperçu comme la vidéo ----
 
-  const scene = useMemo(() => {
-    if (!feuille || !bande || !gp) return null;
+  /* Le relevé du parcours, mis à part parce que l'image et le son en ont tous deux besoin :
+     la scène pour placer le curseur, la bande-son pour savoir où la rogner. Le refaire deux
+     fois voudrait dire échantillonner le morceau deux fois, et surtout risquer que les deux
+     ne tombent pas d'accord sur l'instant de la première note. */
+  const parcours = useMemo(() => {
     const instance = api.current;
-    if (!instance?.score) return null;
-    const decalageMs = Math.max(0, reglages.video.compteAvantSec) * 1000;
+    if (!feuille || !bande || !gp || !instance?.score) return null;
     // Le rendu d'alphaTab porte au-dessus et en dessous des portées beaucoup de blanc. On
     // cadre sur ce qui se lit, sinon la bande qu'on a demandée est aux trois quarts vide.
     const etendue = etendueDesPortees(instance);
+    const ancres = ancresDeDefilement(
+      instance,
+      bande.reperes,
+      pistesVisibles(instance.score, gp.piste),
+      bande.dureeMs,
+      etendue?.y0 ?? 0,
+    );
+    // La première note, et non le premier temps : une mesure de silence est faite de temps
+    // qui ne sonnent pas, et c'est précisément elle qu'on veut pouvoir sauter.
+    const premiere = ancres.find((a) => a.sonne);
+    return { etendue, ancres, premiereNoteMs: premiere ? premiere.tempsMs : 0 };
+  }, [feuille, bande, gp]);
+
+  /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note. */
+  const debutMs = gp?.demarrerALaPremiereNote ? (parcours?.premiereNoteMs ?? 0) : 0;
+
+  const scene = useMemo(() => {
+    if (!feuille || !bande || !gp || !parcours) return null;
+    const instance = api.current;
+    if (!instance?.score) return null;
+    const decalageMs = Math.max(0, reglages.video.compteAvantSec) * 1000;
     // La largeur d'une mesure vient du rendu, pas d'un réglage : c'est elle qui permet de
     // demander « quatre mesures à l'écran » plutôt qu'une hauteur en pixels.
     // Les barres, elles, servent à tourner la page sur une mesure entière plutôt qu'au milieu.
@@ -213,35 +236,42 @@ export function AtelierGp({
       largeurMesure: largeurDeMesure(instance),
       barres: barresDeMesure(instance),
     };
-    const cadree = etendue
-      ? recadrer(avecMesure, etendue.y0, etendue.y1)
+    const cadree = parcours.etendue
+      ? recadrer(avecMesure, parcours.etendue.y0, parcours.etendue.y1)
       : avecMesure;
     return creerScene({
       feuille: cadree,
       video: reglages.video,
-      dureeMs: bande.dureeMs + decalageMs,
+      dureeMs: bande.dureeMs - debutMs + decalageMs,
       titre: morceau.titre,
       artiste: morceau.artiste,
       curseurA: curseurDepuisAncres(
-        ancresDeDefilement(
-          instance,
-          bande.reperes,
-          pistesVisibles(instance.score, gp.piste),
-          bande.dureeMs,
-          etendue?.y0 ?? 0,
-        ),
+        parcours.ancres,
         decalageMs,
         reglages.video.curseurGlisse,
+        debutMs,
       ),
     });
-  }, [feuille, bande, reglages.video, morceau.titre, morceau.artiste, gp]);
+  }, [
+    feuille,
+    bande,
+    parcours,
+    debutMs,
+    reglages.video,
+    morceau.titre,
+    morceau.artiste,
+    gp,
+  ]);
 
   const audio = useMemo(
     () =>
       bande
-        ? avecSilenceAvant(bande.audio, reglages.video.compteAvantSec * 1000)
+        ? avecSilenceAvant(
+            depuis(bande.audio, debutMs),
+            reglages.video.compteAvantSec * 1000,
+          )
         : null,
-    [bande, reglages.video.compteAvantSec],
+    [bande, debutMs, reglages.video.compteAvantSec],
   );
 
   if (!gp)
@@ -345,6 +375,16 @@ export function AtelierGp({
                 actif={gp.afficherTablature}
                 onChange={(afficherTablature) =>
                   modifier((r) => ({ ...r, gp: { ...gp, afficherTablature } }))
+                }
+              />
+              <Bascule
+                label="Commencer à la première note"
+                actif={gp.demarrerALaPremiereNote}
+                onChange={(demarrerALaPremiereNote) =>
+                  modifier((r) => ({
+                    ...r,
+                    gp: { ...gp, demarrerALaPremiereNote },
+                  }))
                 }
               />
               <Bascule

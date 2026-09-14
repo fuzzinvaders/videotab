@@ -90,6 +90,8 @@ function reglagesParDefaut(type) {
       afficherTablature: true,
       // La rythmique sous la tablature : sans elle, un chiffre ne dit pas la durée.
       rythme: true,
+      // Le morceau entier, silence d'intro compris : rogner est un choix.
+      demarrerALaPremiereNote: false,
     },
   };
 }

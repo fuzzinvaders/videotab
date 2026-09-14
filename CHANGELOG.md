@@ -173,6 +173,14 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **A piece can start at its first note rather than at its first bar.** A Guitar Pro file
+  begins where the piece begins, not where the instrument comes in: a bass that waits two bars
+  opens the video on two silent bars. Nothing is wrong there — it is what the file says — but
+  one rarely films somebody else's silence. The switch trims the leading silence from the
+  soundtrack and shifts the cursor by the same amount, so the two cannot drift apart. Measured
+  on a real piece: 3:10 becomes 3:07, exactly the 3356 ms that preceded the first note, and the
+  cursor now appears on that note the instant the count-in ends. It is the first note that
+  counts, not the first beat — a bar of rests is made of beats that do not sound.
 - **The cursor can step from note to note instead of gliding.** Gliding is exact at every
   instant, but its speed varies a great deal, and not by accident: a score does not space its
   notes in proportion to their duration — that is a rule of engraving, not of arithmetic — so

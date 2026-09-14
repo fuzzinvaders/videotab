@@ -66,7 +66,9 @@ covers timing, staff detection, server-side validation and the library operation
   the video, at the video's own resolution. What you see before spending three minutes
   encoding is what you get afterwards.
 - **Guitar Pro** — pick the track (one track makes a readable video), the tempo, tab alone or
-  with the standard staff, the rhythm under the tab, the metronome. The rhythm is on by
+  with the standard staff, the rhythm under the tab, the metronome, and starting at the first
+  note rather than the first bar — a bass that comes in after two bars would otherwise open the
+  video on two silent ones. The rhythm is on by
   default: a fret number says where to put the finger, not how long to leave it there. Tempo is applied to the **score**, not to the
   player: the sound, the picture and the announced duration all follow it.
 - **PDF** — "Détecter les lignes" looks for staves on each page and proposes a layout. It is

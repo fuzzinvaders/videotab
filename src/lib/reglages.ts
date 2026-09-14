@@ -131,6 +131,9 @@ export function completerReglages(reglages: Reglages | undefined, type: TypeMorc
       // combien de temps l'y laisser, et la tablature ne se lit plus qu'en connaissant déjà
       // le morceau.
       rythme: gp?.rythme ?? true,
+      // On garde le morceau entier par défaut : rogner est un choix, pas une évidence, et
+      // certaines intros muettes sont voulues.
+      demarrerALaPremiereNote: gp?.demarrerALaPremiereNote ?? false,
     },
   }
 }

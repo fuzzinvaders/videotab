@@ -69,7 +69,9 @@ opérations de bibliothèque.
   dessinera la vidéo, à la définition de la vidéo. Ce qu'on voit avant de lancer les trois
   minutes d'encodage est donc ce qu'on obtiendra après.
 - **Guitar Pro** — choisir la piste (une seule donne une vidéo lisible), le tempo, la
-  tablature seule ou avec la portée, la rythmique sous la tablature, le métronome. La
+  tablature seule ou avec la portée, la rythmique sous la tablature, le métronome, et le
+  départ à la première note plutôt qu'à la première mesure — une basse qui entre au bout de
+  deux mesures ouvrirait sinon la vidéo sur deux mesures muettes. La
   rythmique est là par défaut : un chiffre dit où poser le doigt, pas combien de temps l'y
   laisser. Le tempo est appliqué à la **partition**,
   pas au lecteur : le son, l'image et la durée annoncée le suivent tous les trois.

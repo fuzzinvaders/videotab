@@ -472,6 +472,8 @@ export interface AncreDefilement {
   y: number
   h: number
   bloc: { x: number; w: number }
+  /** Vrai si ce temps porte des notes. Un silence est un temps aussi, et il ne sonne pas. */
+  sonne: boolean
 }
 
 /**
@@ -523,6 +525,7 @@ export function ancresDeDefilement(
       y: systeme.y - decalageY,
       h: systeme.h,
       bloc: { x: beat.visualBounds.x, w: beat.visualBounds.w },
+      sonne: (trouve.beat as alphaTab.model.Beat).notes.length > 0,
     })
   }
 
@@ -533,11 +536,18 @@ export function curseurDepuisAncres(
   ancres: AncreDefilement[],
   decalageMs: number,
   glisse = true,
+  /** Ce qu'on retranche au début du morceau : le silence d'avant la première note. */
+  debutMs = 0,
 ): (tMs: number) => Curseur | null {
   if (ancres.length === 0) return () => null
-  const courbe = courbeMonotone(ancres.map((a) => ({ t: a.tempsMs + decalageMs, v: a.x })))
+  /* Le décalage du décompte s'ajoute, celui de la découpe se retranche : une ancre posée à
+     `debutMs` dans le morceau doit tomber à `decalageMs` dans la vidéo, c'est-à-dire juste
+     après le décompte. Les deux se composent en une seule translation. */
+  const glissement = decalageMs - debutMs
+  const courbe = courbeMonotone(ancres.map((a) => ({ t: a.tempsMs + glissement, v: a.x })))
 
   return (tMs: number) => {
+    // Le décompte, lui, se compte toujours depuis zéro : pas de curseur avant qu'il finisse.
     if (tMs < decalageMs) return null
     // La position s'interpole, le reste non : un surlignage à cheval sur deux temps ne
     // voudrait rien dire, et la portée ne se déplace pas entre deux notes.

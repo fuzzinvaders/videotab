@@ -128,6 +128,13 @@ export interface ReglagesVideo {
   curseurGlisse: boolean
   opacite: number
   compteAvantSec: number
+  /**
+   * Marquer le décompte de clics, plutôt que de le laisser muet.
+   *
+   * Un décompte silencieux ne sert qu'à qui regarde l'écran — c'est-à-dire pas à qui pose
+   * ses doigts sur le manche, l'usage même auquel il est destiné.
+   */
+  decompteSonore: boolean
   fondu: boolean
   bandeau: boolean
   barreDeProgression: boolean

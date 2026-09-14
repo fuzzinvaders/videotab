@@ -509,6 +509,17 @@ export function PanneauVideo({
         />
 
         <div className="space-y-2">
+          {/* Sans clics, le décompte ne compte que pour qui regarde l'écran — et pas pour
+              qui pose ses doigts sur le manche, à qui il est pourtant destiné. */}
+          {video.compteAvantSec > 0 ? (
+            <Bascule
+              label="Clics pendant le décompte"
+              actif={video.decompteSonore}
+              onChange={(decompteSonore) =>
+                modifier((v) => ({ ...v, decompteSonore }))
+              }
+            />
+          ) : null}
           <Bascule
             label="Titre et artiste en haut"
             actif={video.bandeau}

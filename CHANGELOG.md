@@ -190,6 +190,13 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The count-in can be heard, not only seen.** It counted in silence: the figure shrank on
+  screen and that was all — of use to whoever is watching, of none to whoever is putting their
+  fingers on the neck, which is the very purpose it serves. A click now falls on each second,
+  the last one higher so the start can be heard coming. On the second, like the figure, and not
+  on the beat of the score: the two must say the same thing, and it is the second one sees.
+  Verified by decoding an exported file: a transient at 0 s, another at 1 s, then the music at
+  2.1 s.
 - **A piece can start at its first note rather than at its first bar.** A Guitar Pro file
   begins where the piece begins, not where the instrument comes in: a bass that waits two bars
   opens the video on two silent bars. Nothing is wrong there — it is what the file says — but

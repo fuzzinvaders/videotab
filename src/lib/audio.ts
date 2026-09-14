@@ -106,8 +106,13 @@ export function depuis(buffer: AudioBuffer, msDebut: number): AudioBuffer {
  * ce décalage à l'aperçu, à l'enregistreur et au curseur — trois endroits, trois occasions
  * de se tromper d'un signe — on le grave une bonne fois dans la bande elle-même.
  */
-export function avecSilenceAvant(buffer: AudioBuffer, silenceMs: number): AudioBuffer {
-  const images = Math.round((silenceMs / 1000) * buffer.sampleRate)
+export function avecDecompteAvant(
+  buffer: AudioBuffer,
+  decompteMs: number,
+  /** Marquer chaque seconde d'un clic. Sans lui le décompte ne sert qu'à qui regarde. */
+  clics = false,
+): AudioBuffer {
+  const images = Math.round((decompteMs / 1000) * buffer.sampleRate)
   if (images <= 0) return buffer
   const ctx = contexteAudio()
   const sortie = ctx.createBuffer(
@@ -118,5 +123,37 @@ export function avecSilenceAvant(buffer: AudioBuffer, silenceMs: number): AudioB
   for (let canal = 0; canal < buffer.numberOfChannels; canal++) {
     sortie.getChannelData(canal).set(buffer.getChannelData(canal), images)
   }
+  if (clics) poserLesClics(sortie, decompteMs)
   return sortie
+}
+
+/**
+ * Un clic par seconde de décompte, le dernier plus aigu.
+ *
+ * Le décompte comptait en silence : on voyait le chiffre décroître, et c'était tout. Utile
+ * pour qui regarde l'écran, inutile pour qui pose ses doigts sur le manche — c'est-à-dire
+ * pour l'usage même auquel il est destiné. Les clics tombent sur la seconde, comme le chiffre
+ * affiché, et non sur le temps de la partition : les deux doivent dire la même chose, et
+ * c'est la seconde qu'on voit.
+ *
+ * Une sinusoïde brève dont l'enveloppe s'éteint — assez sèche pour se placer sans traîner,
+ * assez douce pour ne pas claquer dans un montage.
+ */
+function poserLesClics(sortie: AudioBuffer, decompteMs: number): void {
+  const frequence = sortie.sampleRate
+  const longueur = Math.round(0.035 * frequence)
+  const pistes = Array.from({ length: sortie.numberOfChannels }, (_, c) =>
+    sortie.getChannelData(c),
+  )
+
+  for (let seconde = 0; seconde * 1000 < decompteMs; seconde++) {
+    const debut = Math.round(seconde * frequence)
+    // Le dernier annonce le départ : plus haut, on l'entend venir sans avoir à compter.
+    const hauteur = (seconde + 1) * 1000 >= decompteMs ? 1760 : 880
+    for (let i = 0; i < longueur && debut + i < sortie.length; i++) {
+      const t = i / frequence
+      const valeur = Math.sin(2 * Math.PI * hauteur * t) * Math.exp(-t * 70) * 0.35
+      for (const piste of pistes) piste[debut + i] = valeur
+    }
+  }
 }

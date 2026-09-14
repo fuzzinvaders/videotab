@@ -2,7 +2,7 @@ import * as alphaTab from "@coderline/alphatab";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { ErrorText, Field, Select } from "../../components/ui/Field";
-import { avecSilenceAvant, depuis } from "../../lib/audio";
+import { avecDecompteAvant, depuis } from "../../lib/audio";
 import {
   appliquerTempo,
   appliquerTheme,
@@ -268,12 +268,13 @@ export function AtelierGp({
   const audio = useMemo(
     () =>
       bande
-        ? avecSilenceAvant(
+        ? avecDecompteAvant(
             depuis(bande.audio, debutMs),
             reglages.video.compteAvantSec * 1000,
+            reglages.video.decompteSonore,
           )
         : null,
-    [bande, debutMs, reglages.video.compteAvantSec],
+    [bande, debutMs, reglages.video.compteAvantSec, reglages.video.decompteSonore],
   );
 
   if (!gp)

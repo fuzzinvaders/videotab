@@ -4,7 +4,7 @@ import { Card } from "../../components/ui/Card";
 import { ErrorText, Field, Input } from "../../components/ui/Field";
 import { useMorceaux } from "../../hooks/useMorceaux";
 import { messageOf } from "../../lib/api";
-import { avecSilenceAvant, decoderFichierAudio } from "../../lib/audio";
+import { avecDecompteAvant, decoderFichierAudio } from "../../lib/audio";
 import {
   construireMinutage,
   dureeTotaleMs,
@@ -182,12 +182,18 @@ export function AtelierPdf({
   const bandeSon = useMemo(
     () =>
       audio
-        ? avecSilenceAvant(
+        ? avecDecompteAvant(
             audio,
             (pdf?.decalageMs ?? 0) + reglages.video.compteAvantSec * 1000,
+            reglages.video.decompteSonore,
           )
         : null,
-    [audio, pdf?.decalageMs, reglages.video.compteAvantSec],
+    [
+      audio,
+      pdf?.decalageMs,
+      reglages.video.compteAvantSec,
+      reglages.video.decompteSonore,
+    ],
   );
 
   if (!pdf) return <ErrorText>Ce morceau n'a pas de réglages PDF.</ErrorText>;

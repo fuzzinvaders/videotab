@@ -51,6 +51,8 @@ export function videoParDefaut(): ReglagesVideo {
     curseurGlisse: true,
     opacite: 0.3,
     compteAvantSec: 2,
+    // Des clics par défaut : un décompte muet ne compte pour personne.
+    decompteSonore: true,
     fondu: true,
     bandeau: true,
     barreDeProgression: true,
@@ -94,6 +96,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     curseurGlisse: video.curseurGlisse ?? d.curseurGlisse,
     opacite: nombre(video.opacite, d.opacite, 0, 0.9),
     compteAvantSec: nombre(video.compteAvantSec, d.compteAvantSec, 0, 12),
+    decompteSonore: video.decompteSonore ?? d.decompteSonore,
     fondu: video.fondu ?? d.fondu,
     bandeau: video.bandeau ?? d.bandeau,
     barreDeProgression: video.barreDeProgression ?? d.barreDeProgression,

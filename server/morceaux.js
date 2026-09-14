@@ -53,6 +53,8 @@ function reglagesParDefaut(type) {
     // Deux secondes avant la première note : le temps de voir où le morceau commence avant
     // qu'il commence, et de poser les doigts si on joue avec la vidéo.
     compteAvantSec: 2,
+    // Des clics pendant le décompte : muet, il ne sert qu'à qui regarde l'écran.
+    decompteSonore: true,
     fondu: true,
     bandeau: true,
     barreDeProgression: true,

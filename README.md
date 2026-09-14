@@ -135,8 +135,11 @@ In exchange:
 - **Encoding takes as long as the piece.** `MediaRecorder` is a tape recorder, not a renderer:
   it timestamps what it receives with the wall clock. Three minutes of music take three
   minutes.
-- **The tab must stay in the foreground.** A hidden tab has its clocks throttled, and the video
-  keeps the trace — the picture stutters, even though it stays in sync with the sound.
+- **The tab must stay open**, but not in front. Encoding is paced by the audio thread, which
+  the browser never throttles, so the video keeps its full frame rate while you work in
+  another window. Closing the tab does end it. One nuance: while the tab is hidden the frames
+  are spaced on the sound card's grid, about 10.7 ms, which divides 30 fps more evenly than
+  60 — so 30 is the steadier choice for an export you intend to walk away from.
 - **The format is WebM** (VP9 + Opus) everywhere except Safari, which produces mp4. Both are
   accepted by YouTube, Instagram and the usual editing software.
 

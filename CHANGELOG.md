@@ -32,6 +32,30 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **An export made while looking elsewhere came out at one frame per second.** This was the
+  real cause of the stutter, and it was hiding behind a warning that merely asked the user to
+  keep the tab in front — an unreasonable thing to ask of someone waiting three minutes, and
+  a request the code did nothing to enforce or even check. Measured on a real three-minute
+  export: the first five seconds ran at sixty frames a second, and the remaining hundred and
+  eighty-five at **one**, because a hidden page has its animation frames suspended and its
+  timers throttled to one wake-up per second. The audio thread is the one clock a browser
+  never slows down — a hidden page must keep playing its music — so the export is now paced
+  from there, by an `AudioWorklet` whose only job is to tick. Measured again, same scene:
+  thirty frames a second whether the tab is in front or behind. The screen still drives the
+  loop when it can, since its beats are aligned with the display; a timer remains as a last
+  resort should the audio thread itself stop.
+- **The picture stuttered against the audio clock, permanently.** The clock that decides when
+  a note sounds is the right one to draw from, but it does not advance — it jumps, one sound
+  card block at a time. Measured in Chrome: 10.7 ms steps, read by a screen refreshing every
+  16.7 ms, so the tablature moved half a step, then a step and a half, forever. The recorder
+  meanwhile timestamps each frame with the smooth wall clock, and that mismatch is exactly
+  what the eye reads as judder. The two clocks are now combined rather than chosen between:
+  the rhythm comes from the wall, and only the origin is servoed to the sound, slowly enough
+  that the correction can never be seen. The tremor, whose average is zero, is filtered out;
+  the drift, which matters over three minutes, is still tracked.
+- **Each frame is now handed to the recorder explicitly** instead of letting it sample the
+  canvas on its own schedule. Its sampler is free-running: it misses one frame here and
+  doubles another there, which no amount of care in the drawing loop can compensate.
 - **An export could be lost at the very last step.** Re-exporting a piece that already had a
   video failed with a bare "Erreur serveur" after the full encoding time — three minutes of
   waiting thrown away. The cause was a rename onto a file that was still open: the export
@@ -76,6 +100,15 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **An export that did not keep up says so.** The frame rate actually delivered is measured
+  and compared to the one that was asked for; a shortfall is reported next to the file rather
+  than discovered halfway through an edit. A three-minute encode that silently produced a
+  useless file is the worst outcome this tool can have, and nothing was watching for it.
+- **`tools/cadence.js`**, which reads the timestamps an encoder wrote into a WebM and reports
+  how evenly the frames actually fall. The eye is a poor judge of a stutter — it sees one
+  without being able to name it — and a screenshot keeps no trace. This settles the question
+  from the file itself, and without requiring ffmpeg, which this project promised never to
+  need.
 - **The cursor can show the line, the beat highlight, or both.** On a tight tablature the two
   say the same thing twice and the line falls in the middle of the block it is crossing. Where
   there is no beat to highlight — a PDF scrolling horizontally — the line comes back on its

@@ -140,8 +140,12 @@ En échange :
 - **L'encodage dure aussi longtemps que le morceau.** `MediaRecorder` est un magnétophone, pas
   un moteur de rendu : il horodate ce qu'il reçoit avec l'horloge du mur. Trois minutes de
   morceau demandent trois minutes.
-- **L'onglet doit rester au premier plan.** Un onglet caché voit ses horloges ralenties, et la
-  vidéo en garde la trace — l'image saccade, même si elle reste synchrone avec le son.
+- **L'onglet doit rester ouvert**, mais pas devant. L'encodage est cadencé par le fil audio,
+  que le navigateur ne ralentit jamais : la vidéo garde sa cadence pleine pendant que tu
+  travailles dans une autre fenêtre. Le fermer, en revanche, l'interrompt. Une nuance : tant
+  que l'onglet est caché, les images se posent sur la grille de la carte son, environ
+  10,7 ms, qui divise le 30 images par seconde plus régulièrement que le 60 — c'est donc le
+  choix le plus sûr pour un export qu'on laisse tourner.
 - **Le format est du WebM** (VP9 + Opus) partout sauf sur Safari, qui produit du mp4. Les deux
   sont acceptés par YouTube, Instagram et les logiciels de montage courants.
 

@@ -1,4 +1,6 @@
 import { reveillerAudio } from './audio'
+import { horlogeLissee } from './horloge'
+import { battre, type Metronome } from './metronome'
 import type { Scene } from './scene'
 
 /**
@@ -15,9 +17,12 @@ import type { Scene } from './scene'
  * avec WebCodecs, mais il faudrait alors écrire soi-même le conteneur WebM, et cette
  * dépense n'a pas de sens tant qu'on filme des morceaux de trois minutes.
  *
- * Conséquence directe, et il faut la dire à l'utilisateur plutôt que la lui faire
- * découvrir : l'onglet doit rester au premier plan. Un onglet caché voit ses horloges
- * d'animation ralenties à une image par seconde, et la vidéo en garde la trace.
+ * Trois minutes d'attente, c'est trois minutes pendant lesquelles personne ne reste à
+ * regarder une barre avancer. L'export ne demande donc pas qu'on le surveille : il ne bat ni
+ * au rythme de l'écran ni à celui d'un minuteur, que le navigateur ralentit tous deux dès
+ * qu'on regarde ailleurs, mais à celui du fil audio, qui ne ralentit jamais. Il rend aussi
+ * la cadence qu'il a réellement tenue — un fichier qui n'aurait pas suivi doit se dire, pas
+ * se découvrir au montage.
  */
 
 export interface OptionsEnregistrement {
@@ -34,6 +39,12 @@ export interface Enregistrement {
   ext: '.webm' | '.mp4'
   type: string
   dureeMs: number
+  /**
+   * Images par seconde réellement livrées. Ce n'est pas la même chose que la cadence
+   * demandée : une machine qui n'a pas suivi rend un fichier plus pauvre, et c'est le seul
+   * chiffre qui permette de le dire avant de l'avoir monté.
+   */
+  imagesParSeconde: number
 }
 
 /* Par ordre de préférence. VP9 pour la qualité à débit égal, VP8 pour les navigateurs qui
@@ -92,19 +103,39 @@ export async function enregistrer(
   const ctx = canvas.getContext('2d', { alpha: scene.transparente })
   if (!ctx) throw new Error('Impossible de préparer le canvas de rendu.')
 
-  const flux = canvas.captureStream(options.fps)
+  /* Zéro, et non la cadence voulue : on ne laisse pas le navigateur échantillonner le canvas
+     quand bon lui semble, on lui remet chaque image explicitement. Le sien est un
+     échantillonneur libre, qui rate une image ici et en double une là ; celui-ci livre
+     exactement ce qu'on a dessiné, ni plus ni moins. */
+  const flux = canvas.captureStream(0)
+  const pisteImage = flux.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack
 
-  // L'horloge de l'audio est la seule qui compte quand il y en a une : c'est elle que la
-  // bande-son suivra, et une image calculée d'après une autre horloge finirait décalée.
+  /* Le contexte est celui de toute l'application, pas un nouveau : voir lib/audio.ts. Il est
+     réveillé même sans bande-son, parce que c'est de son fil que vient le battement qui
+     cadence l'export. Un navigateur qui le refuserait ne perd que ça : la boucle de secours,
+     plus bas, reprend la main. */
   let contexte: AudioContext | null = null
-  let source: AudioBufferSourceNode | null = null
-  let depart = 0
-  const maintenantMs = () =>
-    contexte ? (contexte.currentTime - depart) * 1000 : performance.now() - depart
-
-  if (options.audio) {
-    // Le contexte est celui de toute l'application, pas un nouveau : voir lib/audio.ts.
+  try {
     contexte = await reveillerAudio()
+  } catch {
+    contexte = null
+  }
+
+  /* L'horloge du son fait foi — c'est elle que la bande suivra — mais elle saute par blocs
+     de dix millisecondes, et une image dessinée d'après ses sauts saccade. On lui emprunte
+     donc sa justesse et non son rythme : voir lib/horloge.ts. */
+  let source: AudioBufferSourceNode | null = null
+  let surLeSon = false
+  let depart = 0
+  const horloge = horlogeLissee({
+    reference: () =>
+      surLeSon && contexte
+        ? (contexte.currentTime - depart) * 1000
+        : performance.now() - depart,
+  })
+
+  if (options.audio && contexte) {
+    surLeSon = true
     const sortie = contexte.createMediaStreamDestination()
     source = contexte.createBufferSource()
     source.buffer = options.audio
@@ -128,6 +159,20 @@ export async function enregistrer(
     recorder.onerror = (e) => reject((e as ErrorEvent).error ?? new Error("Échec de l'encodage."))
   })
 
+  /* Le battement qui cadence l'export, pris sur le fil audio parce que c'est le seul qu'un
+     onglet caché ne ralentisse pas : voir lib/metronome.ts. Il est mis en place avant le
+     départ, le chargement du module prenant quelques millisecondes qu'on ne veut pas voir
+     manquer à la bande. */
+  let battement: (() => void) | null = null
+  let metronome: Metronome | null = null
+  if (contexte) {
+    try {
+      metronome = await battre(contexte, () => battement?.())
+    } catch {
+      metronome = null
+    }
+  }
+
   // Première image dessinée avant le premier octet enregistré : sans ça, la vidéo commence
   // sur un cadre noir, le temps que la boucle rende la main.
   scene.reinitialiser(0)
@@ -136,6 +181,7 @@ export async function enregistrer(
   // Des tranches d'une seconde plutôt qu'un seul bloc final : sur un long morceau, ça
   // évite de garder plusieurs centaines de mégaoctets dans un unique Blob en construction.
   recorder.start(1000)
+  pisteImage.requestFrame()
 
   if (contexte && source) {
     // Un court sursis avant le départ : démarrer la source à l'instant même ferait manquer
@@ -152,49 +198,89 @@ export async function enregistrer(
   }
   options.signal?.addEventListener('abort', onAbort)
 
+  let images = 0
+  const surLaFin: (() => void)[] = []
+  const debutMur = performance.now()
   try {
     await new Promise<void>((resolve) => {
       const pas = 1000 / options.fps
+      /* Le créneau est compté depuis le départ, jamais depuis l'image précédente : un
+         battement en retard ne décale donc pas tous les suivants, et la cadence ne dérive
+         pas sur trois minutes. */
+      let dernierCreneau = -Infinity
+      let fini = false
       let rafId = 0
-      let veille = 0
-
-      /* Le rythme vient de l'écran, l'instant vient du son. Le premier donne une cadence
-         régulière — un rendu par rafraîchissement, aligné sur le balayage — et c'est ce qui
-         manquait : un minuteur seul livre ses images à des intervalles inégaux, que le
-         magnétophone horodate tels quels et que l'œil lit comme des à-coups.
-
-         Le minuteur reste en second rideau, parce qu'un onglet passé en arrière-plan suspend
-         complètement le rafraîchissement. La vidéo y perd en fluidité, mais elle continue et
-         elle se termine. */
-      function planifier() {
-        rafId = requestAnimationFrame(image)
-        veille = window.setTimeout(image, Math.max(64, pas * 3))
-      }
 
       function image() {
-        cancelAnimationFrame(rafId)
-        clearTimeout(veille)
-        if (interrompu) return resolve()
+        if (fini) return
+        if (interrompu) {
+          fini = true
+          return resolve()
+        }
 
-        const tMs = maintenantMs()
+        const brut = horloge.maintenantMs()
+        const tMs = Math.max(0, brut)
         if (tMs >= scene.dureeMs) {
           // Une dernière image à la durée exacte : la barre de progression doit finir pleine,
           // et le fondu de sortie arriver au bout de sa course.
+          fini = true
           scene.dessiner(ctx!, scene.dureeMs)
+          pisteImage.requestFrame()
+          images++
           options.onProgression?.(1, scene.dureeMs)
-          resolve()
-          return
+          return resolve()
         }
-        if (tMs >= 0) {
-          scene.dessiner(ctx!, tMs)
-          options.onProgression?.(tMs / scene.dureeMs, tMs)
-        }
-        planifier()
+
+        const creneau = Math.floor(brut / pas)
+        if (creneau <= dernierCreneau) return
+        dernierCreneau = creneau
+
+        scene.dessiner(ctx!, tMs)
+        pisteImage.requestFrame()
+        images++
+        options.onProgression?.(tMs / scene.dureeMs, tMs)
       }
 
-      planifier()
+      /* Trois réveils pour une seule boucle, en ordre de préférence stricte. `image` ne fait
+         rien deux fois dans le même créneau, mais l'ordre compte quand même : celui qui
+         arrive le premier après l'ouverture d'un créneau décide de l'instant de l'image.
+
+         L'écran d'abord. Ses battements sont alignés sur le balayage, donc une cadence qui
+         divise la sienne tombe juste à chaque fois, et les images s'espacent régulièrement.
+
+         Le fil audio ensuite, mais seulement quand l'écran s'est tu — c'est-à-dire quand on
+         a quitté l'onglet, ce qui suspend le rafraîchissement. Sa grille est plus grossière,
+         dix millisecondes, la taille d'un bloc de carte son : le laisser servir un créneau
+         que l'écran allait servir mieux ne ferait qu'écarter les images inégalement. Il ne
+         prend donc la main qu'après un silence, et la rend dès que l'écran repart.
+
+         Le minuteur enfin, à peine plus qu'une corde de rappel : si le fil audio venait à
+         s'arrêter — une machine mise en veille, un contexte suspendu par le système — plus
+         rien n'appellerait la boucle et l'export resterait pendu. Un quart de seconde suffit
+         pour aller au bout plutôt que de laisser l'utilisateur devant une barre figée. */
+      let dernierEcran = -Infinity
+      const silence = Math.max(25, pas * 1.5)
+
+      function surEcran() {
+        dernierEcran = performance.now()
+        image()
+        if (!fini) rafId = requestAnimationFrame(surEcran)
+      }
+      rafId = requestAnimationFrame(surEcran)
+      surLaFin.push(() => cancelAnimationFrame(rafId))
+
+      battement = () => {
+        if (performance.now() - dernierEcran < silence) return
+        image()
+      }
+
+      const rappel = window.setInterval(image, 250)
+      surLaFin.push(() => clearInterval(rappel))
     })
   } finally {
+    battement = null
+    metronome?.arreter()
+    for (const menage of surLaFin) menage()
     options.signal?.removeEventListener('abort', onAbort)
     // Un dernier battement avant de couper : le magnétophone a besoin de voir passer la
     // dernière image, faute de quoi la vidéo s'arrête une fraction de seconde trop tôt.
@@ -214,5 +300,12 @@ export async function enregistrer(
   if (interrompu) throw new DOMException('Enregistrement interrompu.', 'AbortError')
 
   const blob = new Blob(morceaux, { type })
-  return { blob, ext: extensionDe(type), type, dureeMs: scene.dureeMs }
+  const ecoule = performance.now() - debutMur
+  return {
+    blob,
+    ext: extensionDe(type),
+    type,
+    dureeMs: scene.dureeMs,
+    imagesParSeconde: ecoule > 0 ? (images * 1000) / ecoule : 0,
+  }
 }

@@ -31,7 +31,14 @@ export function PanneauExport({
   const [erreur, setErreur] = useState<string | null>(null)
   const [garder, setGarder] = useState(true)
   const [audible, setAudible] = useState(true)
-  const [produite, setProduite] = useState<{ url: string; nom: string; taille: number } | null>(null)
+  const [produite, setProduite] = useState<{
+    url: string
+    nom: string
+    taille: number
+    /** Cadence tenue et cadence demandée : l'écart est le seul défaut qu'on ne voit pas. */
+    ips: number
+    fps: number
+  } | null>(null)
   const annuler = useRef<AbortController | null>(null)
 
   // L'URL d'un Blob occupe la mémoire tant qu'on ne la révoque pas : une poignée d'exports
@@ -66,6 +73,8 @@ export function PanneauExport({
         url: URL.createObjectURL(resultat.blob),
         nom: `${morceau.titre || 'videotab'}${resultat.ext}`,
         taille: resultat.blob.size,
+        ips: resultat.imagesParSeconde,
+        fps: morceau.reglages.video.fps,
       })
 
       if (garder) {
@@ -105,8 +114,8 @@ export function PanneauExport({
       <p className="text-sm text-slate-400">
         L'encodage se fait ici, dans l'onglet, et <strong className="text-slate-300">en temps
         réel</strong> : {formaterDuree(scene?.dureeMs ?? 0)} de morceau demandent{' '}
-        {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Laisse l'onglet au premier plan —
-        en arrière-plan, le navigateur ralentit l'animation et la vidéo saccade.
+        {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Tu peux aller ailleurs pendant ce
+        temps-là, l'enregistrement continue — mais ne ferme pas l'onglet.
       </p>
 
       <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -165,6 +174,15 @@ export function PanneauExport({
           >
             Télécharger {produite.nom} ({poids(produite.taille)})
           </a>
+          {/* La cadence tenue n'est annoncée que quand elle a manqué : un export réussi n'a
+              pas à se vanter, un export pauvre doit se dénoncer avant le montage. */}
+          {produite.ips < produite.fps * 0.85 ? (
+            <p className="mt-2 text-sm text-amber-400">
+              Cette vidéo n'a tenu que {produite.ips.toFixed(1)} images par seconde sur les{' '}
+              {produite.fps} demandées : la machine n'a pas suivi. Une définition plus petite ou
+              une cadence plus basse donneront un résultat plus fluide.
+            </p>
+          ) : null}
         </div>
       ) : morceau.video ? (
         <div className="rounded-lg bg-slate-950 p-3">

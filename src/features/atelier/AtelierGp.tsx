@@ -113,6 +113,12 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       appliquerTempo(score, gp.tempoPct)
       colorerLesCordes(score, theme)
       instance.settings.display.staveProfile = profilDePortee(gp)
+      /* La rythmique sous la tablature. « Automatique » veut dire : montrée tant que la
+         portée classique est cachée, effacée dès qu'elle revient — celle-ci porte déjà le
+         rythme, et l'écrire deux fois n'apprend rien de plus. */
+      instance.settings.notation.rhythmMode = gp.rythme
+        ? alphaTab.TabRhythmMode.Automatic
+        : alphaTab.TabRhythmMode.Hidden
       /* En bande — défilement comme mesures — c'est alphaTab lui-même qui met tout le morceau
          sur une seule ligne :
          la scène n'a alors qu'à faire glisser cette bande. Recoller à la main des systèmes
@@ -291,6 +297,11 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
               onChange={(afficherTablature) =>
                 modifier((r) => ({ ...r, gp: { ...gp, afficherTablature } }))
               }
+            />
+            <Bascule
+              label="Rythmique sous la tablature"
+              actif={gp.rythme}
+              onChange={(rythme) => modifier((r) => ({ ...r, gp: { ...gp, rythme } }))}
             />
             <Bascule
               label="Métronome dans la bande-son"

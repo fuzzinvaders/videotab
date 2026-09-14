@@ -123,6 +123,10 @@ export function completerReglages(reglages: Reglages | undefined, type: TypeMorc
       metronome: gp?.metronome ?? false,
       afficherPortee: gp?.afficherPortee ?? false,
       afficherTablature: gp?.afficherTablature ?? true,
+      // La rythmique par défaut : sans elle, un chiffre dit où poser le doigt mais pas
+      // combien de temps l'y laisser, et la tablature ne se lit plus qu'en connaissant déjà
+      // le morceau.
+      rythme: gp?.rythme ?? true,
     },
   }
 }

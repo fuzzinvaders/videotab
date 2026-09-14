@@ -86,6 +86,8 @@ function reglagesParDefaut(type) {
       // double la hauteur utile de l'image.
       afficherPortee: false,
       afficherTablature: true,
+      // La rythmique sous la tablature : sans elle, un chiffre ne dit pas la durée.
+      rythme: true,
     },
   };
 }

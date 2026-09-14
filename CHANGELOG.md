@@ -32,6 +32,21 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **The picture ran half a second ahead of the sound, from the first bar to the last.** The
+  tick table that ties the two together is built from what the audio export reports for each
+  chunk it produces — and its two fields do not describe the same instant. `currentTick` gives
+  the tick at the **end** of the chunk, `currentTime` the instant of its **start**. Pairing
+  them skewed the whole table by one chunk. Measured on a real tablature: the first note sounds
+  at 3356 ms, the table announced it at 2856. Time is now counted on the samples actually
+  produced, which cannot disagree with themselves — same measurement afterwards, 3356 ms to the
+  millisecond. The announced duration was short by the same chunk, which quietly cut the last
+  half-second off every video; it is now exact too.
+- **The rhythm was drawn under the tablature and then cropped away.** alphaTab lays it out in a
+  band of its own below the staff, whose height it knows but never declares in the bar bounds —
+  "the region of the staff" stops at the last line. Measured on a bass tablature: staff from
+  125 to 164, crop stopping at 173, and twenty-five pixels of rhythm to draw below 164. Nine
+  survived — enough to see the top of the stems, not enough to read a duration, and just enough
+  to hide that anything was missing. The crop now asks how tall that band is and keeps it.
 - **The frame was drawn half outside the picture, and sometimes entirely outside.** Found while
   adding the thickness setting, by counting the pixels each frame actually paints. Cropped to
   the strip — the framing made for overlays — a card's outline is centred on the edge of the
@@ -122,6 +137,11 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The rhythm under the tablature can be switched off.** It is on by default, because a fret
+  number says where to put the finger and not how long to leave it there — a tablature without
+  rhythm only reads to someone who already knows the piece. It takes room, though, and on an
+  overlay every pixel counts, hence the switch. It steps aside on its own when the standard
+  staff is showing, which already carries the rhythm.
 - **The frame's thickness is now a setting**, from a hairline to sixteen pixels, or none at all.
   It is counted on the width of the image rather than its height, and scaled from a reference of
   1920: cropped to the strip, the picture is only a couple of hundred pixels tall, so a thickness

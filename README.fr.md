@@ -69,7 +69,9 @@ opérations de bibliothèque.
   dessinera la vidéo, à la définition de la vidéo. Ce qu'on voit avant de lancer les trois
   minutes d'encodage est donc ce qu'on obtiendra après.
 - **Guitar Pro** — choisir la piste (une seule donne une vidéo lisible), le tempo, la
-  tablature seule ou avec la portée, le métronome. Le tempo est appliqué à la **partition**,
+  tablature seule ou avec la portée, la rythmique sous la tablature, le métronome. La
+  rythmique est là par défaut : un chiffre dit où poser le doigt, pas combien de temps l'y
+  laisser. Le tempo est appliqué à la **partition**,
   pas au lecteur : le son, l'image et la durée annoncée le suivent tous les trois.
 - **PDF** — « Détecter les lignes » cherche les portées sur chaque page et en propose le
   découpage. Il se corrige à la main : on tire un rectangle pour ajouter une ligne, on attrape

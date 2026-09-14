@@ -126,6 +126,15 @@ export interface ReglagesGp {
   metronome: boolean
   afficherPortee: boolean
   afficherTablature: boolean
+  /**
+   * La rythmique sous la tablature : les hampes et les barres qui disent la durée de chaque
+   * note. Sans elle, un chiffre dit où poser le doigt mais pas combien de temps le laisser —
+   * une tablature devient illisible pour qui ne connaît pas déjà le morceau.
+   *
+   * Elle s'efface d'elle-même quand la portée classique est affichée : celle-ci porte déjà
+   * le rythme, et le répéter deux fois n'apprend rien.
+   */
+  rythme: boolean
 }
 
 /** Un système, c'est une ligne de tablature sur la page — les six cordes qui se lisent

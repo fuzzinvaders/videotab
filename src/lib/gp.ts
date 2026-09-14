@@ -30,6 +30,9 @@ export type ReglagesMoteur = ConstructorParameters<typeof alphaTab.AlphaTabApi>[
 export const POLICE_ALPHATAB = '/font/'
 export const BANQUE_DE_SONS = '/soundfont/sonivox.sf3'
 
+/** L'export audio d'alphaTab est stéréo entrelacé : deux échantillons par image. */
+const CANAUX = 2
+
 export interface Repere {
   tempsMs: number
   tick: number
@@ -259,11 +262,39 @@ export function etendueDesPortees(api: alphaTab.AlphaTabApi): { y0: number; y1: 
   }
   if (!Number.isFinite(y0) || y1 <= y0) return null
 
-  // Une marge mesurée : les chiffres de doigté, les hampes et les indications de rythme
-  // débordent de la portée et ne doivent pas être coupés, mais chaque pixel donné au blanc
-  // est un pixel retiré à la tablature — c'est elle qu'on est venu regarder.
+  /* La rythmique n'est pas dans ces bornes-là. alphaTab la dessine sous la portée, dans une
+     bande à part dont il connaît la hauteur mais qu'il ne déclare nulle part dans le relevé
+     des mesures — « the region of the staff » s'arrête à la dernière ligne. Mesuré sur une
+     tablature de basse : portée de 125 à 164, recadrage à 173, et vingt-cinq pixels de
+     rythmique à dessiner sous 164. On en gardait neuf. Restait le haut des hampes, c'est-à-
+     dire juste assez pour ne pas voir qu'il manquait quelque chose, et pas assez pour lire
+     une durée. */
+  const rythme = hauteurDeLaRythmique(api)
+
+  // Une marge mesurée : les chiffres de doigté et les nuances débordent de la portée et ne
+  // doivent pas être coupés, mais chaque pixel donné au vide est un pixel retiré à la
+  // tablature — c'est elle qu'on est venu regarder.
   const marge = (y1 - y0) * 0.22
-  return { y0: Math.max(0, y0 - marge), y1: y1 + marge }
+  return { y0: Math.max(0, y0 - marge), y1: y1 + rythme + marge }
+}
+
+/**
+ * La hauteur que la rythmique occupe sous la tablature, ou zéro si elle n'est pas dessinée.
+ *
+ * Le mode « automatique » d'alphaTab, qui est celui par défaut, ne dit pas s'il a fini par
+ * l'afficher : il le décide au rendu, d'après la visibilité de la portée classique. On
+ * refait donc ici la même lecture, faute de pouvoir la lui demander.
+ */
+function hauteurDeLaRythmique(api: alphaTab.AlphaTabApi): number {
+  const notation = api.settings.notation
+  const profil = api.settings.display.staveProfile
+  const tabSeule =
+    profil === alphaTab.StaveProfile.Tab || profil === alphaTab.StaveProfile.TabMixed
+  const montree =
+    notation.rhythmMode === alphaTab.TabRhythmMode.ShowWithBeams ||
+    notation.rhythmMode === alphaTab.TabRhythmMode.ShowWithBars ||
+    (notation.rhythmMode === alphaTab.TabRhythmMode.Automatic && tabSeule)
+  return montree ? notation.rhythmHeight : 0
 }
 
 /** La même feuille, ramenée à la tranche utile — les tuiles remontent d'autant. */
@@ -352,6 +383,7 @@ export async function preparerBande(
   // Le premier repère est posé à la main : l'exportateur ne rend compte qu'après avoir
   // produit quelque chose, et il manquerait sinon le point de départ du morceau.
   const reperes: Repere[] = [{ tempsMs: 0, tick: 0 }]
+  let echantillons = 0
   let dureeMs = 0
 
   try {
@@ -360,15 +392,31 @@ export async function preparerBande(
       const tranche = await exportateur.render(500)
       if (!tranche) break
       blocs.push(tranche.samples)
-      reperes.push({ tempsMs: tranche.currentTime, tick: tranche.currentTick })
-      dureeMs = tranche.currentTime
-      if (tranche.endTime > 0) options.onProgression?.(tranche.currentTime / tranche.endTime)
+
+      /* Le temps est compté sur les échantillons produits, et non lu sur `currentTime`.
+         Les deux devraient dire la même chose ; mesuré, ils diffèrent d'une tranche entière.
+         `currentTick` donne le tic **à la fin** de la tranche qu'on vient de recevoir, tandis
+         que `currentTime` donne l'instant de son **début** — apparier les deux décalait toute
+         la table d'une demi-seconde, et avec elle le curseur, qui devançait le son du même
+         montant d'un bout à l'autre du morceau. Vérifié sur une vraie tablature : la première
+         note sonne à 3356 ms, la table l'annonçait à 2856.
+
+         Les échantillons, eux, ne mentent pas : leur nombre est la durée, exactement, et
+         c'est bien la fin de la tranche — le même bout que `currentTick`. Au passage la durée
+         du morceau cesse d'être trop courte d'une tranche, ce qui rognait la dernière
+         demi-seconde de chaque vidéo. */
+      echantillons += tranche.samples.length
+      dureeMs = (echantillons / CANAUX / frequence) * 1000
+      reperes.push({ tempsMs: dureeMs, tick: tranche.currentTick })
+
+      if (tranche.endTime > 0) options.onProgression?.(dureeMs / tranche.endTime)
     }
   } finally {
     exportateur.destroy()
   }
 
-  return { audio: bufferDepuisEntrelace(blocs, 2, frequence), reperes, dureeMs }
+  const audio = bufferDepuisEntrelace(blocs, CANAUX, frequence)
+  return { audio, reperes, dureeMs }
 }
 
 /** Le tic joué à l'instant demandé, interpolé entre deux repères. */

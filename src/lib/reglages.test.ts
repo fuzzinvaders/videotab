@@ -83,6 +83,15 @@ describe('completerReglages', () => {
     expect(completerReglages(undefined, 'pdf').gp).toBeUndefined()
   })
 
+  /* La rythmique est arrivée après coup : un morceau importé avant elle doit la voir
+     apparaître, parce que c'est ce qu'on veut par défaut — un chiffre sans durée ne se lit
+     qu'en connaissant déjà le morceau. */
+  it('allume la rythmique sur un morceau d’avant qu’elle existe', () => {
+    const ancien = { gp: { piste: 0, tempoPct: 100, metronome: false } }
+    expect(completerReglages(ancien as never, 'gp').gp?.rythme).toBe(true)
+    expect(completerReglages({ gp: { rythme: false } } as never, 'gp').gp?.rythme).toBe(false)
+  })
+
   it('garde le découpage d’un PDF, qui ne se retrouve pas tout seul', () => {
     const systemes = [{ page: 0, x0: 0.1, x1: 0.9, y0: 0.2, y1: 0.3, mesures: 4 }]
     const complet = completerReglages({ pdf: { systemes } } as never, 'pdf')

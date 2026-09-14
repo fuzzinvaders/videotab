@@ -221,7 +221,9 @@ export function AtelierGp({
   }, [feuille, bande, gp]);
 
   /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note. */
-  const debutMs = gp?.demarrerALaPremiereNote ? (parcours?.premiereNoteMs ?? 0) : 0;
+  const debutMs = gp?.demarrerALaPremiereNote
+    ? (parcours?.premiereNoteMs ?? 0)
+    : 0;
 
   const scene = useMemo(() => {
     if (!feuille || !bande || !gp || !parcours) return null;
@@ -282,20 +284,21 @@ export function AtelierGp({
        barre latérale ils faisaient une page à n'en plus finir, et laissaient les trois quarts
        de l'écran vides sous une bande qui n'est haute que de deux cents pixels. */
     <div className="space-y-4">
-      <div className="space-y-4">
-        {erreur ? <ErrorText>{erreur}</ErrorText> : null}
-        <Lecteur scene={scene} audio={audio} message={etat} />
+      {erreur ? <ErrorText>{erreur}</ErrorText> : null}
+      {/* L'aperçu est un enfant direct de la page, et non d'une enveloppe à lui : un élément
+          collant ne tient que dans les limites de son parent, et une enveloppe à sa taille le
+          laisserait filer dès le premier réglage. */}
+      <Lecteur scene={scene} audio={audio} message={etat} />
 
-        {/* alphaTab veut un élément attaché au document et large pour dessiner : une
-            partition mise en page sur une largeur nulle sort en une colonne d'une mesure.
-            Il est donc sorti du flux plutôt que caché dedans — une largeur de 1400 pixels
-            dans une colonne de grille en imposerait la largeur à toute la page. */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed top-0 left-0 h-0 w-0 overflow-hidden opacity-0"
-        >
-          <div ref={hote} style={{ width: 1400 }} />
-        </div>
+      {/* alphaTab veut un élément attaché au document et large pour dessiner : une
+          partition mise en page sur une largeur nulle sort en une colonne d'une mesure.
+          Il est donc sorti du flux plutôt que caché dedans — une largeur de 1400 pixels
+          dans une colonne de grille en imposerait la largeur à toute la page. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed top-0 left-0 h-0 w-0 overflow-hidden opacity-0"
+      >
+        <div ref={hote} style={{ width: 1400 }} />
       </div>
 
       {/* Des colonnes tenues à la main, et non un flux qui se rééquilibre. Un empilement

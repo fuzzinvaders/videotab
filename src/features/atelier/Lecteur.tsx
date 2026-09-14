@@ -57,8 +57,20 @@ export function Lecteur({
     if (enLecture && scene && position >= scene.dureeMs - 20) setEnLecture(false)
   }, [position, enLecture, scene])
 
+  /* L'aperçu se colle en haut de l'écran pendant qu'on fait défiler les réglages — mais
+     seulement quand il est assez plat pour ne pas manger la page. Une bande d'incrustation
+     fait un cinquième de sa largeur ; une page entière, ou un format vertical, en fait une
+     fois et demie, et resterait planté devant tout ce qu'on essaie de régler. Le seuil est
+     donc sur la forme de l'image et non sur la disposition, parce que c'est la forme qui
+     décide de la place prise. */
+  const plat = scene ? scene.hauteur / scene.largeur <= 0.25 : false
+
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+    <div
+      className={`overflow-hidden rounded-xl border border-slate-800 bg-slate-950 ${
+        plat ? 'sticky top-0 z-20 shadow-lg shadow-slate-950/80' : ''
+      }`}
+    >
       {/* Un damier derrière l'aperçu quand la scène est transparente : sans lui, on ne
           distinguerait pas un fond transparent d'un fond noir, et la case correspondante
           semblerait sans effet. */}

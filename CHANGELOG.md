@@ -9,6 +9,14 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The preview follows you down the page**, but only when it is a strip. Cropped to the band
+  it is a fifth as tall as it is wide, so pinning it to the top costs little and saves scrolling
+  back up to see what a setting did. A full 16/9 picture, or a vertical format, is another
+  matter — it would sit in front of everything one is trying to adjust — so the rule is on the
+  shape of the image rather than on the layout, since it is the shape that decides how much room
+  it takes. It also meant taking the preview out of its own wrapper: a sticky element only holds
+  within its parent, and a wrapper its own size let it slide away at the first setting.
+
 - **The scene's geometry has moved out of the drawing code** and into
   [src/lib/geometrie.ts](src/lib/geometrie.ts), where it can be tested. It lived at the top of
   , mixed in with the canvas work, which meant it could only be checked by making

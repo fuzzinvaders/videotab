@@ -224,73 +224,74 @@ export function AtelierPdf({
     /* Même disposition que pour une tablature : l'aperçu et le découpage en haut, sur toute
        la largeur, puis les réglages en colonnes. */
     <div className="space-y-4">
-      <div className="space-y-4">
-        {erreur ? <ErrorText>{erreur}</ErrorText> : null}
-        <Lecteur
-          scene={scene}
-          audio={bandeSon}
-          message={
-            pages.length === 0
-              ? etat
-              : "Découpe d’abord les systèmes : « Détecter les lignes »."
-          }
-        />
+      {/* L'aperçu est un enfant direct de la page, et non d'une enveloppe à lui : un
+          élément collant ne tient que dans les limites de son parent, et une enveloppe à sa
+          taille le laisserait filer dès le premier réglage. */}
+      {erreur ? <ErrorText>{erreur}</ErrorText> : null}
+      <Lecteur
+        scene={scene}
+        audio={bandeSon}
+        message={
+          pages.length === 0
+            ? etat
+            : "Découpe d’abord les systèmes : « Détecter les lignes »."
+        }
+      />
 
-        <Card className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-medium text-slate-200">
-              Découpage — {pdf.systemes.length} système
-              {pdf.systemes.length > 1 ? "s" : ""}
-            </h2>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={detecter}
-                disabled={pages.length === 0}
-              >
-                Détecter les lignes
-              </Button>
-              {pdf.systemes.length > 0 ? (
-                <Button
-                  variant="ghost"
-                  onClick={() => majPdf((p) => ({ ...p, systemes: [] }))}
-                  className="text-red-400"
-                >
-                  Tout effacer
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          <p className="text-sm text-slate-400">
-            Tire un rectangle sur la page pour ajouter une ligne, attrape ses
-            bords pour l'ajuster, change son nombre de mesures dans le coin.
-            L'ordre de lecture suit la page, de haut en bas.
-          </p>
-          <p className="text-xs text-slate-500">
-            Pages rendues par{" "}
-            <a
-              href="https://mozilla.github.io/pdf.js/"
-              target="_blank"
-              rel="noreferrer"
-              className="text-slate-400 underline hover:text-slate-200"
+      <Card className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-medium text-slate-200">
+            Découpage — {pdf.systemes.length} système
+            {pdf.systemes.length > 1 ? "s" : ""}
+          </h2>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={detecter}
+              disabled={pages.length === 0}
             >
-              pdf.js
-            </a>
-            .
-          </p>
+              Détecter les lignes
+            </Button>
+            {pdf.systemes.length > 0 ? (
+              <Button
+                variant="ghost"
+                onClick={() => majPdf((p) => ({ ...p, systemes: [] }))}
+                className="text-red-400"
+              >
+                Tout effacer
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <p className="text-sm text-slate-400">
+          Tire un rectangle sur la page pour ajouter une ligne, attrape ses
+          bords pour l'ajuster, change son nombre de mesures dans le coin.
+          L'ordre de lecture suit la page, de haut en bas.
+        </p>
+        <p className="text-xs text-slate-500">
+          Pages rendues par{" "}
+          <a
+            href="https://mozilla.github.io/pdf.js/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-400 underline hover:text-slate-200"
+          >
+            pdf.js
+          </a>
+          .
+        </p>
 
-          {pages.length === 0 ? (
-            <p className="text-slate-500">{etat}</p>
-          ) : (
-            <EditeurSystemes
-              pages={pages}
-              systemes={pdf.systemes}
-              mesuresParDefaut={pdf.mesuresParSysteme}
-              onChange={(systemes) => majPdf((p) => ({ ...p, systemes }))}
-            />
-          )}
-        </Card>
-      </div>
+        {pages.length === 0 ? (
+          <p className="text-slate-500">{etat}</p>
+        ) : (
+          <EditeurSystemes
+            pages={pages}
+            systemes={pdf.systemes}
+            mesuresParDefaut={pdf.mesuresParSysteme}
+            onChange={(systemes) => majPdf((p) => ({ ...p, systemes }))}
+          />
+        )}
+      </Card>
 
       {/* Des colonnes tenues à la main, et non un flux qui se rééquilibre : déplier un
          réglage ferait sinon sauter les cartes d'une colonne à l'autre, et l'on perdrait des

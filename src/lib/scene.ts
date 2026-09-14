@@ -208,6 +208,32 @@ export function creerScene(options: OptionsScene): Scene {
   couche.height = Math.max(1, zone.h)
   const couche2d = couche.getContext('2d')
 
+  /* Une seconde couche, qui ne sert qu'aux tournements de page : elle porte la fenêtre qu'on
+     quitte pendant qu'elle s'efface. Elle n'est fabriquée que là où elle peut servir — en
+     défilement continu rien ne saute, et elle coûterait deux mégaoctets pour rien. */
+  const voile = parBlocs ? document.createElement('canvas') : null
+  if (voile) {
+    voile.width = Math.max(1, zone.w)
+    voile.height = Math.max(1, zone.h)
+  }
+  const voile2d = voile?.getContext('2d') ?? null
+
+  /* La longueur du fondu, comptée en largeur de fenêtre plutôt qu'en millisecondes : la scène
+     ne connaît pas le tempo, et une durée en pixels de partition en tient lieu — elle dure
+     d'autant moins longtemps que le morceau va vite, ce qui est le bon comportement. Deux
+     pour cent et demi de la fenêtre font environ deux dixièmes de seconde à tempo courant. */
+  const longueurFondu = Math.max(1, (zone.w / echelle) * 0.025)
+
+  /** La fenêtre qu'on vient de quitter et où en est son effacement, ou rien. */
+  function transitionA(curseur: Curseur | null): { precedent: number; part: number } | null {
+    if (!parBlocs || !curseur) return null
+    const rang = blocs.indexA(curseur.x)
+    if (rang <= 0) return null
+    const part = (curseur.x - blocs.debuts[rang]) / longueurFondu
+    if (part >= 1) return null
+    return { precedent: blocs.debuts[rang - 1], part: Math.max(0, part) }
+  }
+
   function positionVoulue(curseur: Curseur | null): number {
     if (!curseur) return 0
     if (parBlocs) return blocs.gaucheA(curseur.x) * echelle
@@ -251,6 +277,22 @@ export function creerScene(options: OptionsScene): Scene {
       composerLaBande(couche2d, { curseur, scroll })
       dessinerCadreDerriere(ctx, { zone, video, theme, couleur })
       ctx.drawImage(couche, zone.x, zone.y)
+
+      /* Le fondu du tournement de page. La fenêtre qu'on quitte est redessinée par-dessus la
+         nouvelle, à une opacité qui s'efface : les deux se traversent au lieu de se remplacer
+         d'un coup. Rien ne glisse — c'est précisément ce qu'on évite en choisissant ce mode —
+         mais l'œil voit d'où vient ce qu'il lit, au lieu de retrouver un écran neuf sans
+         transition. Le curseur n'y figure pas : il n'y en a qu'un, et il est déjà à sa
+         nouvelle place. */
+      const passage = transitionA(curseur)
+      if (passage && voile && voile2d) {
+        composerLaBande(voile2d, { curseur, scroll: passage.precedent * echelle, sansCurseur: true })
+        ctx.save()
+        ctx.globalAlpha = 1 - passage.part
+        ctx.drawImage(voile, zone.x, zone.y)
+        ctx.restore()
+      }
+
       dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur: hauteurImage, trait: traitCadre })
     }
 
@@ -300,7 +342,10 @@ export function creerScene(options: OptionsScene): Scene {
   }
 
   /** La bande elle-même : la plaque, la partition, le curseur, et l'effacement des bords. */
-  function composerLaBande(c: CanvasRenderingContext2D, etat: { curseur: Curseur | null; scroll: number }) {
+  function composerLaBande(
+    c: CanvasRenderingContext2D,
+    etat: { curseur: Curseur | null; scroll: number; sansCurseur?: boolean },
+  ) {
     c.setTransform(1, 0, 0, 1, 0, 0)
     c.clearRect(0, 0, zone.w, zone.h)
 
@@ -345,7 +390,7 @@ export function creerScene(options: OptionsScene): Scene {
       c.drawImage(tuile.source, tuile.x, tuile.y, tuile.w, tuile.h)
     }
 
-    if (etat.curseur) {
+    if (etat.curseur && !etat.sansCurseur) {
       dessinerCurseur(c, etat.curseur, {
         couleur,
         opacite: video.opacite,

@@ -26,6 +26,28 @@ export async function reveillerAudio(): Promise<AudioContext> {
   return ctx
 }
 
+/**
+ * De combien le son programmé est en retard sur le son entendu.
+ *
+ * Un contexte audio ne joue pas ce qu'on lui donne à l'instant où on le lui donne : il le
+ * rend dans un tampon, que le système passe ensuite à la carte son. Entre les deux il s'écoule
+ * un délai que le navigateur sait chiffrer — mesuré ici sous Chrome/Windows, dix millisecondes
+ * de traitement et quarante de sortie, soit cinquante-trois en tout, vérifiées en comparant
+ * l'horloge de rendu à celle de `getOutputTimestamp`.
+ *
+ * C'est peu et c'est beaucoup : cinquante millisecondes ne s'entendent pas sur une note tenue,
+ * mais se voient sur une attaque, et une image qui devance le son de cette durée donne
+ * l'impression tenace que le curseur est en avance. Il faut donc retarder l'image d'autant,
+ * et pour cela commencer par le savoir.
+ */
+export function latenceSortieMs(ctx: AudioContext): number {
+  const base = Number.isFinite(ctx.baseLatency) ? ctx.baseLatency : 0
+  // `outputLatency` n'est pas partout, et vaut zéro tant que la sortie n'a rien joué.
+  const sortie = Number.isFinite(ctx.outputLatency) ? ctx.outputLatency : 0
+  // Un plafond, parce qu'un pilote qui annoncerait une demi-seconde ferait pire que mieux.
+  return Math.min(250, (base + sortie) * 1000)
+}
+
 /** Transforme des échantillons entrelacés (gauche, droite, gauche…) en AudioBuffer. */
 export function bufferDepuisEntrelace(
   blocs: Float32Array[],

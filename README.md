@@ -84,7 +84,8 @@ covers timing, staff detection, server-side validation and the library operation
   the same strip, but standing still — the cursor crosses it and the page turns at the end. A
   bar is never cut, so the window holds as many as fit, and the last one is shown ahead of time
   and reopens the next window — the page turns exactly as the cursor reaches it, so you never
-  turn onto the entirely unknown and the cursor has crossed the whole screen first. A digit that
+  turn onto the entirely unknown and the cursor has crossed the whole screen first. The turn is
+  a short dissolve rather than a cut. A digit that
   does not move can be read; a digit that slides can only be followed. *Page*: the
   whole score scrolling downwards, to work on a piece rather than to illustrate it.
 - **Themes** — five of them, including **Cordes colorées** (coloured strings): dark background,

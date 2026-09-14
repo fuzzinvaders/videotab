@@ -1,4 +1,4 @@
-import { reveillerAudio } from './audio'
+import { latenceSortieMs, reveillerAudio } from './audio'
 import type { Scene } from './scene'
 
 /**
@@ -74,6 +74,7 @@ export function creerApercu(
     if (position >= scene.dureeMs - 20) position = 0
     scene.reinitialiser(position)
 
+    let retard = 0
     if (options.audio) {
       const contexte = await reveillerAudio()
       arreterSource()
@@ -83,9 +84,14 @@ export function creerApercu(
       // La bande-son démarre à l'endroit où en est l'image, pas à zéro : sans ce décalage,
       // reprendre la lecture au milieu jouerait le morceau depuis son début.
       source.start(0, Math.max(0, position / 1000))
+      /* Et l'image attend que ce son soit audible. Ce qu'on vient de programmer ne sort pas
+         du haut-parleur maintenant mais dans quelques dizaines de millisecondes, le temps de
+         traverser le tampon puis la carte son. Partir tout de suite mettait l'image en avance
+         d'autant, ce qui ne s'entend pas mais se voit très bien sur une attaque. */
+      retard = latenceSortieMs(contexte)
     }
 
-    origine = performance.now() - position
+    origine = performance.now() + retard - position
     boucle = requestAnimationFrame(tourner)
   }
 

@@ -62,6 +62,8 @@ export function largeurPourTenir(barres: number[], parEcran: number): number {
 export interface Blocs {
   /** Abscisse du bord gauche de la fenêtre où tombe ce point du repère partition. */
   gaucheA(x: number): number
+  /** Rang de cette fenêtre, ou -1 si le découpage n'en connaît aucune. */
+  indexA(x: number): number
   /** Bord gauche de chaque fenêtre, dans l'ordre. */
   debuts: number[]
 }
@@ -89,6 +91,7 @@ export function decouperEnBlocs(d: DemandeBlocs): Blocs {
   if (barres.length < 2) {
     return {
       debuts: [],
+      indexA: () => -1,
       gaucheA: (x) => Math.max(0, Math.floor(x / largeur) * largeur),
     }
   }
@@ -136,19 +139,22 @@ export function decouperEnBlocs(d: DemandeBlocs): Blocs {
 
   const debuts = premieres.map((i) => barres[i])
 
+  // Recherche du dernier début qui ne dépasse pas x : les fenêtres se suivent, donc
+  // celle-là est bien celle qui contient le point.
+  function rang(x: number): number {
+    let bas = 0
+    let haut = debuts.length - 1
+    while (bas < haut) {
+      const milieu = (bas + haut + 1) >> 1
+      if (debuts[milieu] <= x) bas = milieu
+      else haut = milieu - 1
+    }
+    return bas
+  }
+
   return {
     debuts,
-    gaucheA(x) {
-      // Recherche du dernier début qui ne dépasse pas x : les fenêtres se suivent, donc
-      // celle-là est bien celle qui contient le point.
-      let bas = 0
-      let haut = debuts.length - 1
-      while (bas < haut) {
-        const milieu = (bas + haut + 1) >> 1
-        if (debuts[milieu] <= x) bas = milieu
-        else haut = milieu - 1
-      }
-      return debuts[bas]
-    },
+    indexA: rang,
+    gaucheA: (x) => debuts[rang(x)],
   }
 }

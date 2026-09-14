@@ -32,6 +32,15 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **The preview ran ahead of its own sound by the width of the sound card's buffer.** A context
+  does not play what it is handed at the instant it is handed it: the sound crosses a buffer and
+  then the driver before reaching the speaker. Measured here, under Chrome on Windows: ten
+  milliseconds of processing and forty of output, fifty-three in all, confirmed by comparing the
+  rendering clock with `getOutputTimestamp`. The picture started immediately and so led the
+  sound by that much — inaudible on a held note, plainly visible on an attack, and quite enough
+  to leave the impression that the cursor is early. The picture now waits for the sound to be
+  audible. The export was never affected: it taps the audio before the output device, so there
+  is no such delay to account for.
 - **The picture ran half a second ahead of the sound, from the first bar to the last.** The
   tick table that ties the two together is built from what the audio export reports for each
   chunk it produces — and its two fields do not describe the same instant. `currentTick` gives
@@ -147,6 +156,12 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **Turning the page now dissolves instead of cutting.** The window being left is redrawn over
+  the new one at a fading opacity, for about two tenths of a second. Nothing slides — that is
+  the whole point of choosing fixed bars — but the eye sees where what it is reading came from,
+  rather than finding a fresh screen with no warning. The length is counted in window widths
+  rather than in milliseconds, since the scene does not know the tempo: the faster the piece,
+  the shorter the dissolve, which is the right way round.
 - **The rhythm under the tablature can be switched off.** It is on by default, because a fret
   number says where to put the finger and not how long to leave it there — a tablature without
   rhythm only reads to someone who already knows the piece. It takes room, though, and on an

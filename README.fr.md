@@ -89,7 +89,7 @@ opérations de bibliothèque.
   tourne à la fin. Une mesure n'est jamais coupée, la fenêtre en met donc autant qu'il en
   entre, et la dernière est montrée en avance puis rouvre la fenêtre suivante : la page tourne
   pile en arrivant sur elle, donc jamais sur du tout-inconnu et jamais avant que le curseur
-  ait traversé tout l'écran. Un chiffre qui ne bouge pas se déchiffre, un
+  ait traversé tout l'écran. Le tournement se fait en fondu, pas en coupure. Un chiffre qui ne bouge pas se déchiffre, un
   chiffre qui glisse ne se suit que de loin.
   *Page* : la partition entière qui défile vers le bas, pour travailler un morceau plutôt que
   pour l'illustrer.

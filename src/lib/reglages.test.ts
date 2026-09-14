@@ -45,6 +45,15 @@ describe('completerVideo', () => {
     expect(complet.curseurStyle).toBe(videoParDefaut().curseurStyle)
   })
 
+  /* Les mesures fixes sont arrivées après le défilement : un morceau enregistré avec elles
+     doit se rouvrir dessus, et un morceau plus ancien retrouver le défilement sans rien dire.
+     C'est tout ce que garantit l'absence de migration, et ça se vérifie. */
+  it('accepte la disposition en mesures fixes, arrivée après les autres', () => {
+    expect(completerVideo({ disposition: 'mesures' }).disposition).toBe('mesures')
+    expect(completerVideo({}).disposition).toBe('defilement')
+    expect(completerVideo({}).anticipation).toBe(videoParDefaut().anticipation)
+  })
+
   /* La couleur absente doit le rester : c'est elle qui fait suivre le thème. Lui donner une
      valeur par défaut recréerait le bug qu'on vient de corriger — un curseur figé sur la
      teinte d'un thème essayé une fois, et qui ne suit plus jamais les suivants. */

@@ -11,6 +11,7 @@ import {
   colorerLesCordes,
   curseurDepuisAncres,
   etendueDesPortees,
+  barresDeMesure,
   largeurDeMesure,
   masquerEntete,
   pistesVisibles,
@@ -112,12 +113,13 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       appliquerTempo(score, gp.tempoPct)
       colorerLesCordes(score, theme)
       instance.settings.display.staveProfile = profilDePortee(gp)
-      /* En défilement, c'est alphaTab lui-même qui met tout le morceau sur une seule ligne :
+      /* En bande — défilement comme mesures — c'est alphaTab lui-même qui met tout le morceau
+         sur une seule ligne :
          la scène n'a alors qu'à faire glisser cette bande. Recoller à la main des systèmes
          mis en page pour une feuille A4 donnerait des raccords visibles à chaque retour à la
          ligne, et une largeur de mesure qui change d'un système à l'autre. */
       instance.settings.display.layoutMode =
-        video.disposition === 'defilement' ? alphaTab.LayoutMode.Horizontal : alphaTab.LayoutMode.Page
+        video.disposition === 'page' ? alphaTab.LayoutMode.Page : alphaTab.LayoutMode.Horizontal
       appliquerTheme(instance, theme)
       instance.metronomeVolume = gp.metronome ? 1 : 0
       instance.updateSettings()
@@ -177,7 +179,12 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     const etendue = etendueDesPortees(instance)
     // La largeur d'une mesure vient du rendu, pas d'un réglage : c'est elle qui permet de
     // demander « quatre mesures à l'écran » plutôt qu'une hauteur en pixels.
-    const avecMesure = { ...feuille, largeurMesure: largeurDeMesure(instance) }
+    // Les barres, elles, servent à tourner la page sur une mesure entière plutôt qu'au milieu.
+    const avecMesure = {
+      ...feuille,
+      largeurMesure: largeurDeMesure(instance),
+      barres: barresDeMesure(instance),
+    }
     const cadree = etendue ? recadrer(avecMesure, etendue.y0, etendue.y1) : avecMesure
     return creerScene({
       feuille: cadree,

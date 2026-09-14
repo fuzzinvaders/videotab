@@ -33,6 +33,8 @@ export function videoParDefaut(): ReglagesVideo {
     // Un tiers de la largeur : assez de passé pour comprendre où l'on est, assez d'avenir
     // pour voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
     teteX: 0.33,
+    // Une mesure d'avance : de quoi lire ce qui vient sans que la fenêtre tourne pour si peu.
+    anticipation: 1,
     cadre: 'aucun',
     // L'image entière par défaut : c'est le format qu'on attend d'une vidéo, et le cadrage sur
     // la bande ne prend son sens qu'une fois qu'on sait qu'on va l'incruster.
@@ -67,12 +69,13 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     largeur: nombre(video.largeur, d.largeur, 320, 3840),
     hauteur: nombre(video.hauteur, d.hauteur, 320, 3840),
     fps: nombre(video.fps, d.fps, 12, 60),
-    disposition: parmi(video.disposition, ['page', 'defilement'] as const, d.disposition),
+    disposition: parmi(video.disposition, ['page', 'defilement', 'mesures'] as const, d.disposition),
     theme: typeof video.theme === 'string' ? video.theme : d.theme,
     mesuresVisibles: nombre(video.mesuresVisibles, d.mesuresVisibles, 1, 32),
     margeBande: nombre(video.margeBande, d.margeBande, 0, 1.5),
     hauteurMax: nombre(video.hauteurMax, d.hauteurMax, 0.1, 0.95),
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
+    anticipation: nombre(video.anticipation, d.anticipation, 0, 8),
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),

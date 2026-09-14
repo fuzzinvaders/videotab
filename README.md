@@ -79,16 +79,21 @@ covers timing, staff detection, server-side validation and the library operation
   playhead. The zoom is set in **bars on screen** — four by default — and the height of the
   strip follows from it, as short as the tablature requires: whatever it does not take stays
   visible of the video underneath. The breathing room around it is a separate setting. The eye stops moving and waits for the music
-  to arrive, and the whole thing fits in a band at the bottom of a cover video. *Page*: the
+  to arrive, and the whole thing fits in a band at the bottom of a cover video. *Fixed bars*:
+  the same strip, but standing still — the cursor crosses it and the page turns at the end. A
+  bar is never cut, so the window holds as many as fit, and the last ones are shown ahead of
+  time and reopen the next window, so you never turn onto the entirely unknown. A digit that
+  does not move can be read; a digit that slides can only be followed. *Page*: the
   whole score scrolling downwards, to work on a piece rather than to illustrate it.
 - **Themes** — five of them, including **Cordes colorées** (coloured strings): dark background,
   grey staff lines, one colour per string. The colour says which string to play, the number
   says which fret; the eye finds the string before it has read the number. The order starts
   from the lowest string, so a four-string bass and a seven-string guitar read the same way.
   Also: Papier, Ardoise, Néon, Craie.
-- **Framing** — none, a rounded card, a coloured halo, translucent bands, or a vignette. Both
-  ends of the strip always fade out: a bar appearing abruptly at the edge of the frame catches
-  the eye at the wrong moment.
+- **Framing** — none, a rounded card, a coloured halo, translucent bands, or a vignette. While
+  scrolling, both ends of the strip fade out: a bar appearing abruptly at the edge of the frame
+  catches the eye at the wrong moment. With fixed bars they do not, since the bar at the edge is
+  exactly the one being offered to read ahead.
 - **Cursor** — the line at the exact instant, the highlight over the current beat, or both.
   On a tight tablature the two say the same thing and get in each other's way; on a video
   watched from a distance, both beat one. The colour follows the theme until you pick one, and
@@ -102,7 +107,8 @@ covers timing, staff detection, server-side validation and the library operation
 
 This is what the application exists for. Three settings are enough:
 
-1. **Layout: horizontal scroll.** The tablature becomes a band, not a page.
+1. **Layout: horizontal scroll**, or fixed bars. Either way the tablature becomes a band, not
+   a page.
 2. **Background: transparent** — or **chroma green** if the editing software prefers it.
    Transparent produces a VP8 WebM with an alpha channel; it is cleaner, but not every browser
    encodes it and not every editor reads it, and the interface says so before you press.
@@ -197,7 +203,8 @@ history. Every open session is closed; restart the container for it to take effe
   preview and the video call the same `dessiner(ctx, t)`. The file's only real fork is the
   layout: in page mode the cursor is followed on `y` with smoothing, in scroll mode it is held
   on `x` without any — that position is already continuous, and smoothing it would only add a
-  delay between sound and picture.
+  delay between sound and picture — and with fixed bars the strip does not move at all between
+  two page turns, which is the whole point of choosing it.
 - **Themes** ([src/lib/themes.ts](src/lib/themes.ts)) act at three distinct moments: the
   colours the scene paints itself, the ones alphaTab receives **before** drawing (a staff is
   not a picture you retouch afterwards), and the colour of each string, set note by note in

@@ -23,7 +23,12 @@ const DISPOSITIONS: Array<{ id: Disposition; nom: string; aide: string }> = [
   {
     id: 'defilement',
     nom: 'Défilement horizontal',
-    aide: 'Une seule bande qui glisse sous une tête de lecture fixe. C’est la disposition à incruster dans une vidéo de reprise.',
+    aide: 'Une seule bande qui glisse sous une tête de lecture fixe. Le regard ne bouge plus, il attend que la musique arrive.',
+  },
+  {
+    id: 'mesures',
+    nom: 'Mesures fixes',
+    aide: 'La même bande, mais immobile : c’est le curseur qui la traverse, et la page tourne à la fin. Un chiffre qui ne bouge pas se déchiffre — sur une tablature serrée, c’est souvent plus lisible.',
   },
   {
     id: 'page',
@@ -68,7 +73,8 @@ export function PanneauMiseEnScene({
   modifier: (mutation: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
   const theme = themeParId(video.theme)
-  const defilement = video.disposition === 'defilement'
+  const enBande = video.disposition !== 'page'
+  const parBlocs = video.disposition === 'mesures'
 
   return (
     <Card className="space-y-4">
@@ -136,7 +142,7 @@ export function PanneauMiseEnScene({
         ) : null}
       </div>
 
-      {defilement ? (
+      {enBande ? (
         <>
           <Curseur
             label="Mesures à l’écran"
@@ -145,7 +151,11 @@ export function PanneauMiseEnScene({
             max={16}
             pas={1}
             affichage={`${video.mesuresVisibles} mesure${video.mesuresVisibles > 1 ? 's' : ''}`}
-            aide="C’est ce réglage qui fait le zoom : moins de mesures, des chiffres plus gros, une bande plus haute. La hauteur suit toute seule."
+            aide={
+              parBlocs
+                ? 'C’est ce réglage qui fait le zoom, et la fenêtre en montre autant qu’il en entre à cette taille-là — parfois une de plus, parfois une de moins, plutôt que d’en couper une.'
+                : 'C’est ce réglage qui fait le zoom : moins de mesures, des chiffres plus gros, une bande plus haute. La hauteur suit toute seule.'
+            }
             onChange={(mesuresVisibles) => modifier((v) => ({ ...v, mesuresVisibles }))}
           />
           <Curseur
@@ -170,6 +180,25 @@ export function PanneauMiseEnScene({
             aide="Un plafond, pas une cible : la bande reste aussi courte que la tablature l’exige. Il ne s’applique que si elle le dépasse, et on voit alors plus de mesures que demandé."
             onChange={(hauteurMax) => modifier((v) => ({ ...v, hauteurMax }))}
           />
+          {/* Chaque mode a son réglage d'avancée, et l'autre n'a aucun sens chez lui : sans
+              tablature qui glisse il n'y a pas de tête de lecture, et sans page qui tourne il
+              n'y a rien à montrer en avance. */}
+          {parBlocs ? (
+            <Curseur
+              label="Mesures d’avance"
+              valeur={video.anticipation}
+              min={0}
+              max={4}
+              pas={1}
+              affichage={
+                video.anticipation === 0
+                  ? 'aucune'
+                  : `${video.anticipation} mesure${video.anticipation > 1 ? 's' : ''}`
+              }
+              aide="Les dernières mesures de la fenêtre, montrées avant d’être jouées : elles rouvrent la fenêtre suivante. À zéro, chaque tournement de page livre du tout-inconnu au moment où il faudrait déjà savoir quoi faire."
+              onChange={(anticipation) => modifier((v) => ({ ...v, anticipation }))}
+            />
+          ) : (
           <Curseur
             label="Tête de lecture"
             valeur={video.teteX}
@@ -180,6 +209,7 @@ export function PanneauMiseEnScene({
             aide="À gauche, on voit venir la suite de loin ; au milieu, on garde autant de passé que d’avenir."
             onChange={(teteX) => modifier((v) => ({ ...v, teteX }))}
           />
+          )}
         </>
       ) : null}
 
@@ -252,7 +282,7 @@ export function PanneauVideo({
         <Select
           value={video.cadrage}
           onChange={(e) => modifier((v) => ({ ...v, cadrage: e.target.value as Cadrage }))}
-          disabled={video.disposition !== 'defilement'}
+          disabled={video.disposition === 'page'}
         >
           <option value="image">Image entière</option>
           <option value="bande">Hauteur de la bande</option>

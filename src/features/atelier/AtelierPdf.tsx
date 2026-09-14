@@ -39,7 +39,9 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
   const { deposerAudio, supprimerAudio } = useMorceaux()
   const pdf = reglages.pdf
   const theme = themeParId(reglages.video.theme)
-  const defilement = reglages.video.disposition === 'defilement'
+  // Défilement et mesures produisent la même bande : seule la façon dont elle avance change,
+  // et c'est la scène qui s'en occupe. Ici, les deux demandent le même recollage.
+  const enBande = reglages.video.disposition !== 'page'
 
   const [pages, setPages] = useState<PageRendue[]>([])
   const [feuille, setFeuille] = useState<Feuille | null>(null)
@@ -106,18 +108,18 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
     [pdf, reglages.video.compteAvantSec],
   )
 
-  /* En défilement, les systèmes découpés sont détachés de leurs pages et recollés bout à
+  /* En bande, les systèmes découpés sont détachés de leurs pages et recollés bout à
      bout en une seule bande. C'est le seul travail que la disposition demande en plus — le
      découpage, lui, sert aux deux, et se corrige une fois pour toutes. */
   const bande = useMemo(
     () =>
-      defilement && pdf
+      enBande && pdf
         ? bandeDepuisSystemes(pages, pdf.systemes, {
             encre: theme.detourerPdf ? theme.encre : null,
             mesuresParDefaut: pdf.mesuresParSysteme,
           })
         : null,
-    [defilement, pages, pdf, theme],
+    [enBande, pages, pdf, theme],
   )
 
   const scene = useMemo(() => {
@@ -129,7 +131,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
       artiste: morceau.artiste,
     }
 
-    if (defilement) {
+    if (enBande) {
       if (!bande || bande.feuille.tuiles.length === 0) return null
       return creerScene({
         ...commun,
@@ -152,7 +154,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
       curseurA: curseurPdf(pdf.systemes, etapes, placements),
     })
   }, [
-    defilement,
+    enBande,
     bande,
     feuille,
     pdf,

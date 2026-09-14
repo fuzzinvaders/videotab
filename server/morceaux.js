@@ -33,6 +33,9 @@ function reglagesParDefaut(type) {
     // Un tiers de la largeur : assez de passé pour savoir où l'on est, assez d'avenir pour
     // voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
     teteX: 0.33,
+    // Une mesure d'avance en mode « mesures » : la fenêtre en montre une de plus qu'elle n'en
+    // fait jouer, et cette mesure-là ouvre la suivante.
+    anticipation: 1,
     cadre: "aucun",
     cadrage: "image",
     fond: "theme",

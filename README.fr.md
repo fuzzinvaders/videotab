@@ -83,6 +83,11 @@ opérations de bibliothèque.
   hauteur de la bande en découle, aussi courte que la tablature l'exige : tout ce qu'elle ne
   prend pas reste visible de la vidéo posée dessous. L'air laissé autour se règle à part. Le regard ne bouge plus, il
   attend que la musique arrive, et ça tient dans un bandeau au bas d'une vidéo de reprise.
+  *Mesures fixes* : la même bande, mais immobile — c'est le curseur qui la traverse, et la page
+  tourne à la fin. Une mesure n'est jamais coupée, la fenêtre en met donc autant qu'il en
+  entre, et les dernières sont montrées en avance puis rouvrent la fenêtre suivante : on ne
+  tourne jamais la page sur du tout-inconnu. Un chiffre qui ne bouge pas se déchiffre, un
+  chiffre qui glisse ne se suit que de loin.
   *Page* : la partition entière qui défile vers le bas, pour travailler un morceau plutôt que
   pour l'illustrer.
 - **Thèmes** — cinq, dont **Cordes colorées** : fond sombre, lignes grises, et une couleur par
@@ -91,8 +96,9 @@ opérations de bibliothèque.
   qui fait qu'une basse à quatre cordes et une guitare à sept se lisent pareil. Et aussi :
   Papier, Ardoise, Néon, Craie.
 - **Encadrement** — aucun, carte à coins arrondis, halo coloré, bandes translucides, ou
-  vignette. Les deux bouts de la bande s'effacent toujours en dégradé : une mesure qui
-  apparaît d'un coup au bord de l'image attire l'œil au mauvais moment.
+  vignette. En défilement, les deux bouts de la bande s'effacent en dégradé : une mesure qui
+  apparaît d'un coup au bord de l'image attire l'œil au mauvais moment. En mesures fixes, non :
+  la mesure du bord est justement celle qu'on donne à lire en avance.
 - **Curseur** — le trait à l'instant exact, le surlignage du temps en cours, ou les deux. Sur
   une tablature serrée les deux disent la même chose et se gênent ; sur une vidéo regardée de
   loin, les deux valent mieux qu'un. La couleur suit le thème tant qu'on n'en choisit pas une,
@@ -107,7 +113,8 @@ opérations de bibliothèque.
 
 C'est ce pour quoi l'application existe. Trois réglages y suffisent :
 
-1. **Disposition : défilement horizontal.** La tablature devient un bandeau, pas une page.
+1. **Disposition : défilement horizontal**, ou mesures fixes. Dans les deux cas la tablature
+   devient un bandeau, pas une page.
 2. **Fond : transparent** — ou **vert d'incrustation** si le logiciel de montage préfère.
    Transparent produit un WebM VP8 à canal alpha ; c'est plus propre, mais tous les navigateurs
    ne l'encodent pas et tous les montages ne le lisent pas, et l'interface le dit avant qu'on
@@ -204,7 +211,8 @@ que ce soit pris en compte.
   L'aperçu et la vidéo appellent le même `dessiner(ctx, t)`. La seule vraie bifurcation du
   fichier est la disposition : en page on suit le curseur en `y` avec un lissage, en
   défilement on le maintient en `x` sans lissage — la position y est déjà continue, et la
-  lisser n'ajouterait qu'un retard entre le son et l'image.
+  lisser n'ajouterait qu'un retard entre le son et l'image — et en mesures fixes la bande ne
+  bouge pas du tout entre deux tournements de page, ce qui est tout l'intérêt de la choisir.
 - **Les thèmes** ([src/lib/themes.ts](src/lib/themes.ts)) agissent à trois moments distincts :
   les couleurs que la scène peint, celles qu'alphaTab reçoit **avant** de dessiner (une portée
   n'est pas une image qu'on retouche après coup), et la couleur de chaque corde, posée note

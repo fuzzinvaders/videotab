@@ -186,6 +186,11 @@ export function bandeDepuisSystemes(
 
   const tuiles: Tuile[] = []
   const segments: Segment[] = []
+  /* Les barres de mesure d'un PDF sont une déduction, pas une lecture : rien dans l'image ne
+     dit où elles tombent. On divise donc chaque système en parts égales du compte déclaré,
+     ce qui est faux au détail près mais juste aux extrémités — et ce sont les extrémités qui
+     comptent, puisqu'elles décident où la page tourne. */
+  const barres: number[] = []
   let curseur = 0
 
   for (const morceau of morceaux) {
@@ -197,8 +202,12 @@ export function bandeDepuisSystemes(
       source: morceau.canvas,
     })
     segments.push({ x: curseur, w: morceau.rect.w })
+    for (let i = 0; i < morceau.mesures; i++) {
+      barres.push(curseur + (i * morceau.rect.w) / morceau.mesures)
+    }
     curseur += morceau.rect.w + ecart
   }
+  barres.push(Math.max(0, curseur - ecart))
 
   /* La largeur d'une mesure ne se mesure pas sur l'image : rien dans un PDF ne dit où sont les
      barres de mesure. On la déduit donc de ce que l'utilisateur a déclaré — tel système porte
@@ -207,7 +216,7 @@ export function bandeDepuisSystemes(
   const largeurMesure = largeurMedianeDeMesure(morceaux.map((m) => m.rect.w / m.mesures))
 
   return {
-    feuille: { largeur: Math.max(0, curseur - ecart), hauteur, tuiles, largeurMesure },
+    feuille: { largeur: Math.max(0, curseur - ecart), hauteur, tuiles, largeurMesure, barres },
     segments,
   }
 }

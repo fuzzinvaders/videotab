@@ -32,6 +32,11 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **alphaTab reports each bar about nine times**, and taking it at its word made the new layout
+  useless: hundreds of zero-width bars, no bar line left to stop at, and a window that fell back
+  to cutting every so many pixels — the lookahead setting then changed nothing at all, which is
+  how it was noticed. Measured on a bass tablature: 766 entries for 86 distinct positions. Only
+  the distinct abscissae are kept now; on a single line, two bars cannot begin at the same place.
 - **An export made while looking elsewhere came out at one frame per second.** This was the
   real cause of the stutter, and it was hiding behind a warning that merely asked the user to
   keep the tab in front — an unreasonable thing to ask of someone waiting three minutes, and
@@ -100,6 +105,28 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **A third layout: fixed bars, moving cursor.** Continuous scrolling has a flaw no measurement
+  reveals — everything moves, all the time. The eye follows a digit sliding past instead of
+  reading it, and on a tight tablature it never gets to settle. The alternative is as old as
+  paper: show a few bars, hold them still, let only the cursor cross them, and turn the page at
+  the end. Two rules govern the split. **A bar is never cut** — so the window holds as many as
+  fit rather than a number decided in advance, since alphaTab gives each bar the width its
+  contents demand. And **you see what is coming** — the last bars of a window are shown ahead of
+  time and become the first of the next, because turning the page onto the entirely unknown is
+  exactly where one loses the thread. How many bars of lookahead is a setting; one by default.
+  The window is deduced from the cursor's position alone, with no memory, so jumping anywhere in
+  the piece shows the same picture as having played it from the start. The edge fade is dropped
+  here: it exists so a bar does not appear abruptly while scrolling, but in this layout the last
+  bar is precisely the one being offered to read, and dimming it would hide what was just added
+  to be seen.
+- **The zoom now keeps its promise in that layout.** "Four bars on screen" was giving three. The
+  median bar width is enough to set a zoom while scrolling — a slightly wide bar simply arrives
+  slightly later — but not here, where a bar that overflows is not trimmed but pushed to the
+  next window. Measured on a real tablature: bars from 166 to 243 pixels for a median of 224, so
+  four real bars overrun four median bars about half the time. The window is now sized on what
+  the requested count actually occupies, at the third quartile of every position in the piece —
+  not the maximum, which would let the opening bar and its clef, key signature and tuning shrink
+  the whole piece for one exception.
 - **An export that did not keep up says so.** The frame rate actually delivered is measured
   and compared to the one that was asked for; a shortfall is reported next to the file rather
   than discovered halfway through an edit. A three-minute encode that silently produced a

@@ -16,8 +16,17 @@ export interface Invite {
  *  lui être apporté de l'extérieur. Presque tout l'atelier découle de cette différence. */
 export type TypeMorceau = 'gp' | 'pdf'
 
-/** Comment la partition traverse l'image. */
-export type Disposition = 'page' | 'defilement'
+/**
+ * Comment la partition traverse l'image.
+ *
+ * Les deux premières donnent la même bande horizontale et ne diffèrent que par ce qui bouge.
+ * En « defilement », c'est la tablature : elle glisse sous une tête de lecture fixe, et le
+ * regard n'a plus qu'à attendre que la musique arrive. En « mesures », c'est le curseur : la
+ * tablature reste immobile le temps de quelques mesures, puis la page tourne. La première se
+ * regarde, la seconde se lit — sur une tablature serrée, un chiffre qui glisse se suit mais
+ * ne se déchiffre pas.
+ */
+export type Disposition = 'page' | 'defilement' | 'mesures'
 
 export type Cadre = 'aucun' | 'carte' | 'lueur' | 'vignette' | 'bandes'
 
@@ -71,6 +80,14 @@ export interface ReglagesVideo {
   hauteurMax: number
   /** Où se tient la tête de lecture, en fraction de largeur (mode défilement). */
   teteX: number
+  /**
+   * Mesures montrées en avance, en mode « mesures ».
+   *
+   * Elles occupent la fin de la fenêtre et rouvrent la suivante : on les a donc lues une fois
+   * avant d'avoir à les jouer. Sans elles, chaque tournement de page livre du tout-inconnu au
+   * moment précis où il faudrait déjà savoir quoi faire.
+   */
+  anticipation: number
   cadre: Cadre
   cadrage: Cadrage
   fond: FondVideo

@@ -294,6 +294,44 @@ export function largeurDeMesure(api: alphaTab.AlphaTabApi): number {
 }
 
 /**
+ * Où tombent les barres de mesure dans le rendu.
+ *
+ * La largeur médiane ci-dessus suffit à répondre à « combien de mesures à l'écran », qui est
+ * une question de zoom. Elle ne suffit pas à tourner la page sans couper une mesure : pour
+ * cela il faut les positions réelles, et elles ne sont régulières nulle part — la première
+ * mesure porte la clef et l'accordage, une mesure de doubles-croches tient deux fois la place
+ * d'une mesure de rondes.
+ *
+ * Le tableau rendu compte **une valeur de plus que le nombre de mesures** : la dernière ferme
+ * la dernière mesure, faute de quoi on ne saurait pas où celle-ci s'arrête.
+ */
+export function barresDeMesure(api: alphaTab.AlphaTabApi): number[] {
+  const bornes = api.boundsLookup
+  if (!bornes) return []
+
+  /* Une même mesure revient plusieurs fois dans les bornes — mesuré sur une tablature de
+     basse, neuf fois pour chacune. alphaTab y verse une entrée par portée et par passe de
+     rendu, et la mise en page horizontale n'y change rien. Les garder toutes reviendrait à
+     déclarer des centaines de mesures de largeur nulle, et le découpage en fenêtres, ne
+     trouvant plus de barre où s'arrêter, se remettrait à couper au kilomètre. On ne retient
+     donc que les abscisses distinctes, arrondies au pixel : deux mesures ne peuvent pas
+     commencer au même endroit sur une ligne unique. */
+  const vues = new Set<number>()
+  let fin = 0
+  for (const systeme of bornes.staffSystems) {
+    for (const mesure of systeme.bars) {
+      vues.add(Math.round(mesure.realBounds.x))
+      fin = Math.max(fin, mesure.realBounds.x + mesure.realBounds.w)
+    }
+  }
+  if (vues.size === 0) return []
+
+  const barres = [...vues].sort((a, b) => a - b)
+  barres.push(Math.max(Math.round(fin), barres[barres.length - 1] + 1))
+  return barres
+}
+
+/**
  * Fabrique la bande-son et la table des tics, d'un seul mouvement.
  *
  * Les deux sortent du même passage du synthétiseur, et c'est volontaire : ce sont deux

@@ -1,3 +1,4 @@
+import { decouperEnBlocs, largeurPourTenir } from './blocs'
 import { echelleDefilement } from './echelle'
 import { formaterDuree } from './minutage'
 import { themeParId, type Theme } from './themes'
@@ -12,14 +13,20 @@ import type { ReglagesVideo, StyleCurseur } from './types'
  * ce qui suit ne connaît que ça, ce qui fait que l'aperçu à l'écran et la vidéo exportée sont
  * dessinés par le même code — et donc que ce qu'on voit est bien ce qu'on obtient.
  *
- * Deux dispositions, et c'est la seule vraie bifurcation du fichier :
+ * Trois dispositions, et c'est la seule vraie bifurcation du fichier :
  *
  *  - **page** : la partition est mise à la largeur et défile verticalement, le curseur
  *    parcourt chaque ligne. C'est la lecture d'une partition, pour travailler un morceau.
  *  - **défilement** : la partition est une seule bande horizontale qui glisse sous une tête
  *    de lecture fixe. C'est la lecture d'un instrument : le regard ne bouge plus, il attend
- *    que la musique arrive. C'est aussi la seule qui tienne dans un bandeau incrusté au bas
- *    d'une vidéo de reprise.
+ *    que la musique arrive.
+ *  - **mesures** : la même bande, mais immobile. On en montre quelques mesures, le curseur
+ *    les traverse, et la page tourne quand il arrive au bout. C'est la lecture d'une
+ *    partition à nouveau, sauf qu'elle tient toujours dans un bandeau — un chiffre qui ne
+ *    bouge pas se déchiffre, là où un chiffre qui glisse ne se suit que de loin.
+ *
+ * Les deux dernières partagent tout sauf ce qui bouge, d'où le `bande` qui les réunit partout
+ * où c'est la mise en page qui est en jeu, et le `parBlocs` qui ne distingue que l'avancée.
  */
 
 export interface Tuile {
@@ -40,6 +47,13 @@ export interface Feuille {
    * zoom en mesures plutôt qu'en pixels — le seul réglage qui ait un sens musical.
    */
   largeurMesure?: number
+  /**
+   * Les barres de mesure, abscisses croissantes : **une de plus que le nombre de mesures**,
+   * la dernière fermant la dernière mesure. La largeur médiane ci-dessus suffit pour régler
+   * un zoom, mais pas pour tourner la page sans couper une mesure — il faut alors savoir où
+   * elles tombent réellement, chacune ayant la largeur que son contenu réclame.
+   */
+  barres?: number[]
 }
 
 export interface Curseur {
@@ -95,7 +109,10 @@ export function creerScene(options: OptionsScene): Scene {
   const couleur = video.couleur ?? theme.curseur
   const { largeur, hauteur } = video
   const compteAvantMs = Math.max(0, video.compteAvantSec) * 1000
-  const defilement = video.disposition === 'defilement'
+  /* Le mode « mesures » partage toute la mise en page du défilement : même bande, même
+     échelle, même recadrage. Il n'en diffère que par la façon dont elle avance. */
+  const bande = video.disposition === 'defilement' || video.disposition === 'mesures'
+  const parBlocs = video.disposition === 'mesures'
 
   const marge = Math.round(largeur * 0.03)
   const bandeauH = video.bandeau && (titre || artiste) ? Math.round(hauteur * 0.09) : 0
@@ -114,11 +131,18 @@ export function creerScene(options: OptionsScene): Scene {
      libre pour la vidéo qu'on posera dessous. */
   const libre = hauteur - bandeauH - barreH
 
-  const mise = defilement
+  /* En mesures fixes, le zoom se règle sur ce que le compte demandé occupe réellement, et non
+     sur une mesure médiane : une mesure qui déborde n'y est pas rognée mais renvoyée à la
+     fenêtre suivante, si bien qu'en demander quatre en afficherait trois. Voir lib/blocs.ts. */
+  const tenue = parBlocs && feuille.barres ? largeurPourTenir(feuille.barres, video.mesuresVisibles) : 0
+  const largeurMesure =
+    tenue > 0 ? tenue / Math.max(1, video.mesuresVisibles) : (feuille.largeurMesure ?? 0)
+
+  const mise = bande
     ? echelleDefilement({
         largeurZone: largeur,
         hauteurMaxBande: Math.min(libre, hauteur * video.hauteurMax),
-        largeurMesure: feuille.largeurMesure ?? 0,
+        largeurMesure,
         mesuresVisibles: video.mesuresVisibles,
         margeRelative: video.margeBande,
         feuille,
@@ -153,10 +177,21 @@ export function creerScene(options: OptionsScene): Scene {
   const scrollMax = Math.max(0, feuille.hauteur * echelle - zone.h)
   const teteX = Math.round(zone.w * video.teteX)
 
+  /* Le découpage en fenêtres de mesures entières, quand c'est le curseur qui avance et non la
+     tablature. Il est fait ici, une fois : il ne dépend que de l'échelle et des barres de
+     mesure, tous deux fixés pour toute la scène. */
+  const blocs = decouperEnBlocs({
+    barres: feuille.barres ?? [],
+    largeurFenetre: zone.w / echelle,
+    anticipation: video.anticipation,
+  })
+
   /* En page, le défilement est lissé d'une image à l'autre : le curseur saute d'une ligne à
      la suivante d'un coup, et une image qui suivrait ce saut donnerait le mal de mer. En
      défilement, au contraire, la position est prise telle quelle — elle est déjà continue,
-     et la lisser ne ferait qu'ajouter un retard entre le son et l'image. */
+     et la lisser ne ferait qu'ajouter un retard entre le son et l'image. En mesures, elle ne
+     change qu'aux tournements de page, et un lissage y ferait glisser la tablature : c'est
+     précisément ce qu'on cherche à éviter en la choisissant. */
   let scroll = 0
   let derniereImageMs = 0
 
@@ -169,7 +204,8 @@ export function creerScene(options: OptionsScene): Scene {
 
   function positionVoulue(curseur: Curseur | null): number {
     if (!curseur) return 0
-    if (defilement) return curseur.x * echelle - teteX
+    if (parBlocs) return blocs.gaucheA(curseur.x) * echelle
+    if (bande) return curseur.x * echelle - teteX
     if (scrollMax === 0) return 0
     const centre = (curseur.y + curseur.h / 2) * echelle
     return Math.min(scrollMax, Math.max(0, centre - zone.h / 2))
@@ -184,7 +220,7 @@ export function creerScene(options: OptionsScene): Scene {
     const curseur = options.curseurA(tMs)
     const cible = positionVoulue(curseur)
 
-    if (defilement) {
+    if (bande) {
       scroll = cible
     } else {
       // Poursuite exponentielle : la vitesse est proportionnelle à ce qui reste à parcourir,
@@ -229,9 +265,10 @@ export function creerScene(options: OptionsScene): Scene {
 
     if (compteAvantMs > 0 && tMs < compteAvantMs) {
       dessinerDecompte(ctx, {
-        x: defilement ? zone.x + teteX : largeur / 2,
+        // Le décompte se pose sur la tête de lecture quand il y en a une, au centre sinon.
+        x: bande && !parBlocs ? zone.x + teteX : largeur / 2,
         y: hauteurImage / 2,
-        taille: Math.round(hauteur * (defilement ? 0.2 : 0.28)),
+        taille: Math.round(hauteur * (bande ? 0.2 : 0.28)),
         restantMs: compteAvantMs - tMs,
         couleur,
       })
@@ -283,19 +320,19 @@ export function creerScene(options: OptionsScene): Scene {
     // L'air demandé décale la tablature vers le bas dans sa bande : ce qui dépassait du
     // recadrage — hampes, rythmes, nom de section — redevient visible dedans plutôt que
     // rogné au bord.
-    if (defilement) c.translate(-etat.scroll, mise ? mise.marge : 0)
+    if (bande) c.translate(-etat.scroll, mise ? mise.marge : 0)
     else c.translate(0, -etat.scroll)
     c.scale(echelle, echelle)
 
-    const debutVisible = defilement ? etat.scroll / echelle : 0
-    const finVisible = defilement ? (etat.scroll + zone.w) / echelle : 0
-    const hautVisible = defilement ? 0 : etat.scroll / echelle
-    const basVisible = defilement ? 0 : (etat.scroll + zone.h) / echelle
+    const debutVisible = bande ? etat.scroll / echelle : 0
+    const finVisible = bande ? (etat.scroll + zone.w) / echelle : 0
+    const hautVisible = bande ? 0 : etat.scroll / echelle
+    const basVisible = bande ? 0 : (etat.scroll + zone.h) / echelle
 
     for (const tuile of feuille.tuiles) {
       // Une partition de cinq pages, c'est une cinquantaine de tuiles dont deux sont à
       // l'écran : les redessiner toutes ferait chuter la cadence de l'export.
-      if (defilement) {
+      if (bande) {
         if (tuile.x + tuile.w < debutVisible || tuile.x > finVisible) continue
       } else if (tuile.y + tuile.h < hautVisible || tuile.y > basVisible) continue
 
@@ -312,7 +349,10 @@ export function creerScene(options: OptionsScene): Scene {
     }
     c.restore()
 
-    if (defilement) effacerLesBords(c, zone.w, zone.h)
+    /* Les bords ne s'effacent qu'en défilement. En mesures, la dernière mesure de la fenêtre
+       est justement celle qu'on donne à lire en avance : l'estomper reviendrait à cacher ce
+       qu'on vient d'ajouter pour être vu. */
+    if (bande && !parBlocs) effacerLesBords(c, zone.w, zone.h)
     c.restore()
   }
 

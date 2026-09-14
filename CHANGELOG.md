@@ -18,6 +18,15 @@ versioning yet, so entries are grouped by the change that shipped them.
   found, but by eye and late. Eleven tests now pin what it promises, and each of those three is
   among them.
 
+- **The scene's geometry has moved out of the drawing code** and into
+  [src/lib/geometrie.ts](src/lib/geometrie.ts), where it can be tested. It lived at the top of
+  `creerScene`, mixed in with the canvas work, which meant it could only be checked by making a
+  canvas — that is to say, never. Three faults had been living there quietly: a crop that
+  trimmed away the rhythm, a frame drawn half outside the picture, and a thickness derived from
+  a height that no longer exists once the video is reduced to its strip. Each was eventually
+  found, but by eye and late. Eleven tests now pin what it promises, and those three are among
+  them.
+
 - **The workshop no longer runs down a single endless column.** The settings sat in a sidebar
   twenty rem wide, stacked one above the other — three thousand pixels of scrolling — while
   three quarters of the screen stayed empty beneath a strip only two hundred pixels tall. The

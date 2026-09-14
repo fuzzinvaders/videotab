@@ -445,18 +445,19 @@ export function PanneauVideo({
       <Repli titre="Finitions">
         <Curseur
           label="Décompte avant le départ"
-          valeur={video.compteAvantSec}
+          valeur={video.compteAvantTemps}
           min={0}
-          max={8}
+          max={16}
           pas={1}
-          affichage={video.compteAvantSec === 0 ? 'aucun' : `${video.compteAvantSec} s`}
-          onChange={(compteAvantSec) => modifier((v) => ({ ...v, compteAvantSec }))}
+          affichage={video.compteAvantTemps === 0 ? 'aucun' : `${video.compteAvantTemps} temps`}
+          aide="Compté en temps et non en secondes : les clics tombent sur la noire du morceau, et le dernier juste avant la première note. Quatre temps font une mesure à quatre-quatre."
+          onChange={(compteAvantTemps) => modifier((v) => ({ ...v, compteAvantTemps }))}
         />
 
         <div className="space-y-2">
           {/* Sans clics, le décompte ne compte que pour qui regarde l'écran — et pas pour
               qui pose ses doigts sur le manche, à qui il est pourtant destiné. */}
-          {video.compteAvantSec > 0 ? (
+          {video.compteAvantTemps > 0 ? (
             <Bascule
               label="Clics pendant le décompte"
               actif={video.decompteSonore}

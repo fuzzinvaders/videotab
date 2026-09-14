@@ -362,6 +362,26 @@ export function barresDeMesure(api: alphaTab.AlphaTabApi): number[] {
 }
 
 /**
+ * Combien de temps dure un temps, en millisecondes.
+ *
+ * Le tempo d'alphaTab se compte en noires par minute, quelle que soit la mesure ; le *temps*,
+ * lui, est l'unité du dénominateur — la noire en quatre-quatre, la croche en six-huit. Les
+ * deux se confondent la plupart du temps, et c'est justement pourquoi il faut les distinguer
+ * ici : c'est sur le temps qu'on bat un décompte.
+ *
+ * Le pourcentage de tempo est appliqué à la main plutôt que relu de la partition : il est posé
+ * sur les automations, pas sur le tempo initial, si bien que `score.tempo` reste la valeur
+ * écrite quoi qu'on ait réglé.
+ */
+export function dureeDUnTemps(score: alphaTab.model.Score, tempoPct: number): number {
+  const bpm = Math.max(1, score.tempo * (Math.max(10, tempoPct) / 100))
+  const denominateur = score.masterBars[0]?.timeSignatureDenominator || 4
+  const noire = 60000 / bpm
+  // Bornée : un fichier au tempo aberrant donnerait sinon un décompte d'une heure ou nul.
+  return Math.min(4000, Math.max(80, noire * (4 / denominateur)))
+}
+
+/**
  * Fabrique la bande-son et la table des tics, d'un seul mouvement.
  *
  * Les deux sortent du même passage du synthétiseur, et c'est volontaire : ce sont deux

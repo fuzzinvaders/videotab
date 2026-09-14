@@ -10,6 +10,7 @@ import {
   collecteurDeTuiles,
   colorerLesCordes,
   curseurDepuisAncres,
+  dureeDUnTemps,
   etendueDesPortees,
   barresDeMesure,
   largeurDeMesure,
@@ -205,11 +206,17 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note. */
   const debutMs = gp?.demarrerALaPremiereNote ? (parcours?.premiereNoteMs ?? 0) : 0
 
+  /* La durée d'un temps, qui donne sa longueur au décompte et l'écart entre ses clics. Elle
+     vient de la partition et suit le curseur de tempo — ralentir le morceau ralentit le
+     décompte, sans quoi il ne mènerait plus à la première note. */
+  const dureeTempsMs =
+    api.current?.score && gp ? dureeDUnTemps(api.current.score, gp.tempoPct) : 500
+
   const scene = useMemo(() => {
     if (!feuille || !bande || !gp || !parcours) return null
     const instance = api.current
     if (!instance?.score) return null
-    const decalageMs = Math.max(0, reglages.video.compteAvantSec) * 1000
+    const decalageMs = Math.max(0, reglages.video.compteAvantTemps) * dureeTempsMs
     // La largeur d'une mesure vient du rendu, pas d'un réglage : c'est elle qui permet de
     // demander « quatre mesures à l'écran » plutôt qu'une hauteur en pixels.
     // Les barres, elles, servent à tourner la page sur une mesure entière plutôt qu'au milieu.
@@ -227,6 +234,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       dureeMs: bande.dureeMs - debutMs + decalageMs,
       titre: morceau.titre,
       artiste: morceau.artiste,
+      dureeTempsMs,
       curseurA: curseurDepuisAncres(
         parcours.ancres,
         decalageMs,
@@ -234,18 +242,29 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
         debutMs,
       ),
     })
-  }, [feuille, bande, parcours, debutMs, reglages.video, morceau.titre, morceau.artiste, gp])
+  }, [
+    feuille,
+    bande,
+    parcours,
+    debutMs,
+    dureeTempsMs,
+    reglages.video,
+    morceau.titre,
+    morceau.artiste,
+    gp,
+  ])
 
   const audio = useMemo(
     () =>
       bande
         ? avecDecompteAvant(
             depuis(bande.audio, debutMs),
-            reglages.video.compteAvantSec * 1000,
+            reglages.video.compteAvantTemps * dureeTempsMs,
             reglages.video.decompteSonore,
+            dureeTempsMs,
           )
         : null,
-    [bande, debutMs, reglages.video.compteAvantSec, reglages.video.decompteSonore],
+    [bande, debutMs, dureeTempsMs, reglages.video.compteAvantTemps, reglages.video.decompteSonore],
   )
 
   if (!gp) return <ErrorText>Ce morceau n'a pas de réglages Guitar Pro.</ErrorText>

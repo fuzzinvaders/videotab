@@ -127,7 +127,15 @@ export interface ReglagesVideo {
    */
   curseurGlisse: boolean
   opacite: number
-  compteAvantSec: number
+  /**
+   * Longueur du décompte, en **temps** et non en secondes.
+   *
+   * Un décompte se compte à la noire, pas à la montre : c'est ce qui permet d'entrer sur le
+   * premier temps sans avoir à convertir. Sa durée en secondes se déduit donc du tempo du
+   * morceau, et change avec lui — quatre temps font une mesure à quatre-quatre, quel que soit
+   * l'endroit où l'on a posé le curseur de tempo.
+   */
+  compteAvantTemps: number
   /**
    * Marquer le décompte de clics, plutôt que de le laisser muet.
    *

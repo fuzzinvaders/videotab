@@ -9,6 +9,24 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The count-in beats the piece instead of the clock.** It counted seconds, and it counted
+  them out loud since yesterday — which made the problem audible: a click every second leads
+  nowhere in a piece that is not at sixty beats per minute. One does not start on a stopwatch,
+  one starts on a beat.
+
+  The setting is therefore counted in beats and no longer in seconds, four by default — one bar
+  in four-four. Their duration is read from the score and follows the tempo slider: slow the
+  piece down and the count-in slows with it, otherwise it would no longer lead to the first
+  note. The first click is higher, like a metronome bell, so one hears where the bar begins;
+  the last falls exactly one beat before the music. The on-screen figure counts the same beats
+  as the clicks — the two say the same thing or they cancel each other out.
+
+  Old settings are not converted: without the tempo, two seconds cannot be translated into
+  beats. A piece set to a two-second count-in now has a two-beat one.
+
+  Measured at 143 bpm, where a quarter note lasts 419.6 ms: clicks at 0, 420, 839 and 1259 ms,
+  and the music at 1678. A test now holds those figures.
+
 - **Exporting no longer takes as long as the piece.** `MediaRecorder` is a tape recorder: it
   records what one plays it, at the speed one plays it, and stamps every frame with the hour of
   the wall clock. Three minutes of music therefore asked for three minutes of waiting, and every

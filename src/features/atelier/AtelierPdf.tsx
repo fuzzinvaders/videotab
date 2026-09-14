@@ -42,6 +42,9 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
   // Défilement et mesures produisent la même bande : seule la façon dont elle avance change,
   // et c'est la scène qui s'en occupe. Ici, les deux demandent le même recollage.
   const enBande = reglages.video.disposition !== 'page'
+  /* Ici le tempo est déclaré et non lu : un temps dure donc exactement ce que dit le bpm. */
+  const dureeTempsMs = 60000 / Math.max(20, pdf?.bpm ?? 90)
+  const decompteMs = Math.max(0, reglages.video.compteAvantTemps) * dureeTempsMs
 
   const [pages, setPages] = useState<PageRendue[]>([])
   const [feuille, setFeuille] = useState<Feuille | null>(null)
@@ -102,10 +105,10 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
             bpm: pdf.bpm,
             battementsParMesure: pdf.battementsParMesure,
             mesuresParSysteme: pdf.mesuresParSysteme,
-            decalageMs: pdf.decalageMs + reglages.video.compteAvantSec * 1000,
+            decalageMs: pdf.decalageMs + decompteMs,
           })
         : [],
-    [pdf, reglages.video.compteAvantSec],
+    [pdf, decompteMs],
   )
 
   /* En bande, les systèmes découpés sont détachés de leurs pages et recollés bout à
@@ -129,6 +132,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
       dureeMs: dureeTotaleMs(etapes),
       titre: morceau.titre,
       artiste: morceau.artiste,
+      dureeTempsMs,
     }
 
     if (enBande) {
@@ -160,6 +164,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
     pdf,
     etapes,
     placements,
+    dureeTempsMs,
     reglages.video,
     theme,
     morceau.titre,
@@ -171,11 +176,12 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
       audio
         ? avecDecompteAvant(
             audio,
-            (pdf?.decalageMs ?? 0) + reglages.video.compteAvantSec * 1000,
+            (pdf?.decalageMs ?? 0) + decompteMs,
             reglages.video.decompteSonore,
+            dureeTempsMs,
           )
         : null,
-    [audio, pdf?.decalageMs, reglages.video.compteAvantSec, reglages.video.decompteSonore],
+    [audio, pdf?.decalageMs, decompteMs, dureeTempsMs, reglages.video.decompteSonore],
   )
 
   if (!pdf) return <ErrorText>Ce morceau n'a pas de réglages PDF.</ErrorText>

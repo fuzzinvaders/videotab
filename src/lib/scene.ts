@@ -88,6 +88,11 @@ export interface OptionsScene {
   /** Vrai pour un PDF en mode page : le curseur laisse une traînée dans la ligne en cours. */
   trainee?: boolean
   /**
+   * Durée d'un temps, en millisecondes. Elle vient du tempo du morceau, que la scène n'a aucun
+   * moyen de connaître seule, et c'est elle qui donne sa longueur au décompte.
+   */
+  dureeTempsMs?: number
+  /**
    * Plaque sous la partition, quand le thème ne décide pas seul. Un PDF lu en mode page est
    * une image de papier : il lui faut son papier, même sur un thème qui n'en veut pas.
    */
@@ -107,7 +112,10 @@ export function creerScene(options: OptionsScene): Scene {
   // une fois : plus bas, plus personne n'a à se demander d'où vient la teinte.
   const couleur = video.couleur ?? theme.curseur
   const { largeur, hauteur } = video
-  const compteAvantMs = Math.max(0, video.compteAvantSec) * 1000
+  /* Le décompte se compte en temps, et sa durée dépend donc du morceau. La scène ne connaît
+     pas le tempo : on le lui donne, et sans lui elle retombe sur deux temps par seconde. */
+  const dureeTempsMs = Math.max(1, options.dureeTempsMs ?? 500)
+  const compteAvantMs = Math.max(0, video.compteAvantTemps) * dureeTempsMs
   const {
     bande,
     parBlocs,
@@ -256,6 +264,7 @@ export function creerScene(options: OptionsScene): Scene {
         y: hauteurImage / 2,
         taille: Math.round(hauteur * (bande ? 0.2 : 0.28)),
         restantMs: compteAvantMs - tMs,
+        dureeTempsMs,
         couleur,
       })
     }
@@ -571,12 +580,21 @@ function dessinerProgression(
 
 function dessinerDecompte(
   ctx: CanvasRenderingContext2D,
-  o: { x: number; y: number; taille: number; restantMs: number; couleur: string },
+  o: {
+    x: number
+    y: number
+    taille: number
+    restantMs: number
+    dureeTempsMs: number
+    couleur: string
+  },
 ) {
-  const secondes = Math.ceil(o.restantMs / 1000)
-  // Le chiffre grossit et s'efface sur la dernière demi-seconde de chaque temps : on le voit
-  // venir du coin de l'œil sans avoir à le lire.
-  const part = (o.restantMs % 1000) / 1000
+  // Le chiffre compte des temps, comme les clics : les deux disent la même chose ou ils
+  // s'annulent l'un l'autre.
+  const temps = Math.ceil(o.restantMs / o.dureeTempsMs)
+  // Il grossit et s'efface sur la fin de chaque temps : on le voit venir du coin de l'œil
+  // sans avoir à le lire.
+  const part = (o.restantMs % o.dureeTempsMs) / o.dureeTempsMs
   const taille = Math.round(o.taille * (1.15 - part * 0.15))
   ctx.save()
   ctx.globalAlpha = 0.25 + part * 0.5
@@ -584,6 +602,6 @@ function dessinerDecompte(
   ctx.font = `700 ${taille}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(String(secondes), o.x, o.y)
+  ctx.fillText(String(temps), o.x, o.y)
   ctx.restore()
 }

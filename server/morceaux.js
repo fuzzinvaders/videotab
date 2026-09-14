@@ -50,9 +50,10 @@ function reglagesParDefaut(type) {
     // Le surlignage situe le temps en cours, le trait vif dit où l'on en est dedans. Trop
     // opaque, il mangerait les chiffres de doigté qu'il est censé désigner.
     opacite: 0.3,
-    // Deux secondes avant la première note : le temps de voir où le morceau commence avant
-    // qu'il commence, et de poser les doigts si on joue avec la vidéo.
-    compteAvantSec: 2,
+    // Une mesure à quatre-quatre avant la première note : le temps de voir où le morceau
+    // commence, et de poser les doigts si on joue avec la vidéo. En temps, pas en secondes :
+    // un décompte se bat à la noire.
+    compteAvantTemps: 4,
     // Des clics pendant le décompte : muet, il ne sert qu'à qui regarde l'écran.
     decompteSonore: true,
     fondu: true,

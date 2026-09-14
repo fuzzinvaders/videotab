@@ -50,7 +50,8 @@ export function videoParDefaut(): ReglagesVideo {
     // quand la bande défile. En mesures fixes, sauter de note en note se défend mieux.
     curseurGlisse: true,
     opacite: 0.3,
-    compteAvantSec: 2,
+    // Une mesure à quatre-quatre : le décompte que tout le monde bat sans y penser.
+    compteAvantTemps: 4,
     // Des clics par défaut : un décompte muet ne compte pour personne.
     decompteSonore: true,
     fondu: true,
@@ -99,7 +100,10 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     ),
     curseurGlisse: video.curseurGlisse ?? d.curseurGlisse,
     opacite: nombre(video.opacite, d.opacite, 0, 0.9),
-    compteAvantSec: nombre(video.compteAvantSec, d.compteAvantSec, 0, 12),
+    /* Le réglage comptait autrefois des secondes, sous un autre nom. Rien à convertir : sans
+       le tempo du morceau on ne saurait pas en combien de temps se traduisent deux secondes,
+       et le défaut de quatre temps vaut mieux qu'une conversion inventée. */
+    compteAvantTemps: nombre(video.compteAvantTemps, d.compteAvantTemps, 0, 16),
     decompteSonore: video.decompteSonore ?? d.decompteSonore,
     fondu: video.fondu ?? d.fondu,
     bandeau: video.bandeau ?? d.bandeau,

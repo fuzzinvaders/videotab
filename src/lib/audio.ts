@@ -109,8 +109,10 @@ export function depuis(buffer: AudioBuffer, msDebut: number): AudioBuffer {
 export function avecDecompteAvant(
   buffer: AudioBuffer,
   decompteMs: number,
-  /** Marquer chaque seconde d'un clic. Sans lui le décompte ne sert qu'à qui regarde. */
+  /** Marquer chaque temps d'un clic. Sans lui le décompte ne sert qu'à qui regarde. */
   clics = false,
+  /** Durée d'un temps, en millisecondes : c'est sur elle que tombent les clics. */
+  dureeTempsMs = 500,
 ): AudioBuffer {
   const images = Math.round((decompteMs / 1000) * buffer.sampleRate)
   if (images <= 0) return buffer
@@ -123,31 +125,34 @@ export function avecDecompteAvant(
   for (let canal = 0; canal < buffer.numberOfChannels; canal++) {
     sortie.getChannelData(canal).set(buffer.getChannelData(canal), images)
   }
-  if (clics) poserLesClics(sortie, decompteMs)
+  if (clics) poserLesClics(sortie, decompteMs, dureeTempsMs)
   return sortie
 }
 
 /**
- * Un clic par seconde de décompte, le dernier plus aigu.
+ * Un clic par temps de décompte, le premier plus aigu.
  *
  * Le décompte comptait en silence : on voyait le chiffre décroître, et c'était tout. Utile
  * pour qui regarde l'écran, inutile pour qui pose ses doigts sur le manche — c'est-à-dire
- * pour l'usage même auquel il est destiné. Les clics tombent sur la seconde, comme le chiffre
- * affiché, et non sur le temps de la partition : les deux doivent dire la même chose, et
- * c'est la seconde qu'on voit.
+ * pour l'usage même auquel il est destiné.
+ *
+ * Les clics tombent sur le **temps**, à la noire du morceau, et non sur la seconde : c'est
+ * ainsi qu'on bat un départ, et c'est la seule façon d'entrer juste sans compter dans sa tête.
+ * Le dernier tombe donc exactement un temps avant la première note. Le premier est plus aigu,
+ * comme la cloche d'un métronome : il dit où est le début de la mesure.
  *
  * Une sinusoïde brève dont l'enveloppe s'éteint — assez sèche pour se placer sans traîner,
  * assez douce pour ne pas claquer dans un montage.
  */
-function poserLesClics(sortie: AudioBuffer, decompteMs: number): void {
+export function poserLesClics(sortie: AudioBuffer, decompteMs: number, dureeTempsMs: number): void {
   const frequence = sortie.sampleRate
   const longueur = Math.round(0.035 * frequence)
+  const pas = Math.max(1, dureeTempsMs)
   const pistes = Array.from({ length: sortie.numberOfChannels }, (_, c) => sortie.getChannelData(c))
 
-  for (let seconde = 0; seconde * 1000 < decompteMs; seconde++) {
-    const debut = Math.round(seconde * frequence)
-    // Le dernier annonce le départ : plus haut, on l'entend venir sans avoir à compter.
-    const hauteur = (seconde + 1) * 1000 >= decompteMs ? 1760 : 880
+  for (let temps = 0; temps * pas < decompteMs; temps++) {
+    const debut = Math.round((temps * pas * frequence) / 1000)
+    const hauteur = temps === 0 ? 1760 : 880
     for (let i = 0; i < longueur && debut + i < sortie.length; i++) {
       const t = i / frequence
       const valeur = Math.sin(2 * Math.PI * hauteur * t) * Math.exp(-t * 70) * 0.35

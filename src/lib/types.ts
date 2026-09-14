@@ -89,6 +89,16 @@ export interface ReglagesVideo {
    */
   anticipation: number
   cadre: Cadre
+  /**
+   * Épaisseur du trait du cadre, en pixels d'une image large de 1920.
+   *
+   * Comptée sur la largeur et non sur la hauteur : cadrée sur la bande, l'image ne fait plus
+   * que deux cents pixels de haut, et une épaisseur qui en découlerait se retrouverait clouée
+   * à son minimum — le réglage n'aurait alors aucun effet là où on en a le plus besoin. À
+   * zéro, il n'y a pas de trait : une carte se réduit à ses coins arrondis, une lueur à son
+   * halo.
+   */
+  epaisseurCadre: number
   cadrage: Cadrage
   fond: FondVideo
   /**

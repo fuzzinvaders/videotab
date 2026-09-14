@@ -177,6 +177,12 @@ export function creerScene(options: OptionsScene): Scene {
   const scrollMax = Math.max(0, feuille.hauteur * echelle - zone.h)
   const teteX = Math.round(zone.w * video.teteX)
 
+  /* L'épaisseur du cadre est comptée sur la largeur, jamais sur la hauteur. Cadrée sur la
+     bande, l'image ne fait plus que deux cents pixels de haut : une épaisseur qui en
+     découlerait resterait clouée à son minimum, et le réglage n'agirait pas là où l'on tient
+     le plus à voir le cadre. La largeur, elle, ne change pas avec le cadrage. */
+  const traitCadre = Math.round(video.epaisseurCadre * (largeur / 1920))
+
   /* Le découpage en fenêtres de mesures entières, quand c'est le curseur qui avance et non la
      tablature. Il est fait ici, une fois : il ne dépend que de l'échelle et des barres de
      mesure, tous deux fixés pour toute la scène. */
@@ -245,7 +251,7 @@ export function creerScene(options: OptionsScene): Scene {
       composerLaBande(couche2d, { curseur, scroll })
       dessinerCadreDerriere(ctx, { zone, video, theme, couleur })
       ctx.drawImage(couche, zone.x, zone.y)
-      dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur: hauteurImage })
+      dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur: hauteurImage, trait: traitCadre })
     }
 
     if (bandeauH > 0) {
@@ -421,28 +427,45 @@ function dessinerCadreDevant(
     couleur: string
     largeur: number
     hauteur: number
+    /** Épaisseur du trait en pixels de cette image-ci, déjà mise à l'échelle. */
+    trait: number
   },
 ) {
   if (o.video.cadre === 'carte' || o.video.cadre === 'lueur') {
-    const rayon = Math.min(o.zone.h * 0.12, 28)
+    if (o.trait <= 0) return
     ctx.save()
     ctx.strokeStyle = o.video.cadre === 'lueur' ? o.couleur : o.theme.lignes
     ctx.globalAlpha = o.video.cadre === 'lueur' ? 0.8 : 0.5
-    ctx.lineWidth = Math.max(2, Math.round(o.hauteur * 0.0025))
+    ctx.lineWidth = o.trait
+    /* Le trait est rentré d'une demi-épaisseur au lieu d'être centré sur le bord de la bande.
+       Un trait centré perd sa moitié extérieure dès que la bande touche le bord de l'image,
+       ce qui est justement le cas du cadrage sur la bande — mesuré : un pixel visible sur les
+       deux demandés, et l'épaisseur qu'on règle ici n'en montrerait que la moitié. */
+    const d = o.trait / 2
     ctx.beginPath()
-    ctx.roundRect(o.zone.x, o.zone.y, o.zone.w, o.zone.h, rayon)
+    ctx.roundRect(
+      o.zone.x + d,
+      o.zone.y + d,
+      Math.max(1, o.zone.w - o.trait),
+      Math.max(1, o.zone.h - o.trait),
+      Math.max(0, Math.min(o.zone.h * 0.12, 28) - d),
+    )
     ctx.stroke()
     ctx.restore()
     return
   }
 
   if (o.video.cadre === 'bandes') {
+    if (o.trait <= 0) return
     ctx.save()
     ctx.fillStyle = o.couleur
     ctx.globalAlpha = 0.65
-    const trait = Math.max(2, Math.round(o.hauteur * 0.003))
-    ctx.fillRect(o.zone.x, o.zone.y - trait, o.zone.w, trait)
-    ctx.fillRect(o.zone.x, o.zone.y + o.zone.h, o.zone.w, trait)
+    /* Les liserés sont posés en dedans de la bande, pas au-dessus et en dessous d'elle. Posés
+       dehors, ils tombaient hors de l'image dès que la bande en occupait toute la hauteur —
+       mesuré : zéro pixel de liseré haut en cadrage sur la bande, alors que c'est le cadrage
+       fait pour l'incrustation, celui où l'on tient le plus à voir où la bande commence. */
+    ctx.fillRect(o.zone.x, o.zone.y, o.zone.w, o.trait)
+    ctx.fillRect(o.zone.x, o.zone.y + o.zone.h - o.trait, o.zone.w, o.trait)
     ctx.restore()
     return
   }

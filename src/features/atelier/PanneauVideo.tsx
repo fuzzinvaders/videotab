@@ -63,6 +63,10 @@ const STYLES: Array<{ id: StyleCurseur; nom: string; aide: string }> = [
   },
 ]
 
+/* Les encadrements qui tracent un trait, et donc les seuls dont l'épaisseur veuille dire
+   quelque chose. La vignette n'assombrit que les bords ; « aucun » ne dessine rien. */
+const AVEC_TRAIT = new Set<Cadre>(['carte', 'lueur', 'bandes'])
+
 const COULEURS = ['#4ade80', '#f59e0b', '#ef4444', '#38bdf8', '#a855f7', '#ec4899', '#ffffff']
 
 export function PanneauMiseEnScene({
@@ -225,6 +229,29 @@ export function PanneauMiseEnScene({
           ))}
         </Select>
       </Field>
+
+      {/* Rien à épaissir sans trait : la vignette n'assombrit que les bords, et « aucun » ne
+          dessine rien du tout. */}
+      {AVEC_TRAIT.has(video.cadre) ? (
+        <Curseur
+          label="Épaisseur du cadre"
+          valeur={video.epaisseurCadre}
+          min={0}
+          max={24}
+          pas={1}
+          affichage={
+            video.epaisseurCadre === 0
+              ? 'sans trait'
+              : `${Math.round(video.epaisseurCadre * (video.largeur / 1920))} px`
+          }
+          aide={
+            video.cadre === 'lueur'
+              ? 'Le filet autour de la bande. Le halo, lui, ne bouge pas — c’est lui qui fait la lueur, et à zéro il reste seul.'
+              : 'Comptée sur une image large de 1920 et suivie à l’échelle : le cadre garde le même poids en 720p comme en vertical.'
+          }
+          onChange={(epaisseurCadre) => modifier((v) => ({ ...v, epaisseurCadre }))}
+        />
+      ) : null}
     </Card>
   )
 }

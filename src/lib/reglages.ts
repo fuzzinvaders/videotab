@@ -36,6 +36,8 @@ export function videoParDefaut(): ReglagesVideo {
     // Une mesure d'avance : de quoi lire ce qui vient sans que la fenêtre tourne pour si peu.
     anticipation: 1,
     cadre: 'aucun',
+    // Trois pixels sur une image de 1920 : un filet qu'on voit sans qu'il prenne la vedette.
+    epaisseurCadre: 3,
     // L'image entière par défaut : c'est le format qu'on attend d'une vidéo, et le cadrage sur
     // la bande ne prend son sens qu'une fois qu'on sait qu'on va l'incruster.
     cadrage: 'image',
@@ -77,6 +79,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
     anticipation: nombre(video.anticipation, d.anticipation, 0, 8),
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
+    epaisseurCadre: nombre(video.epaisseurCadre, d.epaisseurCadre, 0, 24),
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),
     couleur: typeof video.couleur === 'string' ? video.couleur : null,

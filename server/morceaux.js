@@ -37,6 +37,8 @@ function reglagesParDefaut(type) {
     // fait jouer, et cette mesure-là ouvre la suivante.
     anticipation: 1,
     cadre: "aucun",
+    // Épaisseur du trait du cadre, en pixels d'une image large de 1920.
+    epaisseurCadre: 3,
     cadrage: "image",
     fond: "theme",
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a

@@ -26,12 +26,17 @@ describe('completerVideo', () => {
       teteX: -3,
       opacite: 40,
       compteAvantSec: 999,
+      epaisseurCadre: -5,
+      anticipation: 99,
     } as Partial<ReglagesVideo>)
     expect(fou.mesuresVisibles).toBeLessThanOrEqual(32)
     expect(fou.hauteurMax).toBeLessThanOrEqual(0.95)
     expect(fou.teteX).toBeGreaterThanOrEqual(0.08)
     expect(fou.opacite).toBeLessThanOrEqual(0.9)
     expect(fou.compteAvantSec).toBeLessThanOrEqual(12)
+    // Une épaisseur négative dessinerait un trait à l'envers ; zéro veut dire « pas de trait ».
+    expect(fou.epaisseurCadre).toBe(0)
+    expect(fou.anticipation).toBeLessThanOrEqual(8)
   })
 
   it('refuse une disposition, un cadre ou un style de curseur inventés', () => {

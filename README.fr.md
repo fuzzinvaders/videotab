@@ -96,7 +96,8 @@ opérations de bibliothèque.
   qui fait qu'une basse à quatre cordes et une guitare à sept se lisent pareil. Et aussi :
   Papier, Ardoise, Néon, Craie.
 - **Encadrement** — aucun, carte à coins arrondis, halo coloré, bandes translucides, ou
-  vignette. En défilement, les deux bouts de la bande s'effacent en dégradé : une mesure qui
+  vignette, avec l'épaisseur du trait en réglage — comptée sur la largeur, donc du même poids
+  en 720p qu'en vertical. En défilement, les deux bouts de la bande s'effacent en dégradé : une mesure qui
   apparaît d'un coup au bord de l'image attire l'œil au mauvais moment. En mesures fixes, non :
   la mesure du bord est justement celle qu'on donne à lire en avance.
 - **Curseur** — le trait à l'instant exact, le surlignage du temps en cours, ou les deux. Sur

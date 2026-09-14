@@ -90,7 +90,9 @@ covers timing, staff detection, server-side validation and the library operation
   says which fret; the eye finds the string before it has read the number. The order starts
   from the lowest string, so a four-string bass and a seven-string guitar read the same way.
   Also: Papier, Ardoise, Néon, Craie.
-- **Framing** — none, a rounded card, a coloured halo, translucent bands, or a vignette. While
+- **Framing** — none, a rounded card, a coloured halo, translucent bands, or a vignette, with
+  the thickness of the line as a setting — counted on the width, so it keeps its weight in 720p
+  and in vertical alike. While
   scrolling, both ends of the strip fade out: a bar appearing abruptly at the edge of the frame
   catches the eye at the wrong moment. With fixed bars they do not, since the bar at the edge is
   exactly the one being offered to read ahead.

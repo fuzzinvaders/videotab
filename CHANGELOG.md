@@ -32,6 +32,14 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **The frame was drawn half outside the picture, and sometimes entirely outside.** Found while
+  adding the thickness setting, by counting the pixels each frame actually paints. Cropped to
+  the strip — the framing made for overlays — a card's outline is centred on the edge of the
+  strip, which is also the edge of the image: measured, one visible pixel out of the two asked
+  for. The translucent bands were worse, drawn just above and just below the strip, so with no
+  title banner the top one landed at a negative ordinate: **zero pixels**, an option that simply
+  did nothing. Both are now drawn inside the strip, so the whole thickness shows in either
+  framing.
 - **alphaTab reports each bar about nine times**, and taking it at its word made the new layout
   useless: hundreds of zero-width bars, no bar line left to stop at, and a window that fell back
   to cutting every so many pixels — the lookahead setting then changed nothing at all, which is
@@ -105,6 +113,12 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The frame's thickness is now a setting**, from a hairline to sixteen pixels, or none at all.
+  It is counted on the width of the image rather than its height, and scaled from a reference of
+  1920: cropped to the strip, the picture is only a couple of hundred pixels tall, so a thickness
+  derived from the height stayed pinned to its minimum — the setting would have done nothing in
+  precisely the framing it is most wanted for. At zero there is no line: a card keeps only its
+  rounded corners, a glow only its halo.
 - **A third layout: fixed bars, moving cursor.** Continuous scrolling has a flaw no measurement
   reveals — everything moves, all the time. The eye follows a digit sliding past instead of
   reading it, and on a tight tablature it never gets to settle. The alternative is as old as

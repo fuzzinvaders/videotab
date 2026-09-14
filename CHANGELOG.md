@@ -41,12 +41,22 @@ versioning yet, so entries are grouped by the change that shipped them.
   produced, which cannot disagree with themselves — same measurement afterwards, 3356 ms to the
   millisecond. The announced duration was short by the same chunk, which quietly cut the last
   half-second off every video; it is now exact too.
-- **The rhythm was drawn under the tablature and then cropped away.** alphaTab lays it out in a
-  band of its own below the staff, whose height it knows but never declares in the bar bounds —
-  "the region of the staff" stops at the last line. Measured on a bass tablature: staff from
-  125 to 164, crop stopping at 173, and twenty-five pixels of rhythm to draw below 164. Nine
-  survived — enough to see the top of the stems, not enough to read a duration, and just enough
-  to hide that anything was missing. The crop now asks how tall that band is and keeps it.
+- **The rhythm was missing under the tablature**, so a fret number said where to put the finger
+  and never how long to leave it there. Two causes, one hiding the other.
+
+  The first was the crop. alphaTab lays the rhythm out in a band of its own below the staff,
+  whose height it knows but never declares in the bar bounds — "the region of the staff" stops
+  at the last line. Measured on a bass tablature: staff from 125 to 164, crop stopping at 173,
+  and twenty-five pixels of rhythm to draw below 164. The crop now asks how tall that band is
+  and keeps it.
+
+  That alone changed nothing, which is how the second came to light: alphaTab's *automatic*
+  rhythm mode — its default, and what this was relying on — never turned it on. It is
+  documented as showing the rhythm whenever standard notation is hidden, but it reads that from
+  what the file declares for the track, not from the staves we asked to display. Rendering the
+  strip as text, character by character, showed the widened band to be simply empty. The rhythm
+  is now asked for explicitly rather than guessed, and steps aside only when the standard staff
+  is on screen, which carries it already.
 - **The frame was drawn half outside the picture, and sometimes entirely outside.** Found while
   adding the thickness setting, by counting the pixels each frame actually paints. Cropped to
   the strip — the framing made for overlays — a card's outline is centred on the edge of the

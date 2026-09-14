@@ -548,14 +548,24 @@ function Repli({
   children: React.ReactNode;
 }) {
   return (
-    <details className="group rounded-lg border border-slate-800 bg-slate-900/40">
-      <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-slate-300 hover:text-slate-100">
-        <span className="inline-block w-4 text-slate-500 transition-transform group-open:rotate-90">
-          ›
+    <details className="group rounded-lg border border-slate-700 bg-slate-800/40 open:border-slate-600 open:bg-slate-800/70">
+      {/* Le marqueur natif est masqué des deux façons qu'il faut : `list-none` pour Firefox,
+          le pseudo-élément pour les navigateurs WebKit, qui l'ignore. */}
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-200 select-none hover:bg-slate-700/40 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <svg
+            viewBox="0 0 20 20"
+            aria-hidden
+            className="size-4 shrink-0 fill-amber-500 transition-transform group-open:rotate-90"
+          >
+            <path d="M7 4l7 6-7 6z" />
+          </svg>
+          {titre}
         </span>
-        {titre}
+        <span className="text-xs text-slate-400 group-open:hidden">afficher</span>
+        <span className="hidden text-xs text-slate-400 group-open:inline">masquer</span>
       </summary>
-      <div className="space-y-4 border-t border-slate-800 p-3">{children}</div>
+      <div className="space-y-4 border-t border-slate-700 p-3">{children}</div>
     </details>
   );
 }

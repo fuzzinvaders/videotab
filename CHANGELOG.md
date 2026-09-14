@@ -13,11 +13,18 @@ versioning yet, so entries are grouped by the change that shipped them.
   twenty rem wide, stacked one above the other — three thousand pixels of scrolling — while
   three quarters of the screen stayed empty beneath a strip only two hundred pixels tall. The
   preview now takes the full width and the settings sit underneath in two or three columns,
-  and the ones a piece is set up with once are folded away behind a heading. Measured on the
-  same piece: the settings went from 3054 pixels of stacked height to 984. The columns are a
-  flow, not a grid — a grid of three columns left the fourth card stranded on a row of its own
-  with a wide emptiness beside it, whereas a flow drops each card wherever there is room left,
-  and never cuts one in half.
+  and the ones a piece is set up with once are folded away behind a heading that says
+  **afficher** or **masquer**. Measured on the same piece: the settings went from 3054 pixels
+  of stacked height to 882.
+
+  The columns are held by hand rather than flowed. A flow packs more tightly, but it
+  redistributes everything the moment one card grows: unfolding a group made the cards jump
+  from one column to another, and one lost sight of the very thing just opened. Each card now
+  keeps its column for good, so unfolding lengthens only its own — measured, every card stays
+  at the same position when all three groups are opened at once. A plain grid was no better:
+  with four cards over three columns it stranded the fourth on a row of its own, next to a
+  wide emptiness, and that fourth one is **Exporter** — precisely the card one goes looking
+  for once the settings are done.
 
 - **The exported video can be cropped to the strip itself.** A 1920×1080 file carrying eight
   hundred pixels of nothing above and below the tablature is heavy for what it shows, and at

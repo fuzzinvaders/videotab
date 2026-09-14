@@ -146,14 +146,15 @@ cannot keep.
 
 In exchange:
 
-- **Encoding takes as long as the piece.** `MediaRecorder` is a tape recorder, not a renderer:
-  it timestamps what it receives with the wall clock. Three minutes of music take three
-  minutes.
-- **The tab must stay open**, but not in front. Encoding is paced by the audio thread, which
-  the browser never throttles, so the video keeps its full frame rate while you work in
-  another window. Closing the tab does end it. One nuance: while the tab is hidden the frames
-  are spaced on the sound card's grid, about 10.7 ms, which divides 30 fps more evenly than
-  60 — so 30 is the steadier choice for an export you intend to walk away from.
+- **Encoding is faster than the piece, where WebCodecs is available** — Chrome, Edge, recent
+  Firefox and Safari. Measured on a three-minute bass tablature: 21 seconds. The frame rate is
+  exact, since the dates are written rather than observed.
+- **A transparent background falls back to the tape recorder**, and therefore to real time:
+  no browser yet encodes alpha reliably through WebCodecs. Three minutes then take three
+  minutes. The export panel says which of the two is coming before you press.
+- **The tab must stay open**, but not in front. In real time the encoding is paced by the
+  audio thread, which the browser never throttles, so the video keeps its full frame rate
+  while you work in another window. Closing the tab does end it.
 - **The format is WebM** (VP9 + Opus) everywhere except Safari, which produces mp4. Both are
   accepted by YouTube, Instagram and the usual editing software.
 

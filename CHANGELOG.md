@@ -9,6 +9,25 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **Exporting no longer takes as long as the piece.** `MediaRecorder` is a tape recorder: it
+  records what one plays it, at the speed one plays it, and stamps every frame with the hour of
+  the wall clock. Three minutes of music therefore asked for three minutes of waiting, and every
+  piece of clockwork in this project — the smoothed clock, the metronome taken off the audio
+  thread, the explicit handing over of each frame — existed only to get along with that clock.
+
+  WebCodecs asks for none of it. It is handed frames already dated, it compresses them as fast
+  as the machine allows, and a multiplexer files them into a WebM. Measured on the real piece:
+  **3:07 of video in 21 seconds**, upload included — nine times faster than the music. And the
+  frame rate is exact, because the dates are ours to write: 30.00 img/s, intervals of 33, 33 and
+  34 ms, an unevenness of 1.03 where the recorder gave 2.10.
+
+  The recorder stays for two reasons that will not disappear soon: not every browser has
+  WebCodecs, and none of them yet encodes transparency reliably by that route. An overlay on a
+  transparent background therefore still goes through it — verified, 91.6 % of a magenta backdrop
+  still shows through such an export. The panel says which of the two is coming before the button
+  is pressed, since "a few dozen seconds" and "the length of the piece" are not prepared for in
+  the same way.
+
 - **The preview follows you down the page**, but only when it is a strip. Cropped to the band
   it is a fifth as tall as it is wide, so pinning it to the top costs little and saves scrolling
   back up to see what a setting did. A full 16/9 picture, or a vertical format, is another

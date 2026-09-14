@@ -7,7 +7,7 @@ import { messageOf } from '../../lib/api'
 import { formaterDuree } from '../../lib/minutage'
 import type { Scene } from '../../lib/scene'
 import type { Morceau } from '../../lib/types'
-import { enregistrer, formatSupporte } from '../../lib/video'
+import { enregistrer, formatSupporte, voieDEncodage } from '../../lib/video'
 
 function poids(octets: number): string {
   return octets < 1024 * 1024
@@ -19,10 +19,20 @@ export function PanneauExport({
   morceau,
   scene,
   audio,
+  transparente,
 }: {
   morceau: Morceau
   scene: Scene | null
   audio: AudioBuffer | null
+  /**
+   * Le fond transparent, tel qu'il est réglé à l'instant.
+   *
+   * Ni la scène ni le morceau ne peuvent le dire à temps : la première est refaite à chaque
+   * changement et vaut `null` pendant ce temps-là, le second ne porte que ce qui a déjà été
+   * enregistré, avec le retard de la sauvegarde. Le réglage vivant, lui, est juste tout de
+   * suite — et c'est de lui que dépend la voie d'encodage, donc l'attente annoncée.
+   */
+  transparente: boolean
 }) {
   const { deposerVideo, supprimerVideo } = useMorceaux()
   const [encours, setEncours] = useState(false)
@@ -50,13 +60,16 @@ export function PanneauExport({
   }, [produite])
 
   const supporte = formatSupporte()
+  /* Deux voies, deux attentes très différentes : autant le dire avant qu'on appuie. La rapide
+     encode plus vite que le morceau ne dure ; l'autre l'enregistre à sa vitesse. */
+  const rapide = voieDEncodage(transparente) === 'rapide'
 
   async function lancer() {
     if (!scene) return
     setErreur(null)
     setProgression(0)
     setEncours(true)
-    setEtape('Enregistrement en temps réel…')
+    setEtape(rapide ? 'Encodage…' : 'Enregistrement en temps réel…')
     annuler.current = new AbortController()
 
     try {
@@ -106,16 +119,28 @@ export function PanneauExport({
 
       {!supporte ? (
         <ErrorText>
-          Ce navigateur ne sait pas enregistrer de vidéo. Firefox, Chrome, Edge et Safari récents
-          le savent.
+          Ce navigateur ne sait pas enregistrer de vidéo. Firefox, Chrome, Edge et Safari récents le
+          savent.
         </ErrorText>
       ) : null}
 
       <p className="text-sm text-slate-400">
-        L'encodage se fait ici, dans l'onglet, et <strong className="text-slate-300">en temps
-        réel</strong> : {formaterDuree(scene?.dureeMs ?? 0)} de morceau demandent{' '}
-        {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Tu peux aller ailleurs pendant ce
-        temps-là, l'enregistrement continue — mais ne ferme pas l'onglet.
+        {rapide ? (
+          <>
+            L'encodage se fait ici, dans l'onglet, mais{' '}
+            <strong className="text-slate-300">plus vite que le morceau</strong> : les{' '}
+            {formaterDuree(scene?.dureeMs ?? 0)} de vidéo ne demandent pas{' '}
+            {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Ne ferme pas l'onglet, c'est tout.
+          </>
+        ) : (
+          <>
+            L'encodage se fait ici, dans l'onglet, et{' '}
+            <strong className="text-slate-300">en temps réel</strong> :{' '}
+            {formaterDuree(scene?.dureeMs ?? 0)} de morceau demandent{' '}
+            {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Tu peux aller ailleurs pendant ce
+            temps-là, l'enregistrement continue — mais ne ferme pas l'onglet.
+          </>
+        )}
       </p>
 
       <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -150,7 +175,7 @@ export function PanneauExport({
           </div>
           <p className="text-sm text-slate-400">
             {etape} {Math.round(progression * 100)} %
-            {resteMs > 0 ? ` — reste ${formaterDuree(resteMs)}` : ''}
+            {!rapide && resteMs > 0 ? ` — reste ${formaterDuree(resteMs)}` : ''}
           </p>
           <Button variant="secondary" onClick={() => annuler.current?.abort()}>
             Interrompre
@@ -179,8 +204,8 @@ export function PanneauExport({
           {produite.ips < produite.fps * 0.85 ? (
             <p className="mt-2 text-sm text-amber-400">
               Cette vidéo n'a tenu que {produite.ips.toFixed(1)} images par seconde sur les{' '}
-              {produite.fps} demandées : la machine n'a pas suivi. Une définition plus petite ou
-              une cadence plus basse donneront un résultat plus fluide.
+              {produite.fps} demandées : la machine n'a pas suivi. Une définition plus petite ou une
+              cadence plus basse donneront un résultat plus fluide.
             </p>
           ) : null}
         </div>

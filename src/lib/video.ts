@@ -1,4 +1,5 @@
 import { reveillerAudio } from './audio'
+import { encodagePossible, encoder } from './encodeur'
 import { horlogeLissee } from './horloge'
 import { battre, type Metronome } from './metronome'
 import type { Scene } from './scene'
@@ -6,16 +7,17 @@ import type { Scene } from './scene'
 /**
  * L'encodage de la vidéo, dans le navigateur.
  *
- * Le principe tient en trois objets standard : un canvas qu'on dessine, un
+ * Deux voies, et la première est prise dès qu'elle est ouverte : WebCodecs encode plus vite
+ * que le morceau ne dure et date les images lui-même — voir lib/encodeur.ts. Ce fichier-ci
+ * garde la seconde, le magnétophone, pour les navigateurs qui n'ont pas WebCodecs et pour la
+ * transparence, qu'aucun n'encode encore de façon fiable par cette voie-là.
+ *
+ * Le magnétophone tient en trois objets standard : un canvas qu'on dessine, un
  * `captureStream` qui en fait une piste vidéo, un `MediaRecorder` qui encode le tout. Rien
  * à installer sur le serveur, pas de ffmpeg, pas de file d'attente de rendu — la machine
- * qui regarde est celle qui fabrique.
- *
- * Le prix à payer est que l'enregistrement se fait **en temps réel** : trois minutes de
- * morceau demandent trois minutes. `MediaRecorder` est un magnétophone, pas un moteur de
- * rendu ; il horodate ce qu'il reçoit avec l'horloge du mur. On pourrait aller plus vite
- * avec WebCodecs, mais il faudrait alors écrire soi-même le conteneur WebM, et cette
- * dépense n'a pas de sens tant qu'on filme des morceaux de trois minutes.
+ * qui regarde est celle qui fabrique. Mais il enregistre **en temps réel** et horodate ce
+ * qu'il reçoit à l'heure du mur : trois minutes de morceau demandent trois minutes, et toute
+ * l'horlogerie qui suit n'existe que pour composer avec cette horloge-là.
  *
  * Trois minutes d'attente, c'est trois minutes pendant lesquelles personne ne reste à
  * regarder une barre avancer. L'export ne demande donc pas qu'on le surveille : il ne bat ni
@@ -84,14 +86,30 @@ function debitVideo(largeur: number, hauteur: number, fps: number): number {
   return Math.round(Math.min(24_000_000, Math.max(2_000_000, largeur * hauteur * fps * 0.12)))
 }
 
+/**
+ * Comment la vidéo sera fabriquée, avant de s'y engager.
+ *
+ * L'interface le dit avant qu'on appuie plutôt qu'après : « quelques dizaines de secondes » et
+ * « le temps du morceau » ne se préparent pas de la même façon.
+ */
+export function voieDEncodage(transparente: boolean): 'rapide' | 'temps-reel' {
+  return encodagePossible(transparente) ? 'rapide' : 'temps-reel'
+}
+
 export async function enregistrer(
   scene: Scene,
   options: OptionsEnregistrement,
 ): Promise<Enregistrement> {
+  /* Par WebCodecs quand c'est possible : l'encodage y est plus rapide que le morceau, et les
+     images y portent la date qu'on leur donne au lieu de celle de leur arrivée. Le
+     magnétophone reste pour les navigateurs qui n'ont pas WebCodecs et pour la transparence,
+     qu'aucun n'encode encore de façon fiable par cette voie. Voir lib/encodeur.ts. */
+  if (encodagePossible(scene.transparente)) return encoder(scene, options)
+
   const type = formatSupporte(scene.transparente)
   if (!type) {
     throw new Error(
-      "Ce navigateur ne sait pas enregistrer de vidéo (MediaRecorder absent). Firefox, Chrome, Edge et Safari récents le savent.",
+      'Ce navigateur ne sait pas enregistrer de vidéo (MediaRecorder absent). Firefox, Chrome, Edge et Safari récents le savent.',
     )
   }
 
@@ -129,9 +147,7 @@ export async function enregistrer(
   let depart = 0
   const horloge = horlogeLissee({
     reference: () =>
-      surLeSon && contexte
-        ? (contexte.currentTime - depart) * 1000
-        : performance.now() - depart,
+      surLeSon && contexte ? (contexte.currentTime - depart) * 1000 : performance.now() - depart,
   })
 
   if (options.audio && contexte) {

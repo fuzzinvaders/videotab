@@ -265,7 +265,11 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
         </Card>
       </div>
 
-      <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* Un empilement en colonnes plutôt qu'une grille : à quatre cartes sur trois
+         colonnes, la grille laissait la dernière seule sur une rangée à elle, avec un grand
+         vide à côté. Les colonnes, elles, comblent les creux — chaque carte se range là où
+         il reste de la place, sans jamais être coupée en deux. */}
+      <div className="gap-4 md:columns-2 xl:columns-3 [&>*]:mb-4 [&>*]:break-inside-avoid">
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium text-slate-200">Minutage</h2>

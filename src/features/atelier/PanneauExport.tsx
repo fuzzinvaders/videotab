@@ -1,13 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { ErrorText } from '../../components/ui/Field'
+import { ErrorText, Field, Select } from '../../components/ui/Field'
 import { useMorceaux } from '../../hooks/useMorceaux'
 import { messageOf } from '../../lib/api'
 import { formaterDuree } from '../../lib/minutage'
 import type { Scene } from '../../lib/scene'
-import type { Morceau } from '../../lib/types'
+import type { FormatVideo, Morceau, QualiteVideo, ReglagesVideo } from '../../lib/types'
 import { enregistrer, formatSupporte, voieDEncodage } from '../../lib/video'
+
+/* Trois crans plutôt qu'un curseur de débit : personne ne sait ce que vaut un mégabit par
+   seconde, tout le monde sait où sa bande va finir à l'écran. */
+const QUALITES: Array<{ id: QualiteVideo; nom: string; aide: string }> = [
+  {
+    id: 'legere',
+    nom: 'Légère — fichier minuscule',
+    aide: 'Pour une bande dans un coin de l’écran, où les chiffres sont petits de toute façon.',
+  },
+  {
+    id: 'standard',
+    nom: 'Standard',
+    aide: 'Le bon compromis pour une incrustation : une tablature est du trait sur fond uni, elle se comprime bien.',
+  },
+  {
+    id: 'nette',
+    nom: 'Nette — fichier lourd',
+    aide: 'Quand la tablature occupe l’écran entier et qu’on lit les doigtés dessus.',
+  },
+]
 
 function poids(octets: number): string {
   return octets < 1024 * 1024
@@ -19,21 +39,25 @@ export function PanneauExport({
   morceau,
   scene,
   audio,
-  transparente,
+  video,
+  modifier,
 }: {
   morceau: Morceau
   scene: Scene | null
   audio: AudioBuffer | null
   /**
-   * Le fond transparent, tel qu'il est réglé à l'instant.
+   * Les réglages vidéo tels qu'ils sont à l'instant.
    *
-   * Ni la scène ni le morceau ne peuvent le dire à temps : la première est refaite à chaque
+   * Ni la scène ni le morceau ne peuvent les dire à temps : la première est refaite à chaque
    * changement et vaut `null` pendant ce temps-là, le second ne porte que ce qui a déjà été
-   * enregistré, avec le retard de la sauvegarde. Le réglage vivant, lui, est juste tout de
-   * suite — et c'est de lui que dépend la voie d'encodage, donc l'attente annoncée.
+   * enregistré, avec le retard de la sauvegarde. Les réglages vivants, eux, sont justes tout
+   * de suite — et c'est d'eux que dépendent la voie d'encodage, donc l'attente annoncée, et
+   * le format du fichier produit.
    */
-  transparente: boolean
+  video: ReglagesVideo
+  modifier: (f: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
+  const transparente = video.fond === 'transparent'
   const { deposerVideo, supprimerVideo } = useMorceaux()
   const [encours, setEncours] = useState(false)
   const [progression, setProgression] = useState(0)
@@ -59,7 +83,7 @@ export function PanneauExport({
     }
   }, [produite])
 
-  const supporte = formatSupporte()
+  const supporte = formatSupporte(transparente, video.format)
   /* Deux voies, deux attentes très différentes : autant le dire avant qu'on appuie. La rapide
      encode plus vite que le morceau ne dure ; l'autre l'enregistre à sa vitesse. */
   const rapide = voieDEncodage(transparente) === 'rapide'
@@ -74,7 +98,9 @@ export function PanneauExport({
 
     try {
       const resultat = await enregistrer(scene, {
-        fps: morceau.reglages.video.fps,
+        fps: video.fps,
+        format: video.format,
+        qualite: video.qualite,
         audio,
         audible,
         signal: annuler.current.signal,
@@ -87,7 +113,7 @@ export function PanneauExport({
         nom: `${morceau.titre || 'videotab'}${resultat.ext}`,
         taille: resultat.blob.size,
         ips: resultat.imagesParSeconde,
-        fps: morceau.reglages.video.fps,
+        fps: video.fps,
       })
 
       if (garder) {
@@ -142,6 +168,44 @@ export function PanneauExport({
           </>
         )}
       </p>
+
+      {/* Le format et la qualité se règlent ici et non avec la mise en scène : ils ne
+          changent rien à ce qu'on voit dans l'aperçu, seulement au fichier qui en sort. */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field
+          label="Format"
+          hint={
+            transparente
+              ? 'Un fond transparent impose le WebM : le mp4 ne sait pas transporter la transparence.'
+              : video.format === 'mp4'
+                ? 'Se pose dans n’importe quel logiciel de montage.'
+                : 'Plus léger, mais Resolve et Premiere ne le lisent pas.'
+          }
+        >
+          <Select
+            value={video.format}
+            disabled={encours}
+            onChange={(e) => modifier((v) => ({ ...v, format: e.target.value as FormatVideo }))}
+          >
+            <option value="mp4">mp4 — pour le montage</option>
+            <option value="webm">WebM — pour le web</option>
+          </Select>
+        </Field>
+
+        <Field label="Qualité" hint={QUALITES.find((q) => q.id === video.qualite)?.aide}>
+          <Select
+            value={video.qualite}
+            disabled={encours}
+            onChange={(e) => modifier((v) => ({ ...v, qualite: e.target.value as QualiteVideo }))}
+          >
+            {QUALITES.map((q) => (
+              <option key={q.id} value={q.id}>
+                {q.nom}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
 
       <label className="flex items-center gap-2 text-sm text-slate-300">
         <input

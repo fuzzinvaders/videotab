@@ -52,6 +52,26 @@ export type FondVideo = 'theme' | 'chroma' | 'transparent'
  */
 export type Cadrage = 'image' | 'bande'
 
+/**
+ * Le conteneur du fichier produit.
+ *
+ * Cette vidéo-là ne finit pas dans un navigateur : elle finit dans un logiciel de montage,
+ * posée par-dessus une reprise. Or Resolve et Premiere ne lisent pas le WebM, ou le lisent
+ * mal — le fichier arrivait au bout de la chaîne pour s'y faire refuser. Le mp4 est donc le
+ * défaut, et le WebM reste pour le web, où il est plus léger à qualité égale.
+ */
+export type FormatVideo = 'mp4' | 'webm'
+
+/**
+ * Combien de détail on paie.
+ *
+ * Une tablature, c'est du trait sur un fond uni : elle se comprime bien, et il n'y a aucune
+ * raison de lui donner le débit d'une prise de vue. Le réglage existe parce que le bon
+ * compromis dépend de la place que la bande occupera à l'écran — un bandeau dans un coin
+ * n'a pas besoin de la même finesse qu'une tablature plein cadre.
+ */
+export type QualiteVideo = 'legere' | 'standard' | 'nette'
+
 export interface ReglagesVideo {
   largeur: number
   hauteur: number
@@ -100,6 +120,9 @@ export interface ReglagesVideo {
    */
   epaisseurCadre: number
   cadrage: Cadrage
+  /** mp4 pour le montage, WebM pour le web. Voir {@link FormatVideo}. */
+  format: FormatVideo
+  qualite: QualiteVideo
   fond: FondVideo
   /**
    * Couleur du curseur, ou `null` pour prendre celle du thème.
@@ -164,6 +187,16 @@ export interface ReglagesGp {
    * le rythme, et le répéter deux fois n'apprend rien.
    */
   rythme: boolean
+  /**
+   * Montrer les noms de sections — « Intro », « Couplet », « Refrain » — au-dessus de la
+   * tablature.
+   *
+   * Sur quatre-vingts mesures qui se ressemblent, c'est ce qui dit où l'on en est. Ils
+   * coûtent cependant de la hauteur : le recadrage serre la bande sur la portée, et les
+   * laisser entrer oblige à remonter le bord haut sur toute la longueur du morceau, y
+   * compris là où il n'y a aucun nom à lire. D'où le choix plutôt que l'automatisme.
+   */
+  sections: boolean
   /**
    * Commencer la vidéo à la première note plutôt qu'à la première mesure.
    *

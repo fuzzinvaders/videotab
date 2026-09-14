@@ -41,6 +41,11 @@ export function videoParDefaut(): ReglagesVideo {
     // L'image entière par défaut : c'est le format qu'on attend d'une vidéo, et le cadrage sur
     // la bande ne prend son sens qu'une fois qu'on sait qu'on va l'incruster.
     cadrage: 'image',
+    // Le mp4 : c'est le seul format qui se pose sans discuter dans un logiciel de montage,
+    // et le montage est la destination de cette vidéo.
+    format: 'mp4',
+    // Une tablature se comprime bien : « standard » est déjà large pour du trait sur fond uni.
+    qualite: 'standard',
     fond: 'theme',
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
     // choisi une, et continue de la suivre à chaque changement de thème.
@@ -66,6 +71,10 @@ function nombre(valeur: unknown, defaut: number, min: number, max: number): numb
   return Math.min(max, Math.max(min, n))
 }
 
+function pair(valeur: number): number {
+  return 2 * Math.round(valeur / 2)
+}
+
 function parmi<T extends string>(valeur: unknown, valeurs: readonly T[], defaut: T): T {
   return valeurs.includes(valeur as T) ? (valeur as T) : defaut
 }
@@ -74,8 +83,11 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
   const d = videoParDefaut()
   if (!video) return d
   return {
-    largeur: nombre(video.largeur, d.largeur, 320, 3840),
-    hauteur: nombre(video.hauteur, d.hauteur, 320, 3840),
+    /* Arrondies au pair : le sous-échantillonnage de la couleur du H.264 travaille par blocs
+       de deux pixels, et un encodeur refuse une définition impaire. Les définitions proposées
+       le sont toutes, mais un fichier de réglages édité à la main ne l'est pas forcément. */
+    largeur: pair(nombre(video.largeur, d.largeur, 320, 3840)),
+    hauteur: pair(nombre(video.hauteur, d.hauteur, 320, 3840)),
     fps: nombre(video.fps, d.fps, 12, 60),
     disposition: parmi(
       video.disposition,
@@ -91,6 +103,8 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
     epaisseurCadre: nombre(video.epaisseurCadre, d.epaisseurCadre, 0, 24),
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
+    format: parmi(video.format, ['mp4', 'webm'] as const, d.format),
+    qualite: parmi(video.qualite, ['legere', 'standard', 'nette'] as const, d.qualite),
     fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),
     couleur: typeof video.couleur === 'string' ? video.couleur : null,
     curseurStyle: parmi(
@@ -142,6 +156,9 @@ export function completerReglages(reglages: Reglages | undefined, type: TypeMorc
       // combien de temps l'y laisser, et la tablature ne se lit plus qu'en connaissant déjà
       // le morceau.
       rythme: gp?.rythme ?? true,
+      /* Éteints par défaut : ils font remonter le bord haut de la bande sur toute la longueur
+         du morceau, et tout le travail du recadrage est justement de la serrer. */
+      sections: gp?.sections ?? false,
       // On garde le morceau entier par défaut : rogner est un choix, pas une évidence, et
       // certaines intros muettes sont voulues.
       demarrerALaPremiereNote: gp?.demarrerALaPremiereNote ?? false,

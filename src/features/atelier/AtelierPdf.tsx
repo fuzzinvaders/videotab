@@ -385,7 +385,8 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
             morceau={morceau}
             scene={scene}
             audio={bandeSon}
-            transparente={reglages.video.fond === 'transparent'}
+            video={reglages.video}
+            modifier={(mutation) => modifier((r) => ({ ...r, video: mutation(r.video) }))}
           />
         </div>
 

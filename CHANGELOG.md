@@ -9,6 +9,39 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The video comes out as an mp4, and weighs a fraction of what it did.** This video does not
+  end up in a browser: it ends up in an editing timeline, laid over a cover. Resolve and
+  Premiere do not read WebM, or read it badly — the file reached the end of the chain only to
+  be turned away there. It is now an mp4/H.264 by default, with AAC sound; WebM stays on offer
+  for the web, and a transparent background still forces it, since mp4 cannot carry an alpha
+  channel.
+
+  The weight came from the way the bitrate was asked for. A tablature is flat colour crossed
+  by a cursor: at constant quality most frames cost almost nothing, and only the page turns
+  pay. A fixed bitrate spends its budget whether it needs it or not — measured on a real
+  three-minute export, 96 MB, whose intermediate frames all weighed 16 KB to within a hundred
+  bytes. That evenness does not come from the music, it comes from the budget.
+
+  The encoder is now asked for a quantizer instead, which every codec on this machine accepts.
+  Measured on a synthetic tablature at 1080p30: 2.67 Mbit/s the old way against 0.16 Mbit/s at
+  the standard setting — about a sixteenth of the size. Decoding the result back and comparing
+  it pixel by pixel with what was drawn gives 36.9 dB against a 37.7 dB ceiling that no bitrate
+  gets past, because 4:2:0 colour is what sets it. Browsers without the quantizer mode fall
+  back to a bitrate, now three times lower than before.
+
+  Three quality steps rather than a bitrate slider: nobody knows what a megabit per second is
+  worth, everybody knows where their band will sit on screen.
+
+- **Section names can be shown.** "Verse", "Chorus" and the rest were rendered by alphaTab
+  above the staff and then cropped away, because the crop tightens the band onto the staff
+  itself. Keeping them takes two things at once, which is why they now happen together: the
+  tempo marking is hidden, so that the effect band holds nothing but the name, and the top
+  edge is raised to that band.
+
+  It costs height, and that is why it is an option rather than a default: measured on an
+  85-bar piece, the band goes from 82 to 140 pixels. For a given video height the tablature
+  is a third smaller — worth it when eighty bars look alike, not worth it otherwise.
+
 - **The count-in beats the piece instead of the clock.** It counted seconds, and it counted
   them out loud since yesterday — which made the problem audible: a click every second leads
   nowhere in a piece that is not at sixty beats per minute. One does not start on a stopwatch,
@@ -226,6 +259,10 @@ versioning yet, so entries are grouped by the change that shipped them.
   own swatch in the row, so something is always visibly selected.
 
 ### Added
+
+- **The preview answers the keyboard.** Space plays and pauses, the arrows move by five
+  seconds (one second with Shift), Home returns to the start. Text fields keep their keys, so
+  typing a title with a space in it no longer starts playback.
 
 - **The library says how much room the videos take**, at the bottom of the page. Three minutes
   of 1080p weigh some sixty megabytes and nothing bounded their accumulation — the kind of thing

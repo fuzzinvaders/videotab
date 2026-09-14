@@ -40,6 +40,11 @@ function reglagesParDefaut(type) {
     // Épaisseur du trait du cadre, en pixels d'une image large de 1920.
     epaisseurCadre: 3,
     cadrage: "image",
+    // Le mp4 : le seul format qui se pose sans discuter dans un logiciel de montage, et le
+    // montage est la destination de cette vidéo. Le WebM reste au choix, pour le web.
+    format: "mp4",
+    // Une tablature se comprime bien : « standard » est déjà large pour du trait sur fond uni.
+    qualite: "standard",
     fond: "theme",
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
     // choisi une, et continue de la suivre quand on change de thème.
@@ -93,6 +98,9 @@ function reglagesParDefaut(type) {
       afficherTablature: true,
       // La rythmique sous la tablature : sans elle, un chiffre ne dit pas la durée.
       rythme: true,
+      // Les noms de sections sont éteints : ils font remonter le bord haut de la bande sur
+      // toute la longueur du morceau, alors que le recadrage cherche à la serrer.
+      sections: false,
       // Le morceau entier, silence d'intro compris : rogner est un choix.
       demarrerALaPremiereNote: false,
     },

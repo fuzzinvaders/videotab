@@ -19,6 +19,7 @@ import {
   preparerBande,
   recadrer,
   reglagesAlphaTab,
+  reglerBandeauDEffets,
   type BandeGp,
 } from '../../lib/gp'
 import { creerScene, type Feuille } from '../../lib/scene'
@@ -120,6 +121,10 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
          se règle sur ce que le fichier déclare pour la piste, pas sur ce que nous affichons.
          On ne devine donc plus : quand la portée classique est là, elle porte déjà le rythme
          et il n'y a rien à répéter ; sinon la tablature le porte elle-même. */
+      /* Les noms de sections, et le nettoyage de la bande qui les porte : voir
+         reglerBandeauDEffets. Réglé ici, avant le rendu, parce que la hauteur de cette
+         bande-là change la mise en page. */
+      reglerBandeauDEffets(instance, gp.sections)
       instance.settings.notation.rhythmMode =
         gp.rythme && !gp.afficherPortee
           ? alphaTab.TabRhythmMode.ShowWithBars
@@ -189,7 +194,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     if (!feuille || !bande || !gp || !instance?.score) return null
     // Le rendu d'alphaTab porte au-dessus et en dessous des portées beaucoup de blanc. On
     // cadre sur ce qui se lit, sinon la bande qu'on a demandée est aux trois quarts vide.
-    const etendue = etendueDesPortees(instance)
+    const etendue = etendueDesPortees(instance, gp.sections)
     const ancres = ancresDeDefilement(
       instance,
       bande.reperes,
@@ -384,6 +389,11 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
                 onChange={(rythme) => modifier((r) => ({ ...r, gp: { ...gp, rythme } }))}
               />
               <Bascule
+                label="Noms de sections au-dessus"
+                actif={gp.sections}
+                onChange={(sections) => modifier((r) => ({ ...r, gp: { ...gp, sections } }))}
+              />
+              <Bascule
                 label="Métronome dans la bande-son"
                 actif={gp.metronome}
                 onChange={(metronome) => modifier((r) => ({ ...r, gp: { ...gp, metronome } }))}
@@ -409,7 +419,8 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
             morceau={morceau}
             scene={scene}
             audio={audio}
-            transparente={reglages.video.fond === 'transparent'}
+            video={reglages.video}
+            modifier={(mutation) => modifier((r) => ({ ...r, video: mutation(r.video) }))}
           />
         </div>
 

@@ -3,6 +3,7 @@ import { encodagePossible, encoder } from './encodeur'
 import { horlogeLissee } from './horloge'
 import { battre, type Metronome } from './metronome'
 import type { Scene } from './scene'
+import type { FormatVideo, QualiteVideo } from './types'
 
 /**
  * L'encodage de la vidéo, dans le navigateur.
@@ -29,6 +30,10 @@ import type { Scene } from './scene'
 
 export interface OptionsEnregistrement {
   fps: number
+  /** Le conteneur voulu. Il n'est pas garanti : un navigateur qui ne sait pas l'écrire
+   *  rendra l'autre, et `Enregistrement.ext` dit lequel est sorti. */
+  format?: FormatVideo
+  qualite?: QualiteVideo
   audio?: AudioBuffer | null
   /** Faire entendre la bande-son pendant l'enregistrement. */
   audible?: boolean
@@ -49,15 +54,13 @@ export interface Enregistrement {
   imagesParSeconde: number
 }
 
-/* Par ordre de préférence. VP9 pour la qualité à débit égal, VP8 pour les navigateurs qui
-   ne l'encodent pas, et le mp4 en dernier pour Safari, qui ne connaît pas le WebM. */
-const FORMATS = [
-  'video/webm;codecs=vp9,opus',
-  'video/webm;codecs=vp8,opus',
-  'video/webm',
-  'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-  'video/mp4',
-]
+/* Par ordre de préférence, et l'ordre dépend de ce qu'on a demandé. Le mp4 d'abord quand
+   c'est lui qu'on veut — il est le seul que les logiciels de montage prennent sans discuter —
+   sinon le VP9 pour la qualité à débit égal, le VP8 pour les navigateurs qui ne l'encodent
+   pas, et le mp4 quand même en dernier, pour Safari, qui ne connaît pas le WebM. */
+const FORMATS_WEBM = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+const FORMATS_MP4 = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4']
+const FORMATS = [...FORMATS_WEBM, ...FORMATS_MP4]
 
 /* Pour une vidéo à fond transparent, le VP8 passe avant le VP9 : c'est le codec dont le canal
    alpha traverse le plus sûrement `MediaRecorder`, et une incrustation qui perd sa
@@ -65,9 +68,12 @@ const FORMATS = [
    qui n'a que lui, l'export sera opaque, et l'interface le dit avant qu'on appuie. */
 const FORMATS_ALPHA = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm']
 
-export function formatSupporte(alpha = false): string | null {
+export function formatSupporte(alpha = false, format: FormatVideo = 'webm'): string | null {
   if (typeof MediaRecorder === 'undefined') return null
-  const candidats = alpha ? [...FORMATS_ALPHA, ...FORMATS] : FORMATS
+  /* La transparence passe avant le conteneur voulu : le mp4 ne sait pas la transporter, et
+     une incrustation qui perd son alpha ne vaut rien, quel que soit le format demandé. */
+  const voulus = format === 'mp4' ? [...FORMATS_MP4, ...FORMATS_WEBM] : FORMATS
+  const candidats = alpha ? [...FORMATS_ALPHA, ...voulus] : voulus
   return candidats.find((f) => MediaRecorder.isTypeSupported(f)) ?? null
 }
 
@@ -81,9 +87,26 @@ export function extensionDe(type: string): '.webm' | '.mp4' {
   return type.startsWith('video/mp4') ? '.mp4' : '.webm'
 }
 
+/* Bits par pixel et par image. Le magnétophone ne connaît que le débit — pas de mode
+   quantificateur ici — et une tablature n'a pas besoin du débit d'une prise de vue : mesuré
+   sur un export en 1080p à trente images, les images intermédiaires pesaient toutes seize
+   kilooctets à la centaine d'octets près, ce qui est la signature d'un budget dépensé parce
+   qu'il était là. Voir lib/encodeur.ts, qui fait mieux quand il peut. */
+const BITS_PAR_PIXEL: Record<QualiteVideo, number> = {
+  legere: 0.02,
+  standard: 0.04,
+  nette: 0.08,
+}
+
 /** Un débit qui suit la définition : de quoi garder des chiffres de tablature nets. */
-function debitVideo(largeur: number, hauteur: number, fps: number): number {
-  return Math.round(Math.min(24_000_000, Math.max(2_000_000, largeur * hauteur * fps * 0.12)))
+function debitVideo(
+  largeur: number,
+  hauteur: number,
+  fps: number,
+  qualite: QualiteVideo = 'standard',
+): number {
+  const brut = largeur * hauteur * fps * BITS_PAR_PIXEL[qualite]
+  return Math.round(Math.min(24_000_000, Math.max(600_000, brut)))
 }
 
 /**
@@ -106,7 +129,7 @@ export async function enregistrer(
      qu'aucun n'encode encore de façon fiable par cette voie. Voir lib/encodeur.ts. */
   if (encodagePossible(scene.transparente)) return encoder(scene, options)
 
-  const type = formatSupporte(scene.transparente)
+  const type = formatSupporte(scene.transparente, options.format ?? 'mp4')
   if (!type) {
     throw new Error(
       'Ce navigateur ne sait pas enregistrer de vidéo (MediaRecorder absent). Firefox, Chrome, Edge et Safari récents le savent.',
@@ -163,7 +186,7 @@ export async function enregistrer(
   const morceaux: BlobPart[] = []
   const recorder = new MediaRecorder(flux, {
     mimeType: type,
-    videoBitsPerSecond: debitVideo(scene.largeur, scene.hauteur, options.fps),
+    videoBitsPerSecond: debitVideo(scene.largeur, scene.hauteur, options.fps, options.qualite),
     audioBitsPerSecond: 160_000,
   })
   recorder.ondataavailable = (e) => {

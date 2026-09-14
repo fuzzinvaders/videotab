@@ -51,6 +51,43 @@ export function Lecteur({
     }
   }
 
+  /* Le clavier, parce qu'on règle d'une main et qu'on relit sans arrêt le même passage.
+     Espace lance et arrête, les flèches se déplacent de cinq secondes, Origine revient au
+     début — les touches d'un lecteur vidéo, pour ne rien avoir à apprendre.
+
+     Écouté sur la fenêtre plutôt que sur l'aperçu : il n'a pas le focus, on vient de bouger
+     un curseur de réglage. Un champ de saisie garde en revanche ses touches, sinon taper un
+     titre contenant une espace lancerait la lecture. */
+  useEffect(() => {
+    if (!scene) return
+    const dureeMs = scene.dureeMs
+    function surTouche(e: KeyboardEvent) {
+      const cible = e.target as HTMLElement | null
+      const saisie =
+        cible?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(cible?.tagName ?? '')
+      if (saisie || e.metaKey || e.ctrlKey || e.altKey) return
+      const lecteur = apercu.current
+      if (!lecteur) return
+
+      if (e.code === 'Space') {
+        e.preventDefault()
+        basculer()
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault()
+        const pas = (e.shiftKey ? 1000 : 5000) * (e.key === 'ArrowRight' ? 1 : -1)
+        lecteur.allerA(Math.min(dureeMs, Math.max(0, lecteur.position() + pas)))
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        lecteur.allerA(0)
+      }
+    }
+    window.addEventListener('keydown', surTouche)
+    return () => window.removeEventListener('keydown', surTouche)
+    // `basculer` est refait à chaque rendu mais ne lit que des références : l'attacher aux
+    // dépendances ferait poser et retirer l'écouteur trente fois par seconde pendant la lecture.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene])
+
   // La lecture s'arrête d'elle-même à la fin : le bouton doit le savoir, sinon il continue
   // d'afficher « pause » devant une image figée.
   useEffect(() => {
@@ -99,6 +136,7 @@ export function Lecteur({
           disabled={!scene}
           className="rounded-lg bg-slate-800 px-3 py-1.5 text-slate-100 transition-colors hover:bg-slate-700 disabled:opacity-40"
           aria-label={enLecture ? 'Pause' : 'Lecture'}
+          title="Espace"
         >
           {enLecture ? '❚❚' : '▶'}
         </button>

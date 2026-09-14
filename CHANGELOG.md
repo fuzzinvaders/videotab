@@ -32,15 +32,23 @@ versioning yet, so entries are grouped by the change that shipped them.
   Three quality steps rather than a bitrate slider: nobody knows what a megabit per second is
   worth, everybody knows where their band will sit on screen.
 
-- **Section names can be shown.** "Verse", "Chorus" and the rest were rendered by alphaTab
-  above the staff and then cropped away, because the crop tightens the band onto the staff
-  itself. Keeping them takes two things at once, which is why they now happen together: the
-  tempo marking is hidden, so that the effect band holds nothing but the name, and the top
-  edge is raised to that band.
+- **Section names can be shown**, and they cost nothing. "Verse", "Chorus" and the rest were
+  rendered by alphaTab above the staff and then cropped away, because the crop tightens the
+  band onto the staff itself.
 
-  It costs height, and that is why it is an option rather than a default: measured on an
-  85-bar piece, the band goes from 82 to 140 pixels. For a given video height the tablature
-  is a third smaller — worth it when eighty bars look alike, not worth it otherwise.
+  Raising the top edge to reach them was the obvious fix and the wrong one. alphaTab writes
+  them at the very top of a stack of effect bands — measured on a bass tablature, 53 pixels
+  above the first string, with mostly empty bands in between. Keeping that space grew the
+  band from 81 to 140 pixels, a 70 % tax for two words.
+
+  So the scene draws them itself, in the air it already reserves above the tablature: the
+  band stays at 81 pixels, and the name sits a few pixels from the first string instead of
+  53. Its size follows the tablature rather than the available air, or a generous margin
+  setting would give a heading bigger than the music. Two sections too close together do not
+  overlap — the second is dropped, an unreadable name being worth less than none.
+
+  In page layout nothing of this applies: the score scrolls vertically, there is room, and
+  alphaTab keeps writing them itself.
 
 - **The count-in beats the piece instead of the clock.** It counted seconds, and it counted
   them out loud since yesterday — which made the problem audible: a click every second leads

@@ -20,6 +20,7 @@ import {
   recadrer,
   reglagesAlphaTab,
   reglerBandeauDEffets,
+  sectionsDeLaPartition,
   type BandeGp,
 } from '../../lib/gp'
 import { creerScene, type Feuille } from '../../lib/scene'
@@ -121,10 +122,11 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
          se règle sur ce que le fichier déclare pour la piste, pas sur ce que nous affichons.
          On ne devine donc plus : quand la portée classique est là, elle porte déjà le rythme
          et il n'y a rien à répéter ; sinon la tablature le porte elle-même. */
-      /* Les noms de sections, et le nettoyage de la bande qui les porte : voir
-         reglerBandeauDEffets. Réglé ici, avant le rendu, parce que la hauteur de cette
-         bande-là change la mise en page. */
-      reglerBandeauDEffets(instance, gp.sections)
+      /* En page, alphaTab écrit lui-même les noms de sections : la partition défile
+         verticalement, la place ne manque pas au-dessus des portées. En bande, c'est la scène
+         qui les pose — voir sectionsDeLaPartition — et il ne faut surtout pas qu'il les
+         dessine aussi, sa pile de bandes d'effets faisant grandir la bande de moitié. */
+      reglerBandeauDEffets(instance, gp.sections && video.disposition === 'page')
       instance.settings.notation.rhythmMode =
         gp.rythme && !gp.afficherPortee
           ? alphaTab.TabRhythmMode.ShowWithBars
@@ -194,7 +196,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     if (!feuille || !bande || !gp || !instance?.score) return null
     // Le rendu d'alphaTab porte au-dessus et en dessous des portées beaucoup de blanc. On
     // cadre sur ce qui se lit, sinon la bande qu'on a demandée est aux trois quarts vide.
-    const etendue = etendueDesPortees(instance, gp.sections)
+    const etendue = etendueDesPortees(instance)
     const ancres = ancresDeDefilement(
       instance,
       bande.reperes,
@@ -229,6 +231,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       ...feuille,
       largeurMesure: largeurDeMesure(instance),
       barres: barresDeMesure(instance),
+      sections: gp.sections ? sectionsDeLaPartition(instance) : undefined,
     }
     const cadree = parcours.etendue
       ? recadrer(avecMesure, parcours.etendue.y0, parcours.etendue.y1)

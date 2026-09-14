@@ -2,7 +2,7 @@ import * as alphaTab from '@coderline/alphatab'
 import { bufferDepuisEntrelace, contexteAudio } from './audio'
 import { courbeMonotone } from './courbe'
 import { largeurMedianeDeMesure } from './echelle'
-import type { Curseur, Feuille, Tuile } from './scene'
+import type { Curseur, Feuille, SectionRelevee, Tuile } from './scene'
 import { couleurDeCorde, hexVersRgb, type Theme } from './themes'
 
 /**
@@ -103,19 +103,61 @@ export function masquerEntete(api: alphaTab.AlphaTabApi): void {
 /**
  * Ce qu'on laisse alphaTab écrire au-dessus de la portée.
  *
- * Il y dessine une bande d'effets — indication de tempo, nom de section, mesure alternative —
- * dont la hauteur suit ce qu'elle contient. Or le recadrage serre la vidéo sur la portée
- * elle-même : cette bande-là tombe hors cadre, et les noms de sections avec elle.
+ * Il y empile des bandes d'effets — indication de tempo, nom de section, mesure alternative —
+ * et le recadrage, lui, serre la vidéo sur la portée elle-même : tout cet étage tombe hors
+ * cadre. C'est voulu pour presque tout, et gênant pour les seuls noms de sections.
  *
- * Les faire revenir demande donc deux choses à la fois, et c'est pourquoi elles sont ici
- * ensemble : remonter le bord haut du cadre (voir {@link etendueDesPortees}), et **vider la
- * bande de tout le reste**. L'indication de tempo est toujours éteinte : elle se pose au-dessus
- * de la première mesure, elle est illisible à la taille d'une incrustation, et tant qu'elle est
- * là elle fixe à elle seule la hauteur de la bande — on remonterait le cadre pour elle.
+ * D'où le partage. En page, la partition défile verticalement et la place ne manque pas :
+ * alphaTab écrit les noms, et ce paramètre les allume. En bande, il faudrait remonter le bord
+ * haut de soixante-dix pour cent pour deux mots posés tout en haut de la pile — c'est la scène
+ * qui les dessine alors, dans l'air qu'elle réserve déjà (voir {@link sectionsDeLaPartition}),
+ * et il ne faut surtout pas qu'alphaTab les dessine aussi.
+ *
+ * L'indication de tempo, elle, est éteinte dans tous les cas : illisible à la taille d'une
+ * incrustation, et hors cadre de toute façon.
  */
-export function reglerBandeauDEffets(api: alphaTab.AlphaTabApi, sections: boolean): void {
+export function reglerBandeauDEffets(api: alphaTab.AlphaTabApi, marqueurs: boolean): void {
   api.settings.notation.elements.set(alphaTab.NotationElement.EffectTempo, false)
-  api.settings.notation.elements.set(alphaTab.NotationElement.EffectMarker, sections)
+  api.settings.notation.elements.set(alphaTab.NotationElement.EffectMarker, marqueurs)
+}
+
+/**
+ * Où sont les changements de section, et comment ils s'appellent.
+ *
+ * Relevés pour être redessinés par la scène plutôt que laissés à alphaTab, et ce n'est pas
+ * une coquetterie. Il les écrit tout en haut d'une pile de bandes d'effets — mesuré sur une
+ * tablature de basse, le nom se retrouve à cinquante-trois pixels au-dessus de la première
+ * corde, avec entre les deux des bandes vides ou presque. Garder cet espace-là, c'est agrandir
+ * la bande de soixante-dix pour cent pour deux mots. La scène, elle, peut les poser dans l'air
+ * qu'elle réserve déjà au-dessus de la tablature : à deux doigts d'elle, et pour rien.
+ *
+ * Les abscisses sont dans le repère de la partition, comme les tuiles : c'est le recadrage qui
+ * les déplacera, et lui ne touche qu'à la hauteur.
+ */
+export function sectionsDeLaPartition(api: alphaTab.AlphaTabApi): SectionRelevee[] {
+  const bornes = api.boundsLookup
+  const score = api.score
+  if (!bornes || !score) return []
+
+  /* Une mesure est déclarée une fois par portée et par système — neuf fois sur une partition
+     à une seule piste — et c'est la première qui compte, les autres étant la même mesure vue
+     d'un autre étage. */
+  const abscisses = new Map<number, number>()
+  for (const systeme of bornes.staffSystems) {
+    for (const mesure of systeme.bars) {
+      if (!abscisses.has(mesure.index)) abscisses.set(mesure.index, mesure.realBounds.x)
+    }
+  }
+
+  const relevees: SectionRelevee[] = []
+  for (const mesure of score.masterBars) {
+    // Le texte long s'il existe, sinon le marqueur court : « Verse 1 » plutôt que « A ».
+    const texte = mesure.section?.text || mesure.section?.marker
+    const x = abscisses.get(mesure.index)
+    if (!texte || x === undefined) continue
+    relevees.push({ x, texte })
+  }
+  return relevees.sort((a, b) => a.x - b.x)
 }
 
 /** « #rrggbb » vers la couleur qu'alphaTab attend. */
@@ -254,11 +296,7 @@ export function collecteurDeTuiles() {
  *
  * On mesure donc ce qui compte, et la scène cadre là-dessus.
  */
-export function etendueDesPortees(
-  api: alphaTab.AlphaTabApi,
-  /** Remonter le bord haut jusqu'aux noms de sections, au lieu de s'arrêter à la portée. */
-  avecSections = false,
-): { y0: number; y1: number } | null {
+export function etendueDesPortees(api: alphaTab.AlphaTabApi): { y0: number; y1: number } | null {
   const bornes = api.boundsLookup
   if (!bornes || bornes.staffSystems.length === 0) return null
 
@@ -274,14 +312,8 @@ export function etendueDesPortees(
      revenait à ne pas recadrer du tout, et la bande emportait trois quarts d'air. */
   let y0 = Number.POSITIVE_INFINITY
   let y1 = Number.NEGATIVE_INFINITY
-  // Le haut du bandeau d'effets, qui n'est relevé que si on a demandé à le garder.
-  let effets = Number.POSITIVE_INFINITY
   for (const systeme of bornes.staffSystems) {
     for (const mesureMaitresse of systeme.bars) {
-      /* Justement les bornes trompeuses décrites plus haut : elles couvrent tout ce qui
-         gravite autour de la musique. Ce qu'on ne veut pas quand on cherche la portée, ce
-         qu'on veut exactement quand on cherche ce qui est écrit au-dessus d'elle. */
-      effets = Math.min(effets, mesureMaitresse.visualBounds.y)
       for (const mesure of mesureMaitresse.bars) {
         y0 = Math.min(y0, mesure.visualBounds.y)
         y1 = Math.max(y1, mesure.visualBounds.y + mesure.visualBounds.h)
@@ -303,12 +335,7 @@ export function etendueDesPortees(
   // doivent pas être coupés, mais chaque pixel donné au vide est un pixel retiré à la
   // tablature — c'est elle qu'on est venu regarder.
   const marge = (y1 - y0) * 0.22
-  /* Le bandeau d'effets remonte le bord haut, mais ne le descend jamais : sans nom de section
-     nulle part, il est vide et se confond avec le haut de la portée, et la bande reste aussi
-     serrée qu'avant. Le réglage ne coûte donc de la hauteur que sur les morceaux qui ont
-     quelque chose à y écrire. */
-  const haut = avecSections && Number.isFinite(effets) ? Math.min(y0 - marge, effets) : y0 - marge
-  return { y0: Math.max(0, haut), y1: y1 + rythme + marge }
+  return { y0: Math.max(0, y0 - marge), y1: y1 + rythme + marge }
 }
 
 /**

@@ -37,10 +37,21 @@ export interface Tuile {
 }
 
 /** La partition entière, en morceaux, dans son propre repère en pixels. */
+/** Un changement de section, à son abscisse dans le repère de la partition. */
+export interface SectionRelevee {
+  x: number
+  texte: string
+}
+
 export interface Feuille {
   largeur: number
   hauteur: number
   tuiles: Tuile[]
+  /**
+   * Les noms de sections, s'ils sont demandés. Dessinés par la scène et non par alphaTab :
+   * voir `sectionsDeLaPartition`, qui explique pourquoi.
+   */
+  sections?: SectionRelevee[]
   /**
    * Largeur d'une mesure dans ce repère, si on la connaît. C'est elle qui permet de régler le
    * zoom en mesures plutôt qu'en pixels — le seul réglage qui ait un sens musical.
@@ -348,6 +359,21 @@ export function creerScene(options: OptionsScene): Scene {
     }
     c.restore()
 
+    /* Les noms de sections, posés dans l'air que la bande réserve déjà au-dessus de la
+       tablature : ils ne coûtent donc pas un pixel de hauteur. Dessinés hors de la mise à
+       l'échelle, pour que le texte garde la même taille quel que soit le zoom — un nom de
+       section n'est pas de la musique, il n'a pas à grandir avec elle. */
+    if (bande && feuille.sections?.length && marge > 6) {
+      dessinerSections(c, feuille.sections, {
+        echelle,
+        scroll: etat.scroll,
+        marge,
+        largeur: zone.w,
+        hauteurTablature: zone.h - 2 * marge,
+        couleur: theme.texte,
+      })
+    }
+
     /* Les bords ne s'effacent qu'en défilement. En mesures, la dernière mesure de la fenêtre
        est justement celle qu'on donne à lire en avance : l'estomper reviendrait à cacher ce
        qu'on vient d'ajouter pour être vu. */
@@ -519,6 +545,54 @@ function dessinerCurseur(
     const epaisseur = Math.max(2, curseur.h * 0.035)
     ctx.globalAlpha = 1
     ctx.fillRect(curseur.x - epaisseur / 2, curseur.y, epaisseur, curseur.h)
+  }
+  ctx.restore()
+}
+
+/**
+ * Les noms de sections au-dessus de la tablature.
+ *
+ * Posés à l'aplomb de la barre de mesure où la section commence, et jamais plus grands que
+ * l'air disponible — la bande n'a pas à s'agrandir pour eux. Deux sections trop rapprochées
+ * ne se chevauchent pas : la seconde s'efface, parce qu'un nom illisible vaut moins que pas
+ * de nom du tout.
+ */
+function dessinerSections(
+  ctx: CanvasRenderingContext2D,
+  sections: SectionRelevee[],
+  o: {
+    echelle: number
+    scroll: number
+    marge: number
+    largeur: number
+    hauteurTablature: number
+    couleur: string
+  },
+) {
+  /* Deux plafonds. L'air disponible, parce que le nom doit y tenir sans mordre sur la
+     tablature ; et la tablature elle-même, parce qu'un réglage généreux en air donnerait
+     sinon un titre plus gros que la musique. Mesuré à quatre mesures à l'écran, l'air seul
+     autorisait quarante-deux pixels pour une tablature dont les chiffres en font vingt. */
+  const taille = Math.max(
+    11,
+    Math.min(Math.round(o.marge * 0.8), Math.round(o.hauteurTablature * 0.15), 36),
+  )
+  ctx.save()
+  ctx.font = `600 ${taille}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`
+  ctx.fillStyle = o.couleur
+  ctx.globalAlpha = 0.75
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+
+  let occupeJusqua = -Infinity
+  for (const section of sections) {
+    const x = section.x * o.echelle - o.scroll
+    if (x > o.largeur) break
+    const largeurTexte = ctx.measureText(section.texte).width
+    if (x + largeurTexte < 0 || x < occupeJusqua) continue
+    occupeJusqua = x + largeurTexte + taille * 0.5
+    // La ligne de base juste au-dessus de la tablature, à un souffle de la première corde.
+    ctx.fillText(section.texte, x + 2, o.marge - Math.max(2, taille * 0.18))
   }
   ctx.restore()
 }

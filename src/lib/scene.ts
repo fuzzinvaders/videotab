@@ -1,5 +1,4 @@
-import { decouperEnBlocs, largeurPourTenir } from './blocs'
-import { echelleDefilement } from './echelle'
+import { mesurerScene } from './geometrie'
 import { formaterDuree } from './minutage'
 import { themeParId, type Theme } from './themes'
 import type { ReglagesVideo, StyleCurseur } from './types'
@@ -109,88 +108,21 @@ export function creerScene(options: OptionsScene): Scene {
   const couleur = video.couleur ?? theme.curseur
   const { largeur, hauteur } = video
   const compteAvantMs = Math.max(0, video.compteAvantSec) * 1000
-  /* Le mode « mesures » partage toute la mise en page du défilement : même bande, même
-     échelle, même recadrage. Il n'en diffère que par la façon dont elle avance. */
-  const bande = video.disposition === 'defilement' || video.disposition === 'mesures'
-  const parBlocs = video.disposition === 'mesures'
-
-  const marge = Math.round(largeur * 0.03)
-  const bandeauH = video.bandeau && (titre || artiste) ? Math.round(hauteur * 0.09) : 0
-  const barreH = video.barreDeProgression ? Math.max(3, Math.round(hauteur * 0.012)) : 0
-
-  /* La zone est la fenêtre par laquelle on regarde la partition, et les deux dispositions la
-     calculent dans l'ordre inverse l'une de l'autre.
-
-     En page, la place disponible est donnée et l'échelle s'y ajuste : la partition est mise à
-     la largeur, parce qu'une tablature se lit ligne par ligne et que la rogner sur les côtés
-     reviendrait à couper des mesures.
-
-     En défilement, c'est l'échelle qui est donnée — tant de mesures à l'écran — et la hauteur
-     de la bande en découle. La bande est alors aussi courte que la tablature l'exige, ce qui
-     est exactement ce qu'on attend d'une incrustation : tout le reste de l'image demeure
-     libre pour la vidéo qu'on posera dessous. */
-  const libre = hauteur - bandeauH - barreH
-
-  /* En mesures fixes, le zoom se règle sur ce que le compte demandé occupe réellement, et non
-     sur une mesure médiane : une mesure qui déborde n'y est pas rognée mais renvoyée à la
-     fenêtre suivante, si bien qu'en demander quatre en afficherait trois. Voir lib/blocs.ts. */
-  const tenue = parBlocs && feuille.barres ? largeurPourTenir(feuille.barres, video.mesuresVisibles) : 0
-  const largeurMesure =
-    tenue > 0 ? tenue / Math.max(1, video.mesuresVisibles) : (feuille.largeurMesure ?? 0)
-
-  const mise = bande
-    ? echelleDefilement({
-        largeurZone: largeur,
-        hauteurMaxBande: Math.min(libre, hauteur * video.hauteurMax),
-        largeurMesure,
-        mesuresVisibles: video.mesuresVisibles,
-        margeRelative: video.margeBande,
-        feuille,
-      })
-    : null
-
-  /* Cadrer sur la bande, c'est réduire la vidéo à ce qu'elle montre : le fichier ne porte
-     plus les huit cents pixels de vide au-dessus et en dessous, il pèse ce qu'il vaut, et au
-     montage il se pose sans qu'on ait à deviner où est la tablature dedans. La hauteur est
-     arrondie au pair — plusieurs encodeurs refusent les dimensions impaires. */
-  const cadreSurBande = Boolean(mise) && video.cadrage === 'bande'
-  const hauteurImage = cadreSurBande
-    ? 2 * Math.ceil((bandeauH + mise!.hauteurBande + barreH) / 2)
-    : hauteur
-
-  const zone = mise
-    ? {
-        x: 0,
-        y: cadreSurBande ? bandeauH : bandeauH + Math.round((libre - mise.hauteurBande) / 2),
-        w: largeur,
-        h: mise.hauteurBande,
-      }
-    : {
-        x: marge,
-        y: bandeauH + Math.round(marge / 2),
-        w: largeur - marge * 2,
-        h: hauteur - bandeauH - marge - barreH * 2,
-      }
-
-  const echelle = mise ? mise.echelle : feuille.largeur > 0 ? zone.w / feuille.largeur : 1
-
-  const scrollMax = Math.max(0, feuille.hauteur * echelle - zone.h)
-  const teteX = Math.round(zone.w * video.teteX)
-
-  /* L'épaisseur du cadre est comptée sur la largeur, jamais sur la hauteur. Cadrée sur la
-     bande, l'image ne fait plus que deux cents pixels de haut : une épaisseur qui en
-     découlerait resterait clouée à son minimum, et le réglage n'agirait pas là où l'on tient
-     le plus à voir le cadre. La largeur, elle, ne change pas avec le cadrage. */
-  const traitCadre = Math.round(video.epaisseurCadre * (largeur / 1920))
-
-  /* Le découpage en fenêtres de mesures entières, quand c'est le curseur qui avance et non la
-     tablature. Il est fait ici, une fois : il ne dépend que de l'échelle et des barres de
-     mesure, tous deux fixés pour toute la scène. */
-  const blocs = decouperEnBlocs({
-    barres: feuille.barres ?? [],
-    largeurFenetre: zone.w / echelle,
-    anticipation: video.anticipation,
-  })
+  const {
+    bande,
+    parBlocs,
+    hauteurImage,
+    zone,
+    echelle,
+    marge,
+    scrollMax,
+    teteX,
+    traitCadre,
+    longueurFondu,
+    bandeauH,
+    barreH,
+    blocs,
+  } = mesurerScene({ video, feuille, avecBandeau: Boolean(titre || artiste) })
 
   /* En page, le défilement est lissé d'une image à l'autre : le curseur saute d'une ligne à
      la suivante d'un coup, et une image qui suivrait ce saut donnerait le mal de mer. En
@@ -217,12 +149,6 @@ export function creerScene(options: OptionsScene): Scene {
     voile.height = Math.max(1, zone.h)
   }
   const voile2d = voile?.getContext('2d') ?? null
-
-  /* La longueur du fondu, comptée en largeur de fenêtre plutôt qu'en millisecondes : la scène
-     ne connaît pas le tempo, et une durée en pixels de partition en tient lieu — elle dure
-     d'autant moins longtemps que le morceau va vite, ce qui est le bon comportement. Deux
-     pour cent et demi de la fenêtre font environ deux dixièmes de seconde à tempo courant. */
-  const longueurFondu = Math.max(1, (zone.w / echelle) * 0.025)
 
   /** La fenêtre qu'on vient de quitter et où en est son effacement, ou rien. */
   function transitionA(curseur: Curseur | null): { precedent: number; part: number } | null {
@@ -371,7 +297,7 @@ export function creerScene(options: OptionsScene): Scene {
     // L'air demandé décale la tablature vers le bas dans sa bande : ce qui dépassait du
     // recadrage — hampes, rythmes, nom de section — redevient visible dedans plutôt que
     // rogné au bord.
-    if (bande) c.translate(-etat.scroll, mise ? mise.marge : 0)
+    if (bande) c.translate(-etat.scroll, marge)
     else c.translate(0, -etat.scroll)
     c.scale(echelle, echelle)
 

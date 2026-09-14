@@ -1,83 +1,113 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, envoyerFichier } from '../lib/api'
-import type { Bibliotheque, Morceau, Reglages, SafeUser } from '../lib/types'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { api, envoyerFichier } from "../lib/api";
+import type { Bibliotheque, Morceau, Reglages, SafeUser } from "../lib/types";
 
 interface MorceauxContextValue {
-  morceaux: Morceau[]
-  users: SafeUser[]
-  chargement: boolean
-  erreur: string | null
-  recharger: () => Promise<void>
-  importer: (fichier: File, onProgression?: (part: number) => void) => Promise<Morceau>
-  renommer: (id: string, champs: { titre: string; artiste: string }) => Promise<void>
-  enregistrerReglages: (id: string, reglages: Reglages) => Promise<void>
-  supprimer: (id: string) => Promise<void>
+  morceaux: Morceau[];
+  users: SafeUser[];
+  /** Place prise par les vidéos sur le serveur, en octets. */
+  espaceVideos: number;
+  chargement: boolean;
+  erreur: string | null;
+  recharger: () => Promise<void>;
+  importer: (
+    fichier: File,
+    onProgression?: (part: number) => void,
+  ) => Promise<Morceau>;
+  renommer: (
+    id: string,
+    champs: { titre: string; artiste: string },
+  ) => Promise<void>;
+  enregistrerReglages: (id: string, reglages: Reglages) => Promise<void>;
+  supprimer: (id: string) => Promise<void>;
   deposerVideo: (
     id: string,
     blob: Blob,
     infos: { ext: string; dureeMs: number },
     onProgression?: (part: number) => void,
-  ) => Promise<void>
-  supprimerVideo: (id: string) => Promise<void>
-  deposerAudio: (id: string, fichier: File) => Promise<void>
-  supprimerAudio: (id: string) => Promise<void>
+  ) => Promise<void>;
+  supprimerVideo: (id: string) => Promise<void>;
+  deposerAudio: (id: string, fichier: File) => Promise<void>;
+  supprimerAudio: (id: string) => Promise<void>;
 }
 
-const MorceauxContext = createContext<MorceauxContextValue | undefined>(undefined)
+const MorceauxContext = createContext<MorceauxContextValue | undefined>(
+  undefined,
+);
 
 export function MorceauxProvider({ children }: { children: ReactNode }) {
-  const [morceaux, setMorceaux] = useState<Morceau[]>([])
-  const [users, setUsers] = useState<SafeUser[]>([])
-  const [chargement, setChargement] = useState(true)
-  const [erreur, setErreur] = useState<string | null>(null)
+  const [morceaux, setMorceaux] = useState<Morceau[]>([]);
+  const [users, setUsers] = useState<SafeUser[]>([]);
+  const [espaceVideos, setEspaceVideos] = useState(0);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   /* Le serveur renvoie la bibliothèque entière à chaque écriture : on la pose telle quelle
      plutôt que de recoudre la liste localement. Deux onglets ouverts sur la même instance
      restent ainsi d'accord sans qu'aucun n'ait à surveiller l'autre. */
   const appliquer = useCallback((reponse: Bibliotheque) => {
     setMorceaux(
-      [...reponse.morceaux].sort((a, b) => Date.parse(b.modifieLe) - Date.parse(a.modifieLe)),
-    )
-    if (reponse.users) setUsers(reponse.users)
-  }, [])
+      [...reponse.morceaux].sort(
+        (a, b) => Date.parse(b.modifieLe) - Date.parse(a.modifieLe),
+      ),
+    );
+    if (reponse.users) setUsers(reponse.users);
+    if (typeof reponse.espaceVideos === "number")
+      setEspaceVideos(reponse.espaceVideos);
+  }, []);
 
   const recharger = useCallback(async () => {
     try {
-      appliquer(await api.get<Bibliotheque>('/api/morceaux'))
-      setErreur(null)
+      appliquer(await api.get<Bibliotheque>("/api/morceaux"));
+      setErreur(null);
     } catch {
-      setErreur('Impossible de joindre le serveur.')
+      setErreur("Impossible de joindre le serveur.");
     } finally {
-      setChargement(false)
+      setChargement(false);
     }
-  }, [appliquer])
+  }, [appliquer]);
 
   useEffect(() => {
-    void recharger()
-  }, [recharger])
+    void recharger();
+  }, [recharger]);
 
-  async function importer(fichier: File, onProgression?: (part: number) => void) {
-    const url = `/api/morceaux?nom=${encodeURIComponent(fichier.name)}`
+  async function importer(
+    fichier: File,
+    onProgression?: (part: number) => void,
+  ) {
+    const url = `/api/morceaux?nom=${encodeURIComponent(fichier.name)}`;
     const reponse = await envoyerFichier<Bibliotheque & { morceau: Morceau }>(
-      'POST',
+      "POST",
       url,
       fichier,
       onProgression,
-    )
-    appliquer(reponse)
-    return reponse.morceau
+    );
+    appliquer(reponse);
+    return reponse.morceau;
   }
 
-  async function renommer(id: string, champs: { titre: string; artiste: string }) {
-    appliquer(await api.patch<Bibliotheque>(`/api/morceaux/${id}`, champs))
+  async function renommer(
+    id: string,
+    champs: { titre: string; artiste: string },
+  ) {
+    appliquer(await api.patch<Bibliotheque>(`/api/morceaux/${id}`, champs));
   }
 
   async function enregistrerReglages(id: string, reglages: Reglages) {
-    appliquer(await api.put<Bibliotheque>(`/api/morceaux/${id}/reglages`, { reglages }))
+    appliquer(
+      await api.put<Bibliotheque>(`/api/morceaux/${id}/reglages`, { reglages }),
+    );
   }
 
   async function supprimer(id: string) {
-    appliquer(await api.delete<Bibliotheque>(`/api/morceaux/${id}`))
+    appliquer(await api.delete<Bibliotheque>(`/api/morceaux/${id}`));
   }
 
   async function deposerVideo(
@@ -86,21 +116,23 @@ export function MorceauxProvider({ children }: { children: ReactNode }) {
     infos: { ext: string; dureeMs: number },
     onProgression?: (part: number) => void,
   ) {
-    const url = `/api/morceaux/${id}/video?ext=${encodeURIComponent(infos.ext)}&duree=${Math.round(infos.dureeMs)}`
-    appliquer(await envoyerFichier<Bibliotheque>('PUT', url, blob, onProgression))
+    const url = `/api/morceaux/${id}/video?ext=${encodeURIComponent(infos.ext)}&duree=${Math.round(infos.dureeMs)}`;
+    appliquer(
+      await envoyerFichier<Bibliotheque>("PUT", url, blob, onProgression),
+    );
   }
 
   async function supprimerVideo(id: string) {
-    appliquer(await api.delete<Bibliotheque>(`/api/morceaux/${id}/video`))
+    appliquer(await api.delete<Bibliotheque>(`/api/morceaux/${id}/video`));
   }
 
   async function deposerAudio(id: string, fichier: File) {
-    const url = `/api/morceaux/${id}/audio?nom=${encodeURIComponent(fichier.name)}`
-    appliquer(await envoyerFichier<Bibliotheque>('PUT', url, fichier))
+    const url = `/api/morceaux/${id}/audio?nom=${encodeURIComponent(fichier.name)}`;
+    appliquer(await envoyerFichier<Bibliotheque>("PUT", url, fichier));
   }
 
   async function supprimerAudio(id: string) {
-    appliquer(await api.delete<Bibliotheque>(`/api/morceaux/${id}/audio`))
+    appliquer(await api.delete<Bibliotheque>(`/api/morceaux/${id}/audio`));
   }
 
   return (
@@ -108,6 +140,7 @@ export function MorceauxProvider({ children }: { children: ReactNode }) {
       value={{
         morceaux,
         users,
+        espaceVideos,
         chargement,
         erreur,
         recharger,
@@ -123,11 +156,11 @@ export function MorceauxProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </MorceauxContext.Provider>
-  )
+  );
 }
 
 export function useMorceaux() {
-  const ctx = useContext(MorceauxContext)
-  if (!ctx) throw new Error('useMorceaux must be used within MorceauxProvider')
-  return ctx
+  const ctx = useContext(MorceauxContext);
+  if (!ctx) throw new Error("useMorceaux must be used within MorceauxProvider");
+  return ctx;
 }

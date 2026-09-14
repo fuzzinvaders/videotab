@@ -190,6 +190,15 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The library says how much room the videos take**, at the bottom of the page. Three minutes
+  of 1080p weigh some sixty megabytes and nothing bounded their accumulation — the kind of thing
+  one notices the day the disk is full, on a machine that is probably doing something else as
+  well. An optional `VIDEOS_MAX_TOTAL_MB` refuses a video beyond that budget, before receiving
+  it rather than after: sixty megabytes accepted only to be thrown away help nobody, and the
+  announced length is enough to know. There is deliberately no default — nobody here knows what
+  disk the machine has, and an invented figure would one day refuse a perfectly legitimate
+  export. Verified: with a ten-megabyte budget already exceeded, the upload comes back 507 with
+  a message naming the way out, and not a byte is written.
 - **The count-in can be heard, not only seen.** It counted in silence: the figure shrank on
   screen and that was all — of use to whoever is watching, of none to whoever is putting their
   fingers on the neck, which is the very purpose it serves. A click now falls on each second,

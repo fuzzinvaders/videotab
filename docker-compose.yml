@@ -32,6 +32,7 @@ services:
       # Taille maximale d'une vidéo envoyée, en mégaoctets. Une minute de 1080p en VP9 pèse
       # une quinzaine de mégaoctets ; 512 laisse donc passer un morceau très long.
       VIDEO_MAX_MB: ${VIDEO_MAX_MB:-512}
+      VIDEOS_MAX_TOTAL_MB: ${VIDEOS_MAX_TOTAL_MB:-}
     volumes:
       # Persiste les comptes, la bibliothèque, les tablatures et les vidéos produites.
       - videotab-data:/data

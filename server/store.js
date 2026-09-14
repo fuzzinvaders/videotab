@@ -53,7 +53,10 @@ function verifyPassword(password, stored) {
   if (!salt || !hash) return false;
   const expected = Buffer.from(hash, "hex");
   const actual = crypto.scryptSync(password, salt, 64);
-  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+  return (
+    expected.length === actual.length &&
+    crypto.timingSafeEqual(expected, actual)
+  );
 }
 
 // ---- Jeton de session : HMAC sans état, `<payload base64url>.<hmac>` ----
@@ -71,7 +74,9 @@ function signValue(value, secret) {
 }
 
 function signSession(userId, secret, maxAgeSec) {
-  const payload = base64url(JSON.stringify({ uid: userId, exp: Date.now() + maxAgeSec * 1000 }));
+  const payload = base64url(
+    JSON.stringify({ uid: userId, exp: Date.now() + maxAgeSec * 1000 }),
+  );
   return `${payload}.${signValue(payload, secret)}`;
 }
 
@@ -84,7 +89,8 @@ function verifySession(token, secret) {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
   try {
     const { uid, exp } = JSON.parse(fromBase64url(payload));
-    if (typeof uid !== "string" || typeof exp !== "number" || Date.now() > exp) return null;
+    if (typeof uid !== "string" || typeof exp !== "number" || Date.now() > exp)
+      return null;
     return uid;
   } catch {
     return null;
@@ -115,7 +121,12 @@ function writeUsersStore(store) {
 }
 
 function toSafeUser(u) {
-  return { id: u.id, username: u.username, admin: Boolean(u.admin), createdAt: u.createdAt };
+  return {
+    id: u.id,
+    username: u.username,
+    admin: Boolean(u.admin),
+    createdAt: u.createdAt,
+  };
 }
 
 function userCount() {
@@ -128,7 +139,9 @@ function listUsers() {
 
 function findByUsername(username) {
   const needle = String(username).trim().toLowerCase();
-  return readUsersStore().users.find((u) => u.username.toLowerCase() === needle);
+  return readUsersStore().users.find(
+    (u) => u.username.toLowerCase() === needle,
+  );
 }
 
 function findById(id) {
@@ -139,7 +152,8 @@ function checkCredentials(username, password) {
   const name = String(username).trim();
   if (name.length < 2) return "Identifiant trop court (2 caractères min).";
   if (name.length > 40) return "Identifiant trop long (40 caractères max).";
-  if (String(password).length < 6) return "Mot de passe trop court (6 caractères min).";
+  if (String(password).length < 6)
+    return "Mot de passe trop court (6 caractères min).";
   return null;
 }
 
@@ -149,7 +163,8 @@ function createFirstUser(username, password) {
   const problem = checkCredentials(username, password);
   if (problem) return { ok: false, error: problem };
   const store = readUsersStore();
-  if (store.users.length > 0) return { ok: false, error: "Un compte existe déjà." };
+  if (store.users.length > 0)
+    return { ok: false, error: "Un compte existe déjà." };
   const user = {
     id: crypto.randomUUID(),
     username: String(username).trim(),
@@ -181,7 +196,10 @@ function updatePassword(id, newPassword) {
   const store = readUsersStore();
   const idx = store.users.findIndex((u) => u.id === id);
   if (idx === -1) return { ok: false, error: "Utilisateur introuvable." };
-  store.users[idx] = { ...store.users[idx], passwordHash: hashPassword(newPassword) };
+  store.users[idx] = {
+    ...store.users[idx],
+    passwordHash: hashPassword(newPassword),
+  };
   writeUsersStore(store);
   return { ok: true };
 }
@@ -190,7 +208,11 @@ function deleteUser(id) {
   const store = readUsersStore();
   const user = store.users.find((u) => u.id === id);
   if (!user) return { ok: false, error: "Compte introuvable." };
-  if (user.admin) return { ok: false, error: "Le compte administrateur ne peut pas être supprimé." };
+  if (user.admin)
+    return {
+      ok: false,
+      error: "Le compte administrateur ne peut pas être supprimé.",
+    };
   store.users = store.users.filter((u) => u.id !== id);
   writeUsersStore(store);
   return { ok: true };
@@ -216,7 +238,11 @@ function listInvites() {
   const now = Date.now();
   return readUsersStore()
     .invites.filter((i) => !i.usedBy && Date.parse(i.expiresAt) > now)
-    .map((i) => ({ code: i.code, createdAt: i.createdAt, expiresAt: i.expiresAt }));
+    .map((i) => ({
+      code: i.code,
+      createdAt: i.createdAt,
+      expiresAt: i.expiresAt,
+    }));
 }
 
 function createInvite() {
@@ -224,9 +250,14 @@ function createInvite() {
   const now = Date.now();
   // Le ménage se fait à la création plutôt que par une tâche de fond : un code périmé
   // ou consommé n'a plus rien à dire, et personne ne va le relire.
-  store.invites = store.invites.filter((i) => !i.usedBy && Date.parse(i.expiresAt) > now);
+  store.invites = store.invites.filter(
+    (i) => !i.usedBy && Date.parse(i.expiresAt) > now,
+  );
   if (store.invites.length >= INVITE_MAX) {
-    return { ok: false, error: `Trop d'invitations en attente (${INVITE_MAX} max).` };
+    return {
+      ok: false,
+      error: `Trop d'invitations en attente (${INVITE_MAX} max).`,
+    };
   }
   const invite = {
     code: newInviteCode(),
@@ -238,7 +269,11 @@ function createInvite() {
   writeUsersStore(store);
   return {
     ok: true,
-    invite: { code: invite.code, createdAt: invite.createdAt, expiresAt: invite.expiresAt },
+    invite: {
+      code: invite.code,
+      createdAt: invite.createdAt,
+      expiresAt: invite.expiresAt,
+    },
   };
 }
 
@@ -246,7 +281,8 @@ function revokeInvite(code) {
   const store = readUsersStore();
   const before = store.invites.length;
   store.invites = store.invites.filter((i) => i.code !== code);
-  if (store.invites.length === before) return { ok: false, error: "Invitation introuvable." };
+  if (store.invites.length === before)
+    return { ok: false, error: "Invitation introuvable." };
   writeUsersStore(store);
   return { ok: true };
 }
@@ -257,15 +293,19 @@ function registerWithInvite(username, password, code) {
   const problem = checkCredentials(username, password);
   if (problem) return { ok: false, error: problem };
   const store = readUsersStore();
-  if (store.users.length === 0) return { ok: false, error: "Aucun compte n'existe encore." };
+  if (store.users.length === 0)
+    return { ok: false, error: "Aucun compte n'existe encore." };
   const wanted = String(code).trim().toUpperCase();
   const invite = store.invites.find((i) => i.code === wanted && !i.usedBy);
-  if (!invite) return { ok: false, error: "Code d'invitation invalide ou déjà utilisé." };
+  if (!invite)
+    return { ok: false, error: "Code d'invitation invalide ou déjà utilisé." };
   if (Date.parse(invite.expiresAt) <= Date.now()) {
     return { ok: false, error: "Code d'invitation expiré." };
   }
   const name = String(username).trim();
-  if (store.users.some((u) => u.username.toLowerCase() === name.toLowerCase())) {
+  if (
+    store.users.some((u) => u.username.toLowerCase() === name.toLowerCase())
+  ) {
     return { ok: false, error: "Cet identifiant est déjà pris." };
   }
   const user = {
@@ -385,10 +425,38 @@ function removeQuietly(file) {
   }
 }
 
+/**
+ * La place que prennent les vidéos, en octets.
+ *
+ * Une vidéo de trois minutes en 1080p pèse une soixantaine de mégaoctets, et rien ne borne
+ * leur accumulation : c'est le genre de chose qui ne se remarque que le jour où le disque est
+ * plein, sur une machine qui fait probablement autre chose à côté. Le compte est donc rendu
+ * pour qu'il soit visible, et le plafond laissé à l'hébergeur, qui seul sait ce dont il
+ * dispose.
+ */
+function espaceVideos() {
+  let fichiers;
+  try {
+    fichiers = fs.readdirSync(VIDEOS_DIR);
+  } catch {
+    return 0;
+  }
+  let total = 0;
+  for (const nom of fichiers) {
+    try {
+      total += fs.statSync(path.join(VIDEOS_DIR, nom)).size;
+    } catch {
+      // Un fichier disparu entre le listage et la mesure ne compte pas : il n'est plus là.
+    }
+  }
+  return total;
+}
+
 export {
   DATA_DIR,
   SOURCES_DIR,
   VIDEOS_DIR,
+  espaceVideos,
   ensureDir,
   userCount,
   listUsers,

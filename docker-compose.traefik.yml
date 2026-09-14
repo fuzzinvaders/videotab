@@ -30,6 +30,7 @@ services:
       ORIGIN: https://${DOMAIN:?Définis DOMAIN=ton-domaine.tld dans .env}
       AUTH_SECRET: ${AUTH_SECRET:-}
       VIDEO_MAX_MB: ${VIDEO_MAX_MB:-512}
+      VIDEOS_MAX_TOTAL_MB: ${VIDEOS_MAX_TOTAL_MB:-}
     volumes:
       - videotab-data:/data
     # Pas de "ports:" ici : Traefik route le trafic via le réseau partagé, pas besoin

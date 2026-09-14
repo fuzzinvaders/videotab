@@ -223,4 +223,12 @@ export interface Morceau {
 export interface Bibliotheque {
   morceaux: Morceau[]
   users?: SafeUser[]
+  /**
+   * Place occupée par les vidéos gardées sur le serveur, en octets.
+   *
+   * Trois minutes de 1080p pèsent une soixantaine de mégaoctets et rien ne borne leur
+   * accumulation : c'est le genre de chose qui ne se remarque que le jour où le disque est
+   * plein, sur une machine qui fait probablement autre chose à côté.
+   */
+  espaceVideos?: number
 }

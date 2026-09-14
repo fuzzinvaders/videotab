@@ -17,7 +17,8 @@
  *                PUT/GET/DELETE /api/morceaux/:id/audio
  * Santé        : GET /healthz — jamais protégé (utilisé par le HEALTHCHECK Docker)
  *
- * Environnement : PORT, HOST, DATA_DIR, AUTH_SECRET, ORIGIN, VIDEO_MAX_MB
+ * Environnement : PORT, HOST, DATA_DIR, AUTH_SECRET, ORIGIN, VIDEO_MAX_MB,
+ * VIDEOS_MAX_TOTAL_MB
  *
  * Une remarque sur le partage des rôles : le serveur ne lit aucune tablature, ne dessine
  * aucune portée et n'encode aucune vidéo. Tout cela se passe dans le navigateur, qui a
@@ -67,6 +68,12 @@ const MAX_BODY_BYTES = 500_000;
 // Une minute de 1080p en VP9 pèse une quinzaine de mégaoctets ; 512 laisse donc passer un
 // morceau très long sans qu'un envoi parti de travers puisse remplir le disque.
 const VIDEO_MAX_BYTES = Number(process.env.VIDEO_MAX_MB || 512) * 1024 * 1024;
+/* Un plafond pour l'ensemble des vidéos, et non pour chacune. Il n'a pas de valeur par
+   défaut, et c'est délibéré : personne ici ne sait de quel disque dispose la machine, et un
+   chiffre inventé finirait par refuser un export parfaitement légitime. L'espace occupé est
+   rendu dans la bibliothèque de toute façon — l'hébergeur voit, et décide. */
+const VIDEOS_MAX_TOTAL_BYTES =
+  Number(process.env.VIDEOS_MAX_TOTAL_MB || 0) * 1024 * 1024;
 const AUDIO_MAX_BYTES = 60 * 1024 * 1024;
 
 const LOGIN_MAX_ATTEMPTS = 10;
@@ -118,14 +125,22 @@ function parseCookies(req) {
   for (const part of header.split(";")) {
     const idx = part.indexOf("=");
     if (idx === -1) continue;
-    cookies[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
+    cookies[part.slice(0, idx).trim()] = decodeURIComponent(
+      part.slice(idx + 1).trim(),
+    );
   }
   return cookies;
 }
 
 function setSessionCookie(res, userId) {
-  const token = store.signSession(userId, store.getSessionSecret(), MAX_AGE_SEC);
-  const secure = Boolean(CONFIGURED_ORIGIN && CONFIGURED_ORIGIN.startsWith("https://"));
+  const token = store.signSession(
+    userId,
+    store.getSessionSecret(),
+    MAX_AGE_SEC,
+  );
+  const secure = Boolean(
+    CONFIGURED_ORIGIN && CONFIGURED_ORIGIN.startsWith("https://"),
+  );
   const parts = [
     `${COOKIE_NAME}=${encodeURIComponent(token)}`,
     "Path=/",
@@ -138,7 +153,10 @@ function setSessionCookie(res, userId) {
 }
 
 function clearSessionCookie(res) {
-  res.setHeader("Set-Cookie", `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.setHeader(
+    "Set-Cookie",
+    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
+  );
 }
 
 function getSessionUser(req) {
@@ -191,7 +209,10 @@ async function deplacer(tmp, target) {
       fs.renameSync(tmp, target);
       return;
     } catch (err) {
-      const occupe = err?.code === "EPERM" || err?.code === "EBUSY" || err?.code === "EACCES";
+      const occupe =
+        err?.code === "EPERM" ||
+        err?.code === "EBUSY" ||
+        err?.code === "EACCES";
       if (!occupe || essai >= 10) throw err;
       // L'attente rend la main au serveur : les autres requêtes continuent d'être servies
       // pendant qu'on patiente, ce qu'une boucle d'attente active interdirait.
@@ -311,7 +332,10 @@ function sendFile(req, res, file, { type, download }) {
     headers["content-length"] = fin - debut + 1;
     res.writeHead(206, headers);
     if (req.method === "HEAD") return res.end();
-    return servirFlux(res, fs.createReadStream(file, { start: debut, end: fin }));
+    return servirFlux(
+      res,
+      fs.createReadStream(file, { start: debut, end: fin }),
+    );
   }
 
   headers["content-length"] = stat.size;
@@ -403,7 +427,11 @@ function cacheControlFor(filePath) {
   const name = path.basename(filePath);
   // Le service worker et la page d'entrée doivent être revalidés à chaque fois, sinon une
   // nouvelle version reste invisible tant que le cache du navigateur n'a pas expiré.
-  if (name === "sw.js" || name === "index.html" || name === "manifest.webmanifest") {
+  if (
+    name === "sw.js" ||
+    name === "index.html" ||
+    name === "manifest.webmanifest"
+  ) {
     return "no-cache";
   }
   // Le reste du build porte une empreinte dans son nom : le contenu ne change jamais.
@@ -413,7 +441,11 @@ function cacheControlFor(filePath) {
   // La police musicale et la banque de sons ne portent pas d'empreinte mais ne changent
   // qu'avec la version d'alphaTab. Une journée évite de retélécharger huit mégaoctets à
   // chaque ouverture sans figer pour autant une mise à jour.
-  if (name.endsWith(".sf2") || name.endsWith(".sf3") || /\.(woff2?|ttf|otf|eot)$/.test(name)) {
+  if (
+    name.endsWith(".sf2") ||
+    name.endsWith(".sf3") ||
+    /\.(woff2?|ttf|otf|eot)$/.test(name)
+  ) {
     return "public, max-age=86400";
   }
   return "public, max-age=3600";
@@ -430,7 +462,10 @@ function applyLibrary(res, mutate) {
   if (result.ok === false) return sendJson(res, 400, { error: result.error });
   // « morceau » est la ligne qui vient d'être touchée : l'écran d'import en a besoin tout
   // de suite, pour ouvrir l'atelier sur le morceau qu'il vient lui-même de créer.
-  return sendJson(res, 200, { ...store.readLibrary(), morceau: result.morceau ?? null });
+  return sendJson(res, 200, {
+    ...store.readLibrary(),
+    morceau: result.morceau ?? null,
+  });
 }
 
 function segments(pathname) {
@@ -459,9 +494,13 @@ async function handleApi(req, res, pathname) {
   }
 
   if (pathname === "/api/setup" && req.method === "POST") {
-    if (store.userCount() > 0) return sendJson(res, 409, { error: "Un compte existe déjà." });
+    if (store.userCount() > 0)
+      return sendJson(res, 409, { error: "Un compte existe déjà." });
     const body = await readJsonBody(req);
-    const result = store.createFirstUser(String(body.username || ""), String(body.password || ""));
+    const result = store.createFirstUser(
+      String(body.username || ""),
+      String(body.password || ""),
+    );
     if (!result.ok) return sendJson(res, 400, { error: result.error });
     setSessionCookie(res, result.user.id);
     return sendJson(res, 200, { user: result.user });
@@ -472,7 +511,9 @@ async function handleApi(req, res, pathname) {
     // Le même frein que la connexion : le code d'invitation est court, il ne doit pas
     // pouvoir être deviné par répétition.
     if (loginIsThrottled(ip)) {
-      return sendJson(res, 429, { error: "Trop de tentatives. Réessayez dans quelques minutes." });
+      return sendJson(res, 429, {
+        error: "Trop de tentatives. Réessayez dans quelques minutes.",
+      });
     }
     const body = await readJsonBody(req);
     const result = store.registerWithInvite(
@@ -493,14 +534,20 @@ async function handleApi(req, res, pathname) {
     const ip = clientIp(req);
     if (loginIsThrottled(ip)) {
       return sendJson(res, 429, {
-        error: "Trop de tentatives de connexion. Réessayez dans quelques minutes.",
+        error:
+          "Trop de tentatives de connexion. Réessayez dans quelques minutes.",
       });
     }
     const body = await readJsonBody(req);
-    const user = store.authenticate(String(body.username || ""), String(body.password || ""));
+    const user = store.authenticate(
+      String(body.username || ""),
+      String(body.password || ""),
+    );
     if (!user) {
       recordLoginFailure(ip);
-      return sendJson(res, 401, { error: "Identifiant ou mot de passe incorrect." });
+      return sendJson(res, 401, {
+        error: "Identifiant ou mot de passe incorrect.",
+      });
     }
     loginAttempts.delete(ip);
     setSessionCookie(res, user.id);
@@ -518,10 +565,15 @@ async function handleApi(req, res, pathname) {
 
   if (pathname === "/api/password" && req.method === "POST") {
     const body = await readJsonBody(req);
-    if (!store.verifyPasswordForUser(user.id, String(body.currentPassword || ""))) {
+    if (
+      !store.verifyPasswordForUser(user.id, String(body.currentPassword || ""))
+    ) {
       return sendJson(res, 403, { error: "Mot de passe actuel incorrect." });
     }
-    const result = store.updatePassword(user.id, String(body.newPassword || ""));
+    const result = store.updatePassword(
+      user.id,
+      String(body.newPassword || ""),
+    );
     if (!result.ok) return sendJson(res, 400, { error: result.error });
     return sendJson(res, 200, { ok: true });
   }
@@ -537,7 +589,8 @@ async function handleApi(req, res, pathname) {
     pathname === "/api/invites/revoke" ||
     pathname === "/api/users/delete"
   ) {
-    if (!user.admin) return sendJson(res, 403, { error: "Réservé à l'administrateur." });
+    if (!user.admin)
+      return sendJson(res, 403, { error: "Réservé à l'administrateur." });
 
     if (pathname === "/api/invites" && req.method === "GET") {
       return sendJson(res, 200, { invites: store.listInvites() });
@@ -545,7 +598,10 @@ async function handleApi(req, res, pathname) {
     if (pathname === "/api/invites" && req.method === "POST") {
       const result = store.createInvite();
       if (!result.ok) return sendJson(res, 400, { error: result.error });
-      return sendJson(res, 200, { invite: result.invite, invites: store.listInvites() });
+      return sendJson(res, 200, {
+        invite: result.invite,
+        invites: store.listInvites(),
+      });
     }
     if (pathname === "/api/invites/revoke" && req.method === "POST") {
       const body = await readJsonBody(req);
@@ -556,7 +612,9 @@ async function handleApi(req, res, pathname) {
     if (pathname === "/api/users/delete" && req.method === "POST") {
       const body = await readJsonBody(req);
       if (String(body.id) === user.id) {
-        return sendJson(res, 400, { error: "On ne supprime pas son propre compte." });
+        return sendJson(res, 400, {
+          error: "On ne supprime pas son propre compte.",
+        });
       }
       const result = store.deleteUser(String(body.id || ""));
       if (!result.ok) return sendJson(res, 400, { error: result.error });
@@ -567,7 +625,11 @@ async function handleApi(req, res, pathname) {
   // ---- La bibliothèque ----
 
   if (pathname === "/api/morceaux" && req.method === "GET") {
-    return sendJson(res, 200, { ...store.readLibrary(), users: store.listUsers() });
+    return sendJson(res, 200, {
+      ...store.readLibrary(),
+      users: store.listUsers(),
+      espaceVideos: store.espaceVideos(),
+    });
   }
 
   if (pathname === "/api/morceaux" && req.method === "POST") {
@@ -597,7 +659,10 @@ async function handleApi(req, res, pathname) {
       store.removeQuietly(cible);
       return sendJson(res, 400, { error: result.error });
     }
-    return sendJson(res, 200, { ...store.readLibrary(), morceau: result.morceau });
+    return sendJson(res, 200, {
+      ...store.readLibrary(),
+      morceau: result.morceau,
+    });
   }
 
   const parts = segments(pathname); // ["api", "morceaux", id, action?]
@@ -620,21 +685,31 @@ async function handleApi(req, res, pathname) {
       const artiste = validateTexte(body.value.artiste, "L'artiste", 120);
       if (!artiste.ok) return sendJson(res, 400, { error: artiste.error });
       return applyLibrary(res, (data) =>
-        renommerMorceau(data, id.value, { titre: titre.value, artiste: artiste.value }),
+        renommerMorceau(data, id.value, {
+          titre: titre.value,
+          artiste: artiste.value,
+        }),
       );
     }
 
     if (req.method === "DELETE") {
-      const result = store.updateLibrary((data) => supprimerMorceau(data, id.value));
-      if (result.ok === false) return sendJson(res, 400, { error: result.error });
+      const result = store.updateLibrary((data) =>
+        supprimerMorceau(data, id.value),
+      );
+      if (result.ok === false)
+        return sendJson(res, 400, { error: result.error });
       // Les fichiers partent après la sauvegarde, jamais avant : si l'écriture du JSON
       // échoue, la bibliothèque pointe encore vers des fichiers qui existent toujours.
-      store.removeQuietly(store.sourcePath(result.fichiers.source.id, result.fichiers.source.ext));
+      store.removeQuietly(
+        store.sourcePath(result.fichiers.source.id, result.fichiers.source.ext),
+      );
       // Toutes les vidéos du morceau, pas seulement la dernière : un export qu'on n'avait pas
       // pu effacer sur le moment traînerait sinon indéfiniment.
       store.balayerVideos(morceau.id);
       if (morceau.reglages?.pdf?.audio) {
-        store.removeQuietly(store.audioPath(morceau.id, morceau.reglages.pdf.audio.ext));
+        store.removeQuietly(
+          store.audioPath(morceau.id, morceau.reglages.pdf.audio.ext),
+        );
       }
       return sendJson(res, 200, store.readLibrary());
     }
@@ -645,23 +720,32 @@ async function handleApi(req, res, pathname) {
     if (!body.ok) return sendJson(res, 400, { error: body.error });
     const reglages = validateReglages(body.value.reglages);
     if (!reglages.ok) return sendJson(res, 400, { error: reglages.error });
-    if (!reglages.value) return sendJson(res, 400, { error: "Réglages manquants." });
-    return applyLibrary(res, (data) => enregistrerReglages(data, id.value, reglages.value));
+    if (!reglages.value)
+      return sendJson(res, 400, { error: "Réglages manquants." });
+    return applyLibrary(res, (data) =>
+      enregistrerReglages(data, id.value, reglages.value),
+    );
   }
 
   if (action === "source" && (req.method === "GET" || req.method === "HEAD")) {
-    return sendFile(req, res, store.sourcePath(morceau.id, morceau.fichier.ext), {
-      type: MIME_TYPES[morceau.fichier.ext] || "application/octet-stream",
-      // Pas de content-disposition ici : c'est alphaTab et pdf.js qui lisent cette
-      // adresse, et un « attachment » ferait télécharger la tablature au lieu de
-      // l'afficher. Le vrai téléchargement passe par ?telecharger=1.
-      download: query(req).get("telecharger") ? morceau.fichier.nom : null,
-    });
+    return sendFile(
+      req,
+      res,
+      store.sourcePath(morceau.id, morceau.fichier.ext),
+      {
+        type: MIME_TYPES[morceau.fichier.ext] || "application/octet-stream",
+        // Pas de content-disposition ici : c'est alphaTab et pdf.js qui lisent cette
+        // adresse, et un « attachment » ferait télécharger la tablature au lieu de
+        // l'afficher. Le vrai téléchargement passe par ?telecharger=1.
+        download: query(req).get("telecharger") ? morceau.fichier.nom : null,
+      },
+    );
   }
 
   if (action === "video") {
     if (req.method === "GET" || req.method === "HEAD") {
-      if (!morceau.video) return sendJson(res, 404, { error: "Aucune vidéo enregistrée." });
+      if (!morceau.video)
+        return sendJson(res, 404, { error: "Aucune vidéo enregistrée." });
       const nom = `${morceau.titre || "videotab"}${morceau.video.ext}`;
       return sendFile(req, res, store.videoPath(nomDeVideo(morceau)), {
         type: MIME_TYPES[morceau.video.ext] || "video/webm",
@@ -679,11 +763,34 @@ async function handleApi(req, res, pathname) {
          de lire la vidéo précédente au moment où il envoie la nouvelle — le lecteur du
          panneau d'export pointe dessus —, et Windows refuse de renommer par-dessus un fichier
          ouvert. Trois minutes d'encodage se perdaient alors sur un EPERM au dernier mètre. */
+      /* Le refus vient avant la réception, pas après : recevoir soixante mégaoctets pour
+         les jeter ne rend service à personne, et l'en-tête de longueur suffit à savoir. Le
+         plafond ne s'applique que si l'hébergeur en a posé un. */
+      if (VIDEOS_MAX_TOTAL_BYTES > 0) {
+        const annonce = Number(req.headers["content-length"] || 0);
+        if (store.espaceVideos() + annonce > VIDEOS_MAX_TOTAL_BYTES) {
+          return sendJson(res, 507, {
+            error:
+              "Plus de place pour les vidéos sur le serveur. Supprime-en une depuis la " +
+              "bibliothèque, ou relève VIDEOS_MAX_TOTAL_MB.",
+          });
+        }
+      }
+
       const nom = store.nomVideo(morceau.id, ext);
-      const { taille } = await receiveFile(req, store.videoPath(nom), VIDEO_MAX_BYTES);
+      const { taille } = await receiveFile(
+        req,
+        store.videoPath(nom),
+        VIDEO_MAX_BYTES,
+      );
 
       const resultat = store.updateLibrary((data) =>
-        attacherVideo(data, id.value, { nom, ext, taille, dureeMs: duree.value }),
+        attacherVideo(data, id.value, {
+          nom,
+          ext,
+          taille,
+          dureeMs: duree.value,
+        }),
       );
       if (resultat.ok === false) {
         store.removeQuietly(store.videoPath(nom));
@@ -692,14 +799,23 @@ async function handleApi(req, res, pathname) {
       // Les exports précédents partent seulement une fois le nouveau enregistré. Celui qui
       // résiste encore parce qu'on le lit sera balayé au prochain passage.
       store.balayerVideos(morceau.id, nom);
-      return sendJson(res, 200, { ...store.readLibrary(), morceau: resultat.morceau });
+      return sendJson(res, 200, {
+        ...store.readLibrary(),
+        morceau: resultat.morceau,
+      });
     }
 
     if (req.method === "DELETE") {
-      const result = store.updateLibrary((data) => detacherVideo(data, id.value));
-      if (result.ok === false) return sendJson(res, 400, { error: result.error });
+      const result = store.updateLibrary((data) =>
+        detacherVideo(data, id.value),
+      );
+      if (result.ok === false)
+        return sendJson(res, 400, { error: result.error });
       store.balayerVideos(id.value);
-      return sendJson(res, 200, { ...store.readLibrary(), morceau: result.morceau });
+      return sendJson(res, 200, {
+        ...store.readLibrary(),
+        morceau: result.morceau,
+      });
     }
   }
 
@@ -715,22 +831,33 @@ async function handleApi(req, res, pathname) {
     }
 
     if (req.method === "PUT") {
-      const nom = validateTexte(query(req).get("nom"), "Le nom du fichier", 200, {
-        obligatoire: true,
-      });
+      const nom = validateTexte(
+        query(req).get("nom"),
+        "Le nom du fichier",
+        200,
+        {
+          obligatoire: true,
+        },
+      );
       if (!nom.ok) return sendJson(res, 400, { error: nom.error });
       const ext = (nom.value.match(/\.[a-z0-9]+$/i)?.[0] ?? "").toLowerCase();
       if (![".mp3", ".ogg", ".wav", ".m4a", ".flac"].includes(ext)) {
-        return sendJson(res, 400, { error: "Format audio non reconnu (mp3, ogg, wav, m4a, flac)." });
+        return sendJson(res, 400, {
+          error: "Format audio non reconnu (mp3, ogg, wav, m4a, flac).",
+        });
       }
       const cible = store.audioPath(morceau.id, ext);
       const { taille } = await receiveFile(req, cible, AUDIO_MAX_BYTES);
-      if (audio && audio.ext !== ext) store.removeQuietly(store.audioPath(morceau.id, audio.ext));
+      if (audio && audio.ext !== ext)
+        store.removeQuietly(store.audioPath(morceau.id, audio.ext));
       return applyLibrary(res, (data) => {
         const cible2 = trouver(data, id.value);
         if (!cible2) return { ok: false, error: "Morceau introuvable." };
         const reglages = cible2.reglages ?? {};
-        reglages.pdf = { ...(reglages.pdf ?? {}), audio: { nom: nom.value, ext, taille } };
+        reglages.pdf = {
+          ...(reglages.pdf ?? {}),
+          audio: { nom: nom.value, ext, taille },
+        };
         return enregistrerReglages(data, id.value, reglages);
       });
     }
@@ -794,8 +921,12 @@ server.requestTimeout = 0;
 server.headersTimeout = 60_000;
 
 server.listen(PORT, HOST, () => {
-  console.log(`Videotab écoute sur http://${HOST}:${PORT} (données : ${store.DATA_DIR})`);
+  console.log(
+    `Videotab écoute sur http://${HOST}:${PORT} (données : ${store.DATA_DIR})`,
+  );
   if (!fs.existsSync(DIST_DIR)) {
-    console.log("dist/ absent : lancez `npm run build`, ou `npm run dev` pour le serveur Vite.");
+    console.log(
+      "dist/ absent : lancez `npm run build`, ou `npm run dev` pour le serveur Vite.",
+    );
   }
 });

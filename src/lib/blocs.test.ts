@@ -128,3 +128,51 @@ describe('largeurPourTenir', () => {
     expect(largeurPourTenir([0], 4)).toBe(0)
   })
 })
+
+describe('decouperEnBlocs : ce que l’œil compte comme affiché', () => {
+  /* La bande est dessinée sur toute la largeur de la zone, donc la mesure qui déborde à
+     droite se voit quand même. La compter, c'est tourner la page une mesure plus tard —
+     exactement la frustration qu'on corrige : voir cinq mesures et changer d'écran à la
+     quatrième, curseur aux deux tiers. */
+  it('compte la mesure qui déborde dès qu’on en voit plus de la moitié', () => {
+    const barres = barresRegulieres(12) // mesures de 100
+    // 470 de large : quatre mesures entières, et 70 % de la cinquième — elle compte.
+    const large = decouperEnBlocs({ barres, largeurFenetre: 470, anticipation: 1 })
+    expect(large.debuts).toEqual([0, 400, 800])
+
+    // 430 : quatre entières et seulement 30 % de la cinquième — elle ne compte pas.
+    const juste = decouperEnBlocs({ barres, largeurFenetre: 430, anticipation: 1 })
+    expect(juste.debuts).toEqual([0, 300, 600, 900])
+  })
+
+  it('ne compte pas une mesure dont on ne voit qu’un filet', () => {
+    const barres = barresRegulieres(12)
+    // 401 : la cinquième mesure n'est visible que sur un pixel.
+    expect(decouperEnBlocs({ barres, largeurFenetre: 401, anticipation: 0 }).debuts).toEqual([
+      0, 400, 800,
+    ])
+  })
+})
+
+describe('decouperEnBlocs : le curseur ne sort jamais de la fenêtre', () => {
+  /* C'est l'invariant qui rend le mode utilisable : quelle que soit l'avance demandée, la
+     fenêtre suivante s'ouvre sur une mesure dont on voit déjà le début. Autrement le curseur
+     partirait au-delà du bord droit en attendant que la page tourne. */
+  it('ouvre toujours la fenêtre suivante sur une mesure déjà visible', () => {
+    const cas = [
+      { barres: barresRegulieres(20), largeur: 470 },
+      { barres: barresRegulieres(20), largeur: 430 },
+      { barres: [0, 200, 300, 400, 500, 600, 700, 800, 1000, 1100], largeur: 470 },
+    ]
+    for (const { barres, largeur } of cas) {
+      for (const anticipation of [0, 1, 2, 3]) {
+        const b = decouperEnBlocs({ barres, largeurFenetre: largeur, anticipation })
+        for (let i = 1; i < b.debuts.length; i++) {
+          const ecart = b.debuts[i] - b.debuts[i - 1]
+          expect(ecart, `largeur ${largeur}, avance ${anticipation}`).toBeGreaterThan(0)
+          expect(ecart, `largeur ${largeur}, avance ${anticipation}`).toBeLessThan(largeur)
+        }
+      }
+    }
+  })
+})

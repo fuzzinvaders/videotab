@@ -19,6 +19,12 @@
  *    et redeviennent les premières de la suivante. Tourner la page sur du tout-inconnu est
  *    précisément le moment où l'on décroche ; les avoir déjà lues une fois change tout.
  *
+ * « Affichée » se compte comme l'œil le fait, et non comme le pavage : la bande est dessinée
+ * sur toute la largeur, si bien que la mesure qui déborde à droite se voit quand même, et
+ * souvent presque en entier. Elle compte dès qu'on en voit plus de la moitié. Sans cela, on
+ * en montrait cinq et on tournait la page à la quatrième — mesuré, le curseur n'atteignait
+ * que 57 à 72 % de la largeur avant que tout change.
+ *
  * La fenêtre n'avance qu'en avant, jamais en arrière : elle se déduit de la seule position
  * du curseur, sans mémoire, ce qui permet de se déplacer n'importe où dans le morceau et
  * d'obtenir la même image qu'en l'ayant joué depuis le début.
@@ -101,12 +107,31 @@ export function decouperEnBlocs(d: DemandeBlocs): Blocs {
     let fin = debut + 1
     while (fin < mesures && barres[fin + 1] - barres[debut] <= largeur) fin++
 
+    /* La mesure suivante déborde à droite, mais la bande est dessinée sur toute la largeur :
+       on en voit donc une partie, et souvent presque tout. Ne pas la compter revenait à
+       tourner la page une mesure trop tôt — l'œil en voyait cinq et la page tournait à la
+       quatrième, curseur aux deux tiers de l'écran seulement. Elle compte dès qu'on en voit
+       plus de la moitié : c'est celle que l'œil compte, et c'est sur elle qu'il attend la
+       page. */
+    if (fin < mesures) {
+      const visible = largeur - (barres[fin] - barres[debut])
+      const entiere = barres[fin + 1] - barres[fin]
+      if (entiere > 0 && visible > entiere / 2) fin++
+    }
+
     /* La dernière mesure est déjà dans cette fenêtre-ci : tourner encore la page ne
        montrerait que ce qu'on vient de lire, décalé à gauche. On s'arrête là. */
     if (fin >= mesures) break
 
     // Reculer du nombre de mesures d'avance, sans jamais faire du surplace.
-    debut = Math.max(debut + 1, fin - anticipation)
+    let suivant = Math.max(debut + 1, fin - anticipation)
+
+    /* La fenêtre suivante doit s'ouvrir sur une mesure dont on voit déjà le début. Sans cette
+       garde, demander zéro mesure d'avance ferait tourner la page sur la mesure d'après celle
+       qui dépasse — le curseur serait alors sorti par la droite avant que l'image change. */
+    while (suivant > debut + 1 && barres[suivant] >= barres[debut] + largeur) suivant--
+
+    debut = suivant
   }
 
   const debuts = premieres.map((i) => barres[i])

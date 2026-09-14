@@ -85,8 +85,9 @@ opérations de bibliothèque.
   attend que la musique arrive, et ça tient dans un bandeau au bas d'une vidéo de reprise.
   *Mesures fixes* : la même bande, mais immobile — c'est le curseur qui la traverse, et la page
   tourne à la fin. Une mesure n'est jamais coupée, la fenêtre en met donc autant qu'il en
-  entre, et les dernières sont montrées en avance puis rouvrent la fenêtre suivante : on ne
-  tourne jamais la page sur du tout-inconnu. Un chiffre qui ne bouge pas se déchiffre, un
+  entre, et la dernière est montrée en avance puis rouvre la fenêtre suivante : la page tourne
+  pile en arrivant sur elle, donc jamais sur du tout-inconnu et jamais avant que le curseur
+  ait traversé tout l'écran. Un chiffre qui ne bouge pas se déchiffre, un
   chiffre qui glisse ne se suit que de loin.
   *Page* : la partition entière qui défile vers le bas, pour travailler un morceau plutôt que
   pour l'illustrer.

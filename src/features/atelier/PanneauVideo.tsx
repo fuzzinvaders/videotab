@@ -199,7 +199,7 @@ export function PanneauMiseEnScene({
                   ? 'aucune'
                   : `${video.anticipation} mesure${video.anticipation > 1 ? 's' : ''}`
               }
-              aide="Les dernières mesures de la fenêtre, montrées avant d’être jouées : elles rouvrent la fenêtre suivante. À zéro, chaque tournement de page livre du tout-inconnu au moment où il faudrait déjà savoir quoi faire."
+              aide="Les dernières mesures de la fenêtre, montrées avant d’être jouées : elles rouvrent la fenêtre suivante. À une, la page tourne pile en arrivant sur la dernière mesure affichée — le curseur a donc traversé tout l’écran. En demander plus fait tourner plus tôt, et laisse plus de temps pour lire ce qui vient."
               onChange={(anticipation) => modifier((v) => ({ ...v, anticipation }))}
             />
           ) : (

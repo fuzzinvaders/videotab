@@ -40,6 +40,15 @@ versioning yet, so entries are grouped by the change that shipped them.
   title banner the top one landed at a negative ordinate: **zero pixels**, an option that simply
   did nothing. Both are now drawn inside the strip, so the whole thickness shows in either
   framing.
+- **The page turned one bar too early.** The strip is drawn across the whole width, so the bar
+  that overflows on the right is still shown — often almost whole. It was not counted, so five
+  bars were visible and the page turned on the fourth. Measured, cursor position at the moment
+  of the turn: **57 % to 72 %** of the width, a third of the screen wasted and the eye left
+  hanging. A bar now counts as displayed once more than half of it is visible, which is how the
+  eye counts it. Same measurement afterwards: **73 % to 91 %, 82 % on average**. A guard comes
+  with it — the next window must open on a bar whose beginning is already visible, otherwise
+  asking for no lookahead at all would send the cursor off the right edge before the picture
+  changed.
 - **alphaTab reports each bar about nine times**, and taking it at its word made the new layout
   useless: hundreds of zero-width bars, no bar line left to stop at, and a window that fell back
   to cutting every so many pixels — the lookahead setting then changed nothing at all, which is

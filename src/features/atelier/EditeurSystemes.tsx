@@ -39,7 +39,13 @@ export function EditeurSystemes({
   onChange: (systemes: SystemePdf[]) => void
 }) {
   const [geste, setGeste] = useState<Geste | null>(null)
-  const [trace, setTrace] = useState<{ page: number; x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const [trace, setTrace] = useState<{
+    page: number
+    x0: number
+    y0: number
+    x1: number
+    y1: number
+  } | null>(null)
 
   function positionDans(e: ReactPointerEvent, element: HTMLElement) {
     const cadre = element.getBoundingClientRect()

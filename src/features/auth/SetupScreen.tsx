@@ -24,10 +24,7 @@ export function SetupScreen() {
   }
 
   return (
-    <AuthShell
-      title="Videotab"
-      subtitle="Premier compte — c'est lui qui invitera les autres."
-    >
+    <AuthShell title="Videotab" subtitle="Premier compte — c'est lui qui invitera les autres.">
       <form onSubmit={onSubmit} className="space-y-4">
         <Field label="Identifiant">
           <Input

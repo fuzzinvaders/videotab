@@ -176,7 +176,8 @@ export function bandeDepuisSystemes(
     })
     .filter((m): m is NonNullable<typeof m> => m !== null)
 
-  if (morceaux.length === 0) return { feuille: { largeur: 0, hauteur: 0, tuiles: [] }, segments: [] }
+  if (morceaux.length === 0)
+    return { feuille: { largeur: 0, hauteur: 0, tuiles: [] }, segments: [] }
 
   const hauteur = Math.max(...morceaux.map((m) => m.rect.h))
   // Un blanc entre deux lignes : sans lui, la fin d'un système et le début du suivant se

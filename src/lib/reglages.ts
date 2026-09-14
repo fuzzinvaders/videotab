@@ -76,7 +76,11 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     largeur: nombre(video.largeur, d.largeur, 320, 3840),
     hauteur: nombre(video.hauteur, d.hauteur, 320, 3840),
     fps: nombre(video.fps, d.fps, 12, 60),
-    disposition: parmi(video.disposition, ['page', 'defilement', 'mesures'] as const, d.disposition),
+    disposition: parmi(
+      video.disposition,
+      ['page', 'defilement', 'mesures'] as const,
+      d.disposition,
+    ),
     theme: typeof video.theme === 'string' ? video.theme : d.theme,
     mesuresVisibles: nombre(video.mesuresVisibles, d.mesuresVisibles, 1, 32),
     margeBande: nombre(video.margeBande, d.margeBande, 0, 1.5),

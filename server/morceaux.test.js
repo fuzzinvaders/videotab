@@ -14,7 +14,11 @@ function bibliothequeAvec(...types) {
   const data = { morceaux: [] };
   for (const type of types) {
     creerMorceau(data, {
-      fichier: { nom: `essai${type === "pdf" ? ".pdf" : ".gp5"}`, ext: type === "pdf" ? ".pdf" : ".gp5", type },
+      fichier: {
+        nom: `essai${type === "pdf" ? ".pdf" : ".gp5"}`,
+        ext: type === "pdf" ? ".pdf" : ".gp5",
+        type,
+      },
       taille: 1234,
       auteur: "remi",
     });

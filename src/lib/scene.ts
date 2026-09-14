@@ -212,14 +212,26 @@ export function creerScene(options: OptionsScene): Scene {
          nouvelle place. */
       const passage = transitionA(curseur)
       if (passage && voile && voile2d) {
-        composerLaBande(voile2d, { curseur, scroll: passage.precedent * echelle, sansCurseur: true })
+        composerLaBande(voile2d, {
+          curseur,
+          scroll: passage.precedent * echelle,
+          sansCurseur: true,
+        })
         ctx.save()
         ctx.globalAlpha = 1 - passage.part
         ctx.drawImage(voile, zone.x, zone.y)
         ctx.restore()
       }
 
-      dessinerCadreDevant(ctx, { zone, video, theme, couleur, largeur, hauteur: hauteurImage, trait: traitCadre })
+      dessinerCadreDevant(ctx, {
+        zone,
+        video,
+        theme,
+        couleur,
+        largeur,
+        hauteur: hauteurImage,
+        trait: traitCadre,
+      })
     }
 
     if (bandeauH > 0) {
@@ -256,7 +268,8 @@ export function creerScene(options: OptionsScene): Scene {
         // Sur un fond transparent, un voile noir ne ferait pas disparaître l'image : il la
         // remplacerait par un rectangle noir dans la vidéo de reprise. On efface donc, au
         // lieu de couvrir — le fondu est alors un fondu vers ce qu'il y a derrière.
-        ctx.globalCompositeOperation = video.fond === 'transparent' ? 'destination-out' : 'source-over'
+        ctx.globalCompositeOperation =
+          video.fond === 'transparent' ? 'destination-out' : 'source-over'
         ctx.globalAlpha = voile
         ctx.fillStyle = video.fond === 'transparent' ? '#000000' : '#000000'
         ctx.fillRect(0, 0, largeur, hauteurImage)

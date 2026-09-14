@@ -16,7 +16,7 @@ function ecarts(valeurs: number[]) {
 }
 
 describe('horlogeLissee', () => {
-  it("rend un temps régulier là où la référence avance par marches", () => {
+  it('rend un temps régulier là où la référence avance par marches', () => {
     const escalier = referenceEnEscalier()
     let mur = 0
     const h = horlogeLissee({ mur: () => mur, reference: () => escalier(mur) })
@@ -40,7 +40,7 @@ describe('horlogeLissee', () => {
     expect(Math.min(...doux)).toBeGreaterThan(0)
   })
 
-  it("reste collée à la référence : elle lisse, elle ne dérive pas", () => {
+  it('reste collée à la référence : elle lisse, elle ne dérive pas', () => {
     const escalier = referenceEnEscalier()
     let mur = 0
     const h = horlogeLissee({ mur: () => mur, reference: () => escalier(mur) })
@@ -53,7 +53,7 @@ describe('horlogeLissee', () => {
     expect(Math.abs(dernier - escalier(mur))).toBeLessThan(16)
   })
 
-  it("suit une horloge de son qui dérive lentement, sans à-coup", () => {
+  it('suit une horloge de son qui dérive lentement, sans à-coup', () => {
     // Cent millionièmes de retard : l'ordre de grandeur d'une carte son face au processeur.
     let mur = 0
     const h = horlogeLissee({ mur: () => mur, reference: () => mur * 0.9999 })

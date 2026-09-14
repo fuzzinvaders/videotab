@@ -142,9 +142,7 @@ export function avecDecompteAvant(
 function poserLesClics(sortie: AudioBuffer, decompteMs: number): void {
   const frequence = sortie.sampleRate
   const longueur = Math.round(0.035 * frequence)
-  const pistes = Array.from({ length: sortie.numberOfChannels }, (_, c) =>
-    sortie.getChannelData(c),
-  )
+  const pistes = Array.from({ length: sortie.numberOfChannels }, (_, c) => sortie.getChannelData(c))
 
   for (let seconde = 0; seconde * 1000 < decompteMs; seconde++) {
     const debut = Math.round(seconde * frequence)

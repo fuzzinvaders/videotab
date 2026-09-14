@@ -13,7 +13,9 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-500">Chargement…</div>
+      <div className="flex min-h-screen items-center justify-center text-slate-500">
+        Chargement…
+      </div>
     )
   }
 

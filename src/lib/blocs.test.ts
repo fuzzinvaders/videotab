@@ -67,7 +67,11 @@ describe('decouperEnBlocs', () => {
   })
 
   it('affiche quand même une mesure plus large que la fenêtre, plutôt que de se bloquer', () => {
-    const b = decouperEnBlocs({ barres: [0, 1000, 1100, 1200], largeurFenetre: 300, anticipation: 1 })
+    const b = decouperEnBlocs({
+      barres: [0, 1000, 1100, 1200],
+      largeurFenetre: 300,
+      anticipation: 1,
+    })
     expect(b.debuts[0]).toBe(0)
     expect(b.debuts.length).toBeGreaterThan(1)
     expect(b.gaucheA(500)).toBe(0)

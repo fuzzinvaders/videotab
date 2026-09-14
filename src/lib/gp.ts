@@ -288,8 +288,7 @@ export function etendueDesPortees(api: alphaTab.AlphaTabApi): { y0: number; y1: 
 function hauteurDeLaRythmique(api: alphaTab.AlphaTabApi): number {
   const notation = api.settings.notation
   const profil = api.settings.display.staveProfile
-  const tabSeule =
-    profil === alphaTab.StaveProfile.Tab || profil === alphaTab.StaveProfile.TabMixed
+  const tabSeule = profil === alphaTab.StaveProfile.Tab || profil === alphaTab.StaveProfile.TabMixed
   const montree =
     notation.rhythmMode === alphaTab.TabRhythmMode.ShowWithBeams ||
     notation.rhythmMode === alphaTab.TabRhythmMode.ShowWithBars ||

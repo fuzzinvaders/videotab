@@ -79,8 +79,7 @@ export function Lecteur({
         style={
           scene?.transparente
             ? {
-                backgroundImage:
-                  'repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%)',
+                backgroundImage: 'repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%)',
                 backgroundSize: '24px 24px',
               }
             : undefined

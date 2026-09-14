@@ -53,10 +53,7 @@ function verifyPassword(password, stored) {
   if (!salt || !hash) return false;
   const expected = Buffer.from(hash, "hex");
   const actual = crypto.scryptSync(password, salt, 64);
-  return (
-    expected.length === actual.length &&
-    crypto.timingSafeEqual(expected, actual)
-  );
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
 // ---- Jeton de session : HMAC sans état, `<payload base64url>.<hmac>` ----
@@ -74,9 +71,7 @@ function signValue(value, secret) {
 }
 
 function signSession(userId, secret, maxAgeSec) {
-  const payload = base64url(
-    JSON.stringify({ uid: userId, exp: Date.now() + maxAgeSec * 1000 }),
-  );
+  const payload = base64url(JSON.stringify({ uid: userId, exp: Date.now() + maxAgeSec * 1000 }));
   return `${payload}.${signValue(payload, secret)}`;
 }
 
@@ -89,8 +84,7 @@ function verifySession(token, secret) {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
   try {
     const { uid, exp } = JSON.parse(fromBase64url(payload));
-    if (typeof uid !== "string" || typeof exp !== "number" || Date.now() > exp)
-      return null;
+    if (typeof uid !== "string" || typeof exp !== "number" || Date.now() > exp) return null;
     return uid;
   } catch {
     return null;
@@ -139,9 +133,7 @@ function listUsers() {
 
 function findByUsername(username) {
   const needle = String(username).trim().toLowerCase();
-  return readUsersStore().users.find(
-    (u) => u.username.toLowerCase() === needle,
-  );
+  return readUsersStore().users.find((u) => u.username.toLowerCase() === needle);
 }
 
 function findById(id) {
@@ -152,8 +144,7 @@ function checkCredentials(username, password) {
   const name = String(username).trim();
   if (name.length < 2) return "Identifiant trop court (2 caractères min).";
   if (name.length > 40) return "Identifiant trop long (40 caractères max).";
-  if (String(password).length < 6)
-    return "Mot de passe trop court (6 caractères min).";
+  if (String(password).length < 6) return "Mot de passe trop court (6 caractères min).";
   return null;
 }
 
@@ -163,8 +154,7 @@ function createFirstUser(username, password) {
   const problem = checkCredentials(username, password);
   if (problem) return { ok: false, error: problem };
   const store = readUsersStore();
-  if (store.users.length > 0)
-    return { ok: false, error: "Un compte existe déjà." };
+  if (store.users.length > 0) return { ok: false, error: "Un compte existe déjà." };
   const user = {
     id: crypto.randomUUID(),
     username: String(username).trim(),
@@ -250,9 +240,7 @@ function createInvite() {
   const now = Date.now();
   // Le ménage se fait à la création plutôt que par une tâche de fond : un code périmé
   // ou consommé n'a plus rien à dire, et personne ne va le relire.
-  store.invites = store.invites.filter(
-    (i) => !i.usedBy && Date.parse(i.expiresAt) > now,
-  );
+  store.invites = store.invites.filter((i) => !i.usedBy && Date.parse(i.expiresAt) > now);
   if (store.invites.length >= INVITE_MAX) {
     return {
       ok: false,
@@ -281,8 +269,7 @@ function revokeInvite(code) {
   const store = readUsersStore();
   const before = store.invites.length;
   store.invites = store.invites.filter((i) => i.code !== code);
-  if (store.invites.length === before)
-    return { ok: false, error: "Invitation introuvable." };
+  if (store.invites.length === before) return { ok: false, error: "Invitation introuvable." };
   writeUsersStore(store);
   return { ok: true };
 }
@@ -293,19 +280,15 @@ function registerWithInvite(username, password, code) {
   const problem = checkCredentials(username, password);
   if (problem) return { ok: false, error: problem };
   const store = readUsersStore();
-  if (store.users.length === 0)
-    return { ok: false, error: "Aucun compte n'existe encore." };
+  if (store.users.length === 0) return { ok: false, error: "Aucun compte n'existe encore." };
   const wanted = String(code).trim().toUpperCase();
   const invite = store.invites.find((i) => i.code === wanted && !i.usedBy);
-  if (!invite)
-    return { ok: false, error: "Code d'invitation invalide ou déjà utilisé." };
+  if (!invite) return { ok: false, error: "Code d'invitation invalide ou déjà utilisé." };
   if (Date.parse(invite.expiresAt) <= Date.now()) {
     return { ok: false, error: "Code d'invitation expiré." };
   }
   const name = String(username).trim();
-  if (
-    store.users.some((u) => u.username.toLowerCase() === name.toLowerCase())
-  ) {
+  if (store.users.some((u) => u.username.toLowerCase() === name.toLowerCase())) {
     return { ok: false, error: "Cet identifiant est déjà pris." };
   }
   const user = {

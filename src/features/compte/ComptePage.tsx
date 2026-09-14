@@ -109,7 +109,7 @@ function Invitations() {
       setInvites(r.invites)
       setErreur(null)
     } catch (err) {
-      setErreur(messageOf(err, "La création a échoué."))
+      setErreur(messageOf(err, 'La création a échoué.'))
     } finally {
       setOccupe(false)
     }
@@ -129,8 +129,8 @@ function Invitations() {
         </Button>
       </div>
       <p className="mb-3 text-sm text-slate-400">
-        Un code vaut sept jours et une seule inscription. Il se dicte à voix haute&nbsp;: ni O
-        ni zéro, ni I ni un.
+        Un code vaut sept jours et une seule inscription. Il se dicte à voix haute&nbsp;: ni O ni
+        zéro, ni I ni un.
       </p>
       <ErrorText>{erreur}</ErrorText>
       {invites.length === 0 ? (

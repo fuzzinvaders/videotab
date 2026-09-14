@@ -45,6 +45,8 @@ function reglagesParDefaut(type) {
     // choisi une, et continue de la suivre quand on change de thème.
     couleur: null,
     curseurStyle: "les-deux",
+    // Le curseur glisse d'une note à l'autre plutôt que d'y sauter.
+    curseurGlisse: true,
     // Le surlignage situe le temps en cours, le trait vif dit où l'on en est dedans. Trop
     // opaque, il mangerait les chiffres de doigté qu'il est censé désigner.
     opacite: 0.3,

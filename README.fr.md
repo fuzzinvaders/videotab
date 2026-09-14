@@ -103,7 +103,8 @@ opérations de bibliothèque.
   en 720p qu'en vertical. En défilement, les deux bouts de la bande s'effacent en dégradé : une mesure qui
   apparaît d'un coup au bord de l'image attire l'œil au mauvais moment. En mesures fixes, non :
   la mesure du bord est justement celle qu'on donne à lire en avance.
-- **Curseur** — le trait à l'instant exact, le surlignage du temps en cours, ou les deux. Sur
+- **Curseur** — le trait à l'instant exact, le surlignage du temps en cours, ou les deux ;
+  glissant entre les notes, ou sautant de l'une à l'autre. Sur
   une tablature serrée les deux disent la même chose et se gênent ; sur une vidéo regardée de
   loin, les deux valent mieux qu'un. La couleur suit le thème tant qu'on n'en choisit pas une,
   et le bouton **Auto** l'y ramène.

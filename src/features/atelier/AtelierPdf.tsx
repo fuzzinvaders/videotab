@@ -201,7 +201,9 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+    /* Même disposition que pour une tablature : l'aperçu et le découpage en haut, sur toute
+       la largeur, puis les réglages en colonnes. */
+    <div className="space-y-4">
       <div className="space-y-4">
         {erreur ? <ErrorText>{erreur}</ErrorText> : null}
         <Lecteur
@@ -263,7 +265,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
         </Card>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium text-slate-200">Minutage</h2>

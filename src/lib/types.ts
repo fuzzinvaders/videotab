@@ -112,6 +112,20 @@ export interface ReglagesVideo {
   couleur: string | null
   /** Le trait à l'instant exact, le surlignage du temps en cours, ou les deux. */
   curseurStyle: StyleCurseur
+  /**
+   * Le curseur glisse d'une note à l'autre, ou saute de l'une à l'autre.
+   *
+   * Glisser est exact à chaque instant, mais la vitesse y varie beaucoup : une partition
+   * n'espace pas ses notes proportionnellement à leur durée — c'est une règle de gravure, pas
+   * d'arithmétique — si bien que le curseur doit courir entre deux notes éloignées et ramper
+   * entre deux notes serrées. Mesuré sur une vraie tablature, du simple au sextuple d'un temps
+   * à l'autre. En défilement continu on ne le voit pas, la bande glissant elle aussi ; en
+   * mesures fixes le curseur est seul à bouger, et ces écarts se lisent comme une saccade.
+   *
+   * Sauter supprime la question : le curseur est sur la note qui sonne, et il y reste jusqu'à
+   * la suivante. On y perd la position exacte entre deux notes, on y gagne une pulsation.
+   */
+  curseurGlisse: boolean
   opacite: number
   compteAvantSec: number
   fondu: boolean

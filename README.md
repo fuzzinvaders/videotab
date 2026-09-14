@@ -99,7 +99,8 @@ covers timing, staff detection, server-side validation and the library operation
   scrolling, both ends of the strip fade out: a bar appearing abruptly at the edge of the frame
   catches the eye at the wrong moment. With fixed bars they do not, since the bar at the edge is
   exactly the one being offered to read ahead.
-- **Cursor** — the line at the exact instant, the highlight over the current beat, or both.
+- **Cursor** — the line at the exact instant, the highlight over the current beat, or both;
+  gliding between the notes or stepping from one to the next.
   On a tight tablature the two say the same thing and get in each other's way; on a video
   watched from a distance, both beat one. The colour follows the theme until you pick one, and
   an **Auto** button brings it back.

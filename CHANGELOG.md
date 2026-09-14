@@ -9,6 +9,13 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The workshop no longer runs down a single endless column.** The settings sat in a sidebar
+  twenty rem wide, stacked one above the other — three thousand pixels of scrolling — while
+  three quarters of the screen stayed empty beneath a strip only two hundred pixels tall. The
+  preview now takes the full width and the settings sit underneath in two or three columns,
+  and the ones a piece is set up with once are folded away behind a heading. Measured on the
+  same piece: the settings went from 3054 pixels of stacked height to 1280.
+
 - **The exported video can be cropped to the strip itself.** A 1920×1080 file carrying eight
   hundred pixels of nothing above and below the tablature is heavy for what it shows, and at
   editing time it has to be positioned by guesswork. "Hauteur de la bande" makes the video as
@@ -156,6 +163,16 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The cursor can step from note to note instead of gliding.** Gliding is exact at every
+  instant, but its speed varies a great deal, and not by accident: a score does not space its
+  notes in proportion to their duration — that is a rule of engraving, not of arithmetic — so
+  the cursor must run between two distant notes and crawl between two close ones. Measured on a
+  real tablature, sampling the cursor every forty milliseconds: from four to twenty-one pixels
+  per step, a sixfold swing, and the same swing everywhere in the piece. While the strip scrolls
+  nobody notices, since the strip moves too; with fixed bars the cursor is the only thing
+  moving, and those swings read as a stutter. Stepping removes the question — the cursor sits on
+  the note that is sounding and waits there: measured, `0 0 0 0 51 0 0 0 0 51`. What is lost is
+  where one is *between* two notes; what is gained is a steady pulse.
 - **Turning the page now dissolves instead of cutting.** The window being left is redrawn over
   the new one at a fading opacity, for about two tenths of a second. Nothing slides — that is
   the whole point of choosing fixed bars — but the eye sees where what it is reading came from,

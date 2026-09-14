@@ -532,6 +532,7 @@ export function ancresDeDefilement(
 export function curseurDepuisAncres(
   ancres: AncreDefilement[],
   decalageMs: number,
+  glisse = true,
 ): (tMs: number) => Curseur | null {
   if (ancres.length === 0) return () => null
   const courbe = courbeMonotone(ancres.map((a) => ({ t: a.tempsMs + decalageMs, v: a.x })))
@@ -542,6 +543,11 @@ export function curseurDepuisAncres(
     // voudrait rien dire, et la portée ne se déplace pas entre deux notes.
     const ancre = ancres[courbe.indexA(tMs)]
     if (!ancre) return null
-    return { x: courbe(tMs), y: ancre.y, h: ancre.h, bloc: ancre.bloc }
+    /* Sans glissement, le curseur se pose sur la note qui sonne et l'y attend. On perd où l'on
+       en est *entre* deux notes ; on gagne une pulsation régulière au lieu d'une vitesse qui
+       varie du simple au sextuple, parce qu'une partition espace ses notes selon une règle de
+       gravure et non au prorata de leur durée. Ça ne se remarque pas quand la bande défile —
+       elle bouge aussi — mais en mesures fixes le curseur est seul à bouger. */
+    return { x: glisse ? courbe(tMs) : ancre.x, y: ancre.y, h: ancre.h, bloc: ancre.bloc }
   }
 }

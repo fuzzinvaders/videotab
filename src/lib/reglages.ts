@@ -46,6 +46,9 @@ export function videoParDefaut(): ReglagesVideo {
     // choisi une, et continue de la suivre à chaque changement de thème.
     couleur: null,
     curseurStyle: 'les-deux',
+    // Glissant par défaut : c'est le mouvement le plus juste, et le seul qui ait un sens
+    // quand la bande défile. En mesures fixes, sauter de note en note se défend mieux.
+    curseurGlisse: true,
     opacite: 0.3,
     compteAvantSec: 2,
     fondu: true,
@@ -88,6 +91,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
       ['trait', 'surlignage', 'les-deux'] as const,
       d.curseurStyle,
     ),
+    curseurGlisse: video.curseurGlisse ?? d.curseurGlisse,
     opacite: nombre(video.opacite, d.opacite, 0, 0.9),
     compteAvantSec: nombre(video.compteAvantSec, d.compteAvantSec, 0, 12),
     fondu: video.fondu ?? d.fondu,

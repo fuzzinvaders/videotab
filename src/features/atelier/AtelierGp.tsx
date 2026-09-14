@@ -211,6 +211,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
           etendue?.y0 ?? 0,
         ),
         decalageMs,
+        reglages.video.curseurGlisse,
       ),
     })
   }, [feuille, bande, reglages.video, morceau.titre, morceau.artiste, gp])
@@ -223,7 +224,10 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   if (!gp) return <ErrorText>Ce morceau n'a pas de réglages Guitar Pro.</ErrorText>
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+    /* L'aperçu prend toute la largeur, les réglages se rangent dessous en colonnes. En
+       barre latérale ils faisaient une page à n'en plus finir, et laissaient les trois quarts
+       de l'écran vides sous une bande qui n'est haute que de deux cents pixels. */
+    <div className="space-y-4">
       <div className="space-y-4">
         {erreur ? <ErrorText>{erreur}</ErrorText> : null}
         <Lecteur scene={scene} audio={audio} message={etat} />
@@ -240,7 +244,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium text-slate-200">Partition</h2>

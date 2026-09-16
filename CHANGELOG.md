@@ -159,6 +159,13 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **The format box no longer claims mp4 while producing WebM.** A background that needs an
+  alpha channel — translucent black, or transparent — cannot be written to mp4, and the export
+  quietly fell back to WebM while the setting still read "mp4". The box now shows the format
+  that will actually come out, greyed and labelled as forced by the background, and says how
+  to get the mp4 back. A browser with no H.264 encoder at all is also called out, on the
+  finished file, rather than discovered in a timeline that refuses it.
+
 - **The preview ran ahead of its own sound by the width of the sound card's buffer.** A context
   does not play what it is handed at the instant it is handed it: the sound crosses a buffer and
   then the driver before reaching the speaker. Measured here, under Chrome on Windows: ten

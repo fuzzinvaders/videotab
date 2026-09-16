@@ -73,6 +73,8 @@ export function PanneauExport({
     /** Cadence tenue et cadence demandée : l'écart est le seul défaut qu'on ne voit pas. */
     ips: number
     fps: number
+    /** Le conteneur réellement produit : il n'est pas toujours celui qu'on avait demandé. */
+    ext: string
   } | null>(null)
   const annuler = useRef<AbortController | null>(null)
 
@@ -115,6 +117,7 @@ export function PanneauExport({
         taille: resultat.blob.size,
         ips: resultat.imagesParSeconde,
         fps: video.fps,
+        ext: resultat.ext,
       })
 
       if (garder) {
@@ -177,19 +180,24 @@ export function PanneauExport({
           label="Format"
           hint={
             transparente
-              ? 'Un fond transparent impose le WebM : le mp4 ne sait pas transporter la transparence.'
+              ? `Le fond ${video.fond === 'voile' ? '« Noir translucide »' : '« Transparent »'} réclame un canal alpha, que le mp4 ne sait pas transporter : quoi qu’on choisisse ici, la vidéo sortira en WebM — et en temps réel. Repasse sur un fond opaque, ou sur le vert d’incrustation, pour retrouver le mp4.`
               : video.format === 'mp4'
                 ? 'Se pose dans n’importe quel logiciel de montage.'
                 : 'Plus léger, mais Resolve et Premiere ne le lisent pas.'
           }
         >
+          {/* Le choix est montré forcé plutôt que laissé à « mp4 » pendant qu'on produit du
+              WebM : une case qui affiche autre chose que ce qui va sortir est un mensonge, et
+              c'est celui qu'on met le plus longtemps à découvrir — au montage. */}
           <Select
-            value={video.format}
-            disabled={encours}
+            value={transparente ? 'webm' : video.format}
+            disabled={encours || transparente}
             onChange={(e) => modifier((v) => ({ ...v, format: e.target.value as FormatVideo }))}
           >
             <option value="mp4">mp4 — pour le montage</option>
-            <option value="webm">WebM — pour le web</option>
+            <option value="webm">
+              {transparente ? 'WebM — imposé par le fond' : 'WebM — pour le web'}
+            </option>
           </Select>
         </Field>
 
@@ -264,6 +272,15 @@ export function PanneauExport({
           >
             Télécharger {produite.nom} ({poids(produite.taille)})
           </a>
+          {/* Le format aussi ne se signale que quand il a manqué. Un navigateur sans encodeur
+              H.264 rend un WebM sans rien dire, et on ne s'en aperçoit qu'en le posant dans une
+              timeline qui le refuse. */}
+          {!transparente && video.format === 'mp4' && produite.ext !== '.mp4' ? (
+            <p className="mt-2 text-sm text-amber-400">
+              Ce navigateur n’a pas d’encodeur mp4 : la vidéo est sortie en WebM. Resolve et
+              Premiere ne le lisent pas — essaie depuis Chrome ou Edge.
+            </p>
+          ) : null}
           {/* La cadence tenue n'est annoncée que quand elle a manqué : un export réussi n'a
               pas à se vanter, un export pauvre doit se dénoncer avant le montage. */}
           {produite.ips < produite.fps * 0.85 ? (

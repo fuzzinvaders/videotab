@@ -133,9 +133,15 @@ describe('mesurerScene : le plafond de hauteur', () => {
 })
 
 describe('mesurerScene : la marge du cadre « verre »', () => {
-  it('réserve de l’air tout autour, et lui seul', () => {
-    const verre = mesurer({ cadre: 'verre', cadrage: 'bande' })
-    const nu = mesurer({ cadre: 'aucun', cadrage: 'bande' })
+  /* Le verre ne réserve sa marge que sur un fond qui laisse passer l'image de dessous. Sur un
+     fond opaque, cette marge ne serait pas du vide autour de la carte mais un cadre noir
+     autour d'elle — un fichier sans transparence remplit de noir ce qu'on lui laisse vide. */
+  const enVerre = (fond: ReglagesVideo['fond']) =>
+    mesurer({ cadre: 'verre', cadrage: 'bande', fond })
+
+  it('réserve de l’air tout autour, et seulement s’il peut rester vide', () => {
+    const verre = enVerre('voile')
+    const nu = mesurer({ cadre: 'aucun', cadrage: 'bande', fond: 'voile' })
 
     // La carte est rentrée des quatre côtés : sans cela ses coins arrondis tombent hors champ
     // et son ombre est coupée net, ce qui est pire que pas d'ombre du tout.
@@ -151,9 +157,19 @@ describe('mesurerScene : la marge du cadre « verre »', () => {
     expect(nu.zone.w).toBe(video().largeur)
   })
 
+  it('n’en réserve aucun sur un fond opaque, où le vide sortirait noir', () => {
+    for (const fond of ['theme', 'noir', 'chroma'] as const) {
+      const g = enVerre(fond)
+      expect(g.zone.x).toBe(0)
+      expect(g.zone.w).toBe(video().largeur)
+      // L'image fait alors exactement la bande : pas un pixel d'entourage.
+      expect(g.hauteurImage - (g.zone.h + g.barreH)).toBeLessThanOrEqual(1)
+    }
+  })
+
   it('prend cette marge sur la tablature, pas sur l’image', () => {
-    const verre = mesurer({ cadre: 'verre', cadrage: 'bande' })
-    const nu = mesurer({ cadre: 'aucun', cadrage: 'bande' })
+    const verre = enVerre('voile')
+    const nu = mesurer({ cadre: 'aucun', cadrage: 'bande', fond: 'voile' })
     /* La zone rétrécie tient moins de mesures à échelle égale, donc l'échelle cède : c'est le
        prix de cet habillage, et il doit se voir dans les chiffres plutôt que déborder. */
     expect(verre.echelle).toBeLessThan(nu.echelle)

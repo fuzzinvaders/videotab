@@ -46,6 +46,9 @@ function reglagesParDefaut(type) {
     // Une tablature se comprime bien : « standard » est déjà large pour du trait sur fond uni.
     qualite: "standard",
     fond: "theme",
+    // Opacité du fond noir translucide, sans effet sur les autres fonds. Un peu plus de la
+    // moitié : assez sombre pour détacher les chiffres, assez clair pour voir la reprise.
+    opaciteFond: 0.55,
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
     // choisi une, et continue de la suivre quand on change de thème.
     couleur: null,

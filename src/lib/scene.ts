@@ -1,7 +1,8 @@
 import { mesurerScene } from './geometrie'
 import { formaterDuree } from './minutage'
+import { fondAvecAlpha } from './reglages'
 import { themeParId, type Theme } from './themes'
-import type { ReglagesVideo, StyleCurseur } from './types'
+import type { Cadre, ReglagesVideo, StyleCurseur } from './types'
 
 /**
  * La scène : ce qu'on voit, image par image.
@@ -111,6 +112,24 @@ export interface OptionsScene {
 }
 
 const DUREE_FONDU_MS = 500
+/* Le rayon des coins d'une carte, proportionnel à la hauteur de la bande et plafonné : sur une
+   incrustation haute de deux cents pixels, vingt-huit pixels de rayon mangeraient déjà les
+   premières mesures. Une seule définition, parce que le fond, la carte et sa lueur doivent
+   tomber au même endroit — sinon le fond dépasse dans les coins, ce qui est précisément le
+   défaut qu'on corrige ici. */
+function rayonDeCarte(zone: { h: number }): number {
+  return Math.min(zone.h * 0.12, 28)
+}
+
+/** Vrai pour les cadres dont les coins sont arrondis. */
+function cadreArrondi(cadre: Cadre): boolean {
+  return cadre === 'carte' || cadre === 'lueur'
+}
+
+/** Le noir translucide du fond « voile », à l'opacité demandée. */
+function voileNoir(opacite: number): string {
+  return `rgba(0, 0, 0, ${Math.min(1, Math.max(0, opacite)).toFixed(3)})`
+}
 /* Le vert des incrustations, celui qu'attendent les logiciels de montage. Pas le vert le plus
    vif possible : celui-là bave sur les bords des chiffres au moment du détourage. */
 const CHROMA = '#00b140'
@@ -188,6 +207,39 @@ export function creerScene(options: OptionsScene): Scene {
     return Math.min(scrollMax, Math.max(0, centre - zone.h / 2))
   }
 
+  /**
+   * Le fond, arrondi comme la carte quand la vidéo est la carte.
+   *
+   * Un rectangle plein derrière un cadre aux coins arrondis, ce sont quatre coins pleins qui
+   * dépassent : le cadre a beau être arrondi, la vidéo reste carrée. Le fond épouse donc la
+   * carte — mais seulement quand on a cadré sur la bande, c'est-à-dire quand la carte est le
+   * bord de l'image. Cadrée en 1920×1080, la carte flotte au milieu d'une page qui a le droit
+   * d'être pleine jusqu'aux bords, et lui creuser quatre encoches n'aurait aucun sens.
+   */
+  function peindreLeFond(ctx: CanvasRenderingContext2D, remplissage: string) {
+    ctx.fillStyle = remplissage
+    if (!cadreArrondi(video.cadre) || video.cadrage !== 'bande') {
+      ctx.fillRect(0, 0, largeur, hauteurImage)
+      return
+    }
+    // Hors de la zone — le bandeau du titre, la barre de progression — le fond reste carré :
+    // eux ne sont pas dans la carte.
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, 0, largeur, hauteurImage)
+    ctx.rect(zone.x, zone.y, zone.w, zone.h)
+    ctx.clip('evenodd')
+    ctx.fillRect(0, 0, largeur, hauteurImage)
+    ctx.restore()
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.roundRect(zone.x, zone.y, zone.w, zone.h, rayonDeCarte(zone))
+    ctx.clip()
+    ctx.fillRect(zone.x, zone.y, zone.w, zone.h)
+    ctx.restore()
+  }
+
   function reinitialiser(tMs = 0) {
     derniereImageMs = tMs
     scroll = positionVoulue(options.curseurA(tMs))
@@ -210,10 +262,12 @@ export function creerScene(options: OptionsScene): Scene {
     ctx.save()
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, largeur, hauteurImage)
-    if (video.fond === 'theme') {
-      ctx.fillStyle = theme.fond
-      ctx.fillRect(0, 0, largeur, hauteurImage)
-    } else if (video.fond === 'chroma') {
+    if (video.fond === 'theme') peindreLeFond(ctx, theme.fond)
+    else if (video.fond === 'voile') peindreLeFond(ctx, voileNoir(video.opaciteFond))
+    else if (video.fond === 'chroma') {
+      /* Le vert ne s'arrondit pas, et ce n'est pas un oubli : c'est lui qui sera détouré, et
+         c'est donc lui qui doit occuper les coins. Un coin laissé vide y ferait un trou que le
+         détourage ne rattraperait pas — du noir au montage, au lieu de rien. */
       ctx.fillStyle = CHROMA
       ctx.fillRect(0, 0, largeur, hauteurImage)
     }
@@ -285,13 +339,12 @@ export function creerScene(options: OptionsScene): Scene {
       const sortie = Math.min(1, Math.max(0, (options.dureeMs - tMs) / DUREE_FONDU_MS))
       const voile = 1 - Math.min(entree, sortie)
       if (voile > 0.001) {
-        // Sur un fond transparent, un voile noir ne ferait pas disparaître l'image : il la
-        // remplacerait par un rectangle noir dans la vidéo de reprise. On efface donc, au
-        // lieu de couvrir — le fondu est alors un fondu vers ce qu'il y a derrière.
-        ctx.globalCompositeOperation =
-          video.fond === 'transparent' ? 'destination-out' : 'source-over'
+        // Sur un fond qui laisse passer la reprise, un voile noir ne ferait pas disparaître
+        // l'image : il la remplacerait par un rectangle noir dans la vidéo de dessous. On
+        // efface donc, au lieu de couvrir — le fondu va vers ce qu'il y a derrière.
+        ctx.globalCompositeOperation = fondAvecAlpha(video.fond) ? 'destination-out' : 'source-over'
         ctx.globalAlpha = voile
-        ctx.fillStyle = video.fond === 'transparent' ? '#000000' : '#000000'
+        ctx.fillStyle = '#000000'
         ctx.fillRect(0, 0, largeur, hauteurImage)
         ctx.globalCompositeOperation = 'source-over'
         ctx.globalAlpha = 1
@@ -310,7 +363,7 @@ export function creerScene(options: OptionsScene): Scene {
 
     c.save()
     if (video.cadre === 'carte' || video.cadre === 'lueur') {
-      const rayon = Math.min(zone.h * 0.12, 28)
+      const rayon = rayonDeCarte(zone)
       c.beginPath()
       c.roundRect(0, 0, zone.w, zone.h, rayon)
       c.clip()
@@ -385,7 +438,7 @@ export function creerScene(options: OptionsScene): Scene {
     largeur,
     hauteur: hauteurImage,
     dureeMs: options.dureeMs,
-    transparente: video.fond === 'transparent',
+    transparente: fondAvecAlpha(video.fond),
     reinitialiser,
     dessiner,
   }
@@ -424,7 +477,7 @@ function dessinerCadreDerriere(
   },
 ) {
   if (o.video.cadre !== 'lueur') return
-  const rayon = Math.min(o.zone.h * 0.12, 28)
+  const rayon = rayonDeCarte(o.zone)
   ctx.save()
   // Le halo est peint *sous* la bande : dessiné par-dessus, il voilerait les chiffres qu'il
   // est censé mettre en valeur.
@@ -467,7 +520,7 @@ function dessinerCadreDevant(
       o.zone.y + d,
       Math.max(1, o.zone.w - o.trait),
       Math.max(1, o.zone.h - o.trait),
-      Math.max(0, Math.min(o.zone.h * 0.12, 28) - d),
+      Math.max(0, rayonDeCarte(o.zone) - d),
     )
     ctx.stroke()
     ctx.restore()
@@ -490,8 +543,8 @@ function dessinerCadreDevant(
   }
 
   if (o.video.cadre === 'vignette') {
-    // Sans fond opaque, la vignette n'a rien à assombrir : elle mangerait la transparence.
-    if (o.video.fond === 'transparent') return
+    // Sans fond opaque, la vignette n'a rien à assombrir : elle rongerait la transparence.
+    if (fondAvecAlpha(o.video.fond)) return
     const halo = ctx.createRadialGradient(
       o.largeur / 2,
       o.hauteur / 2,

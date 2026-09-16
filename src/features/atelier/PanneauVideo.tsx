@@ -221,7 +221,14 @@ export function PanneauMiseEnScene({
         </>
       ) : null}
 
-      <Field label="Encadrement">
+      <Field
+        label="Encadrement"
+        hint={
+          (video.cadre === 'carte' || video.cadre === 'lueur') && video.cadrage !== 'bande'
+            ? 'Les coins arrondis ne découpent l’image que si elle est cadrée sur la bande : sur une image entière, la carte flotte au milieu d’une page qui reste pleine.'
+            : undefined
+        }
+      >
         <Select
           value={video.cadre}
           onChange={(e) => modifier((v) => ({ ...v, cadre: e.target.value as Cadre }))}
@@ -330,11 +337,15 @@ export function PanneauVideo({
         hint={
           video.fond === 'chroma'
             ? 'Un vert plein, à détourer dans le montage. Ça marche partout, y compris sur Safari.'
-            : video.fond === 'transparent'
+            : video.fond === 'voile'
               ? alpha
-                ? 'Vraie transparence, en WebM VP8. À vérifier : tous les logiciels de montage ne la lisent pas.'
-                : 'Ce navigateur ne sait pas encoder la transparence — la vidéo sortira sur le fond du thème. Prends plutôt le fond vert.'
-              : 'Le fond du thème, opaque.'
+                ? 'La reprise se voit à travers, assombrie. Comme la transparence, ça impose le WebM et l’encodage en temps réel.'
+                : 'Ce navigateur ne sait pas encoder la transparence — le voile sortira opaque. Prends plutôt le fond vert.'
+              : video.fond === 'transparent'
+                ? alpha
+                  ? 'Vraie transparence, en WebM VP8. À vérifier : tous les logiciels de montage ne la lisent pas.'
+                  : 'Ce navigateur ne sait pas encoder la transparence — la vidéo sortira sur le fond du thème. Prends plutôt le fond vert.'
+                : 'Le fond du thème, opaque.'
         }
       >
         <Select
@@ -342,10 +353,24 @@ export function PanneauVideo({
           onChange={(e) => modifier((v) => ({ ...v, fond: e.target.value as FondVideo }))}
         >
           <option value="theme">Couleur du thème</option>
+          <option value="voile">Noir translucide</option>
           <option value="chroma">Vert d’incrustation</option>
           <option value="transparent">Transparent</option>
         </Select>
       </Field>
+
+      {video.fond === 'voile' ? (
+        <Curseur
+          label="Opacité du fond"
+          valeur={video.opaciteFond}
+          min={0.1}
+          max={1}
+          pas={0.05}
+          affichage={`${Math.round(video.opaciteFond * 100)} %`}
+          aide="Le seul réglage qui arbitre entre deux choses qu’on veut toutes les deux : voir sa reprise derrière la tablature, et lire la tablature."
+          onChange={(opaciteFond) => modifier((v) => ({ ...v, opaciteFond }))}
+        />
+      ) : null}
 
       <Repli titre="Curseur">
         <Field label="Curseur" hint={STYLES.find((s) => s.id === video.curseurStyle)?.aide}>

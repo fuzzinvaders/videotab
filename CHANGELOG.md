@@ -9,6 +9,21 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **A rounded frame now rounds the video too.** Behind a card with rounded corners sat a
+  square background, and its four corners stuck out: the frame was round, the video was not.
+  The background now follows the card — but only when the image is cropped to the band, which
+  is when the card *is* the edge of the video. Cropped to a full 1920×1080, the card floats in
+  the middle of a page that is entitled to be full to its edges, and notching four corners out
+  of it would mean nothing.
+
+  The green stays square on purpose: it is what gets keyed out, so it is what must occupy the
+  corners. A corner left empty would be a hole the key cannot fill — black in the edit rather
+  than nothing.
+
+  Verified by reading the pixels of a rendered frame: corner transparent and mid-top edge
+  opaque with a card cropped to the band, both opaque without a card, both opaque on a full
+  image, and the corner still pure #00b140 on green.
+
 - **The video comes out as an mp4, and weighs a fraction of what it did.** This video does not
   end up in a browser: it ends up in an editing timeline, laid over a cover. Resolve and
   Premiere do not read WebM, or read it badly — the file reached the end of the chain only to
@@ -267,6 +282,15 @@ versioning yet, so entries are grouped by the change that shipped them.
   own swatch in the row, so something is always visibly selected.
 
 ### Added
+
+- **A translucent black background.** The cover shows through, darkened, and the tablature
+  detaches from it without having to erase the picture — the compromise you want when the
+  theme background hides too much and pure transparency gives too little contrast. Its opacity
+  is a setting, because it is the one slider that arbitrates between two things you want at
+  once: seeing your playing behind the tablature, and reading the tablature.
+
+  Like transparency it needs an alpha channel, so it forces WebM and the real-time encoder.
+  Measured at the default 55 %: an alpha of 140 out of 255, exactly what was asked for.
 
 - **The preview answers the keyboard.** Space plays and pauses, the arrows move by five
   seconds (one second with Shift), Home returns to the start. Text fields keep their keys, so

@@ -5,6 +5,7 @@ import { ErrorText, Field, Select } from '../../components/ui/Field'
 import { useMorceaux } from '../../hooks/useMorceaux'
 import { messageOf } from '../../lib/api'
 import { formaterDuree } from '../../lib/minutage'
+import { fondAvecAlpha } from '../../lib/reglages'
 import type { Scene } from '../../lib/scene'
 import type { FormatVideo, Morceau, QualiteVideo, ReglagesVideo } from '../../lib/types'
 import { enregistrer, formatSupporte, voieDEncodage } from '../../lib/video'
@@ -57,7 +58,7 @@ export function PanneauExport({
   video: ReglagesVideo
   modifier: (f: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
-  const transparente = video.fond === 'transparent'
+  const transparente = fondAvecAlpha(video.fond)
   const { deposerVideo, supprimerVideo } = useMorceaux()
   const [encours, setEncours] = useState(false)
   const [progression, setProgression] = useState(0)

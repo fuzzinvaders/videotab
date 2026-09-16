@@ -1,5 +1,5 @@
 import { THEME_PAR_DEFAUT } from './themes'
-import type { Reglages, ReglagesVideo, TypeMorceau } from './types'
+import type { FondVideo, Reglages, ReglagesVideo, TypeMorceau } from './types'
 
 /**
  * Les réglages complétés, champ manquant par champ manquant.
@@ -47,6 +47,9 @@ export function videoParDefaut(): ReglagesVideo {
     // Une tablature se comprime bien : « standard » est déjà large pour du trait sur fond uni.
     qualite: 'standard',
     fond: 'theme',
+    // Un peu plus de la moitié : assez sombre pour détacher les chiffres, assez clair pour
+    // qu'on reconnaisse ce qui passe derrière.
+    opaciteFond: 0.55,
     // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
     // choisi une, et continue de la suivre à chaque changement de thème.
     couleur: null,
@@ -105,7 +108,8 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     format: parmi(video.format, ['mp4', 'webm'] as const, d.format),
     qualite: parmi(video.qualite, ['legere', 'standard', 'nette'] as const, d.qualite),
-    fond: parmi(video.fond, ['theme', 'chroma', 'transparent'] as const, d.fond),
+    fond: parmi(video.fond, ['theme', 'chroma', 'transparent', 'voile'] as const, d.fond),
+    opaciteFond: nombre(video.opaciteFond, d.opaciteFond, 0.1, 1),
     couleur: typeof video.couleur === 'string' ? video.couleur : null,
     curseurStyle: parmi(
       video.curseurStyle,
@@ -123,6 +127,18 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     bandeau: video.bandeau ?? d.bandeau,
     barreDeProgression: video.barreDeProgression ?? d.barreDeProgression,
   }
+}
+
+/**
+ * Vrai si ce fond a besoin d'un canal alpha dans la vidéo.
+ *
+ * Deux conséquences, et elles pèsent : le fichier sort forcément en WebM — le mp4 ne sait pas
+ * transporter la transparence — et l'encodage repasse par le magnétophone, donc en temps réel.
+ * Une même question posée depuis trois endroits, d'où cette fonction plutôt que trois
+ * comparaisons qui finiraient par diverger.
+ */
+export function fondAvecAlpha(fond: FondVideo): boolean {
+  return fond === 'transparent' || fond === 'voile'
 }
 
 export function completerReglages(reglages: Reglages | undefined, type: TypeMorceau): Reglages {

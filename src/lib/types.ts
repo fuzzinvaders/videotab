@@ -40,8 +40,16 @@ export type Cadre = 'aucun' | 'carte' | 'lueur' | 'vignette' | 'bandes'
  */
 export type StyleCurseur = 'trait' | 'surlignage' | 'les-deux'
 
-/** Ce qu'il y a derrière la partition quand la vidéo doit être incrustée ailleurs. */
-export type FondVideo = 'theme' | 'chroma' | 'transparent'
+/**
+ * Ce qu'il y a derrière la partition quand la vidéo doit être incrustée ailleurs.
+ *
+ * « voile » est le fond noir translucide : la reprise se voit à travers, mais assombrie, et
+ * les chiffres de la tablature s'en détachent sans qu'on ait à effacer l'image. C'est le
+ * compromis qu'on cherche quand le fond du thème cache trop et que la transparence pure ne
+ * donne pas assez de contraste. Comme « transparent », il demande un canal alpha, donc un
+ * WebM — et donc l'encodage lent.
+ */
+export type FondVideo = 'theme' | 'chroma' | 'transparent' | 'voile'
 
 /**
  * Ce que l'image exportée contient.
@@ -124,6 +132,13 @@ export interface ReglagesVideo {
   format: FormatVideo
   qualite: QualiteVideo
   fond: FondVideo
+  /**
+   * Opacité du fond noir translucide. Sans effet sur les autres fonds.
+   *
+   * C'est le seul curseur qui arbitre entre deux choses qu'on veut toutes les deux : voir sa
+   * reprise derrière la tablature, et lire la tablature.
+   */
+  opaciteFond: number
   /**
    * Couleur du curseur, ou `null` pour prendre celle du thème.
    *

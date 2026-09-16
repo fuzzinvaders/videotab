@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completerReglages, completerVideo, videoParDefaut } from './reglages'
+import { completerReglages, completerVideo, fondAvecAlpha, videoParDefaut } from './reglages'
 import type { ReglagesVideo } from './types'
 
 describe('completerVideo', () => {
@@ -28,6 +28,7 @@ describe('completerVideo', () => {
       compteAvantTemps: 999,
       epaisseurCadre: -5,
       anticipation: 99,
+      opaciteFond: 3,
     } as Partial<ReglagesVideo>)
     expect(fou.mesuresVisibles).toBeLessThanOrEqual(32)
     expect(fou.hauteurMax).toBeLessThanOrEqual(0.95)
@@ -37,6 +38,17 @@ describe('completerVideo', () => {
     // Une épaisseur négative dessinerait un trait à l'envers ; zéro veut dire « pas de trait ».
     expect(fou.epaisseurCadre).toBe(0)
     expect(fou.anticipation).toBeLessThanOrEqual(8)
+    expect(fou.opaciteFond).toBeLessThanOrEqual(1)
+  })
+
+  it('sait quels fonds réclament un canal alpha', () => {
+    // Le mp4 ne transporte pas la transparence et le magnétophone encode en temps réel :
+    // cette réponse décide donc du format du fichier et de la durée de l'export.
+    expect(fondAvecAlpha('transparent')).toBe(true)
+    expect(fondAvecAlpha('voile')).toBe(true)
+    expect(fondAvecAlpha('theme')).toBe(false)
+    // Le vert se détoure au montage : c'est justement la façon de s'en passer.
+    expect(fondAvecAlpha('chroma')).toBe(false)
   })
 
   it('refuse une disposition, un cadre ou un style de curseur inventés', () => {

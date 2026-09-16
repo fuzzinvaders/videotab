@@ -17,7 +17,7 @@ interface MorceauxContextValue {
   deposerVideo: (
     id: string,
     blob: Blob,
-    infos: { ext: string; dureeMs: number },
+    infos: { ext: string; dureeMs: number; cache?: Blob | null },
     onProgression?: (part: number) => void,
   ) => Promise<void>
   supprimerVideo: (id: string) => Promise<void>
@@ -87,11 +87,29 @@ export function MorceauxProvider({ children }: { children: ReactNode }) {
   async function deposerVideo(
     id: string,
     blob: Blob,
-    infos: { ext: string; dureeMs: number },
+    infos: { ext: string; dureeMs: number; cache?: Blob | null },
     onProgression?: (part: number) => void,
   ) {
     const url = `/api/morceaux/${id}/video?ext=${encodeURIComponent(infos.ext)}&duree=${Math.round(infos.dureeMs)}`
-    appliquer(await envoyerFichier<Bibliotheque>('PUT', url, blob, onProgression))
+    /* Deux envois quand la transparence a été découpée, et l'image d'abord : le cache
+       s'accroche à elle, et le serveur refuse un cache qui n'accompagnerait rien. La
+       progression est partagée entre les deux selon leur poids, sinon la barre reviendrait en
+       arrière à mi-chemin. */
+    const poidsTotal = blob.size + (infos.cache?.size ?? 0)
+    const part = (octets: number) => octets / Math.max(1, poidsTotal)
+    const reponse = await envoyerFichier<Bibliotheque>('PUT', url, blob, (p) =>
+      onProgression?.(p * part(blob.size)),
+    )
+    if (!infos.cache) {
+      appliquer(reponse)
+      return
+    }
+    const avance = part(blob.size)
+    appliquer(
+      await envoyerFichier<Bibliotheque>('PUT', `${url}&cache=1`, infos.cache, (p) =>
+        onProgression?.(avance + p * part(infos.cache!.size)),
+      ),
+    )
   }
 
   async function supprimerVideo(id: string) {

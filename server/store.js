@@ -380,8 +380,11 @@ function videoPath(nom) {
   return path.join(VIDEOS_DIR, nom);
 }
 
-/** Efface les vidéos d'un morceau, sauf celle qu'on vient de déposer. */
+/* Efface les vidéos d'un morceau, sauf celles qu'on vient de déposer. Il y en a deux quand
+   la transparence est sortie en deux fichiers — l'image et son cache — et perdre le second
+   reviendrait à garder une vidéo dont on ne sait plus quoi faire. */
 function balayerVideos(id, sauf = null) {
+  const gardes = new Set(Array.isArray(sauf) ? sauf : sauf ? [sauf] : []);
   let fichiers;
   try {
     fichiers = fs.readdirSync(VIDEOS_DIR);
@@ -389,7 +392,7 @@ function balayerVideos(id, sauf = null) {
     return;
   }
   for (const nom of fichiers) {
-    if (!nom.startsWith(id) || nom === sauf) continue;
+    if (!nom.startsWith(id) || gardes.has(nom)) continue;
     removeQuietly(path.join(VIDEOS_DIR, nom));
   }
 }

@@ -37,6 +37,12 @@ export interface OptionsEnregistrement {
   audio?: AudioBuffer | null
   /** Faire entendre la bande-son pendant l'enregistrement. */
   audible?: boolean
+  /**
+   * Sortir la transparence en deux fichiers plutôt qu'en un seul.
+   *
+   * Sans effet sur une vidéo opaque, qui n'a rien à découper. Voir {@link Enregistrement.cache}.
+   */
+  cacheSepare?: boolean
   onProgression?: (part: number, tMs: number) => void
   signal?: AbortSignal
 }
@@ -46,6 +52,18 @@ export interface Enregistrement {
   ext: '.webm' | '.mp4'
   type: string
   dureeMs: number
+  /**
+   * La découpe, quand la transparence a été sortie en deux fichiers.
+   *
+   * Une vidéo en noir et blanc, de mêmes dimensions et même durée que la première : blanc où
+   * la tablature est opaque, noir où l'on doit voir la reprise, gris entre les deux. C'est le
+   * « cache » des monteurs, et tous les logiciels savent s'en servir — c'est même le seul
+   * moyen d'avoir de la transparence dans un mp4.
+   *
+   * Le fichier d'image, lui, est posé sur noir : c'est ce qu'attend un cache. Les deux vont
+   * ensemble et ne valent rien séparés.
+   */
+  cache?: { blob: Blob; ext: '.webm' | '.mp4'; type: string }
   /**
    * Images par seconde réellement livrées. Ce n'est pas la même chose que la cadence
    * demandée : une machine qui n'a pas suivi rend un fichier plus pauvre, et c'est le seul
@@ -115,8 +133,8 @@ function debitVideo(
  * L'interface le dit avant qu'on appuie plutôt qu'après : « quelques dizaines de secondes » et
  * « le temps du morceau » ne se préparent pas de la même façon.
  */
-export function voieDEncodage(transparente: boolean): 'rapide' | 'temps-reel' {
-  return encodagePossible(transparente) ? 'rapide' : 'temps-reel'
+export function voieDEncodage(transparente: boolean, cacheSepare = false): 'rapide' | 'temps-reel' {
+  return encodagePossible(transparente, cacheSepare) ? 'rapide' : 'temps-reel'
 }
 
 export async function enregistrer(
@@ -125,9 +143,10 @@ export async function enregistrer(
 ): Promise<Enregistrement> {
   /* Par WebCodecs quand c'est possible : l'encodage y est plus rapide que le morceau, et les
      images y portent la date qu'on leur donne au lieu de celle de leur arrivée. Le
-     magnétophone reste pour les navigateurs qui n'ont pas WebCodecs et pour la transparence,
-     qu'aucun n'encode encore de façon fiable par cette voie. Voir lib/encodeur.ts. */
-  if (encodagePossible(scene.transparente)) return encoder(scene, options)
+     magnétophone reste pour les navigateurs qui n'ont pas WebCodecs, et pour la transparence
+     qu'on veut en un seul fichier — aucun navigateur ne sait l'encoder ici, et il faut alors
+     la découper en deux. Voir lib/encodeur.ts. */
+  if (encodagePossible(scene.transparente, options.cacheSepare)) return encoder(scene, options)
 
   const type = formatSupporte(scene.transparente, options.format ?? 'mp4')
   if (!type) {

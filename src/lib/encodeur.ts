@@ -23,9 +23,13 @@ import type { Enregistrement, OptionsEnregistrement } from './video'
  *  - la cadence est exacte, image après image, parce que c'est nous qui écrivons les dates ;
  *  - l'onglet peut faire ce qu'il veut : plus aucune horloge du navigateur n'entre en jeu.
  *
- * Le magnétophone reste néanmoins là, et pour deux raisons qui ne disparaîtront pas de sitôt :
- * tous les navigateurs n'ont pas WebCodecs, et surtout aucun n'encode encore la transparence de
- * façon fiable par cette voie. Une incrustation à fond transparent passe donc toujours par lui.
+ * Le magnétophone reste néanmoins là pour les navigateurs qui n'ont pas WebCodecs, et pour
+ * qui veut un seul fichier transparent : aucun navigateur n'encode la transparence par cette
+ * voie-ci. Vérifié plutôt que supposé — `VideoEncoder.isConfigSupported` refuse
+ * `alpha: 'keep'` sur VP9, VP8 et H.264, et l'encodeur le dit sans détour : « Alpha encoding
+ * is not currently supported ». Ce n'est pas une prudence héritée, c'est l'état de Chrome.
+ *
+ * D'où le cache séparé : voir {@link encoderAvecCache}.
  */
 
 /* Deux conteneurs, et le mp4 d'abord.
@@ -72,9 +76,15 @@ const QUALITES: Record<QualiteVideo, { avc: number; vp9: number; bitsParPixel: n
   nette: { avc: 21, vp9: 27, bitsParPixel: 0.08 },
 }
 
-/** Vrai si ce navigateur sait encoder par cette voie ce qu'on lui demande. */
-export function encodagePossible(transparente: boolean): boolean {
-  if (transparente) return false
+/**
+ * Vrai si ce navigateur sait encoder par cette voie ce qu'on lui demande.
+ *
+ * La transparence n'y passe que découpée en deux fichiers — l'image d'un côté, sa découpe de
+ * l'autre. Sans ce découpage il n'y a rien à faire ici : aucun encodeur du navigateur ne sait
+ * écrire un canal alpha, et c'est le magnétophone qui reprend la main.
+ */
+export function encodagePossible(transparente: boolean, avecCache = false): boolean {
+  if (transparente && !avecCache) return false
   return (
     typeof VideoEncoder !== 'undefined' &&
     typeof AudioEncoder !== 'undefined' &&
@@ -290,6 +300,9 @@ export async function encoder(
   const { fps } = options
   const images = Math.max(1, Math.round((scene.dureeMs / 1000) * fps))
   const frequence = options.audio?.sampleRate ?? 48000
+  /* Le cache n'a de sens que s'il y a de la transparence à découper. Sur une vidéo opaque il
+     serait uniformément blanc, c'est-à-dire un fichier de plus qui ne dit rien. */
+  const avecCache = Boolean(options.cacheSepare) && scene.transparente
 
   const plan = await choisirPlan(
     options.format ?? 'mp4',
@@ -302,15 +315,148 @@ export async function encoder(
   )
   if (!plan) throw new Error("Ce navigateur n'a aucun encodeur vidéo utilisable.")
 
+  /* La scène est dessinée une fois, sur un canvas qui garde son alpha ; les deux fichiers en
+     sont ensuite tirés. Redessiner pour le cache doublerait le coût du dessin — et surtout
+     rien ne garantirait que les deux passes tombent sur exactement la même image. */
   const canvas = document.createElement('canvas')
   canvas.width = scene.largeur
   canvas.height = scene.hauteur
-  const ctx = canvas.getContext('2d', { alpha: false })
+  const ctx = canvas.getContext('2d', { alpha: scene.transparente })
   if (!ctx) throw new Error('Impossible de préparer le canvas de rendu.')
 
-  const boite = ouvrirBoite(plan, scene.largeur, scene.hauteur, fps)
+  const image = ouvrirPiste(plan, scene, fps, Boolean(options.audio))
+  const cache = avecCache ? ouvrirPiste(plan, scene, fps, false) : null
 
+  /* Les deux canvas de sortie. Le premier portera l'image posée sur noir, le second sa
+     découpe en noir et blanc — tous deux opaques une fois peints, mais pas avant. */
+  const surNoir = avecCache ? toileDeTravail(scene.largeur, scene.hauteur) : null
+  const enCache = avecCache ? toileDeTravail(scene.largeur, scene.hauteur) : null
+
+  const interrompu = () => options.signal?.aborted === true
+
+  let blob: Blob
+  let blobCache: Blob | null = null
+  try {
+    if (options.audio) encoderLeSon(image.encodeurAudio!, options.audio, scene.dureeMs)
+
+    scene.reinitialiser(0)
+    for (let i = 0; i < images; i++) {
+      if (interrompu()) throw new DOMException('Encodage interrompu.', 'AbortError')
+      image.verifier()
+      cache?.verifier()
+
+      /* L'instant de l'image est calculé, jamais mesuré. C'est toute la différence : le
+         magnétophone datait ce qu'il recevait à l'heure de son arrivée, et il fallait donc que
+         l'arrivée tombe juste. Ici la date précède l'image. */
+      const tMs = (i * 1000) / fps
+      scene.dessiner(ctx, tMs)
+
+      // Une image clef toutes les deux secondes : de quoi se déplacer dans la vidéo au montage
+      // sans faire enfler le fichier. Mesuré sur un export de trois minutes, les images clefs
+      // ne pèsent que quatre pour cent du total — ce n'est pas là que se joue le poids.
+      const clef = i % Math.max(1, Math.round(fps * 2)) === 0
+      if (avecCache) {
+        poserSurNoir(surNoir!, canvas)
+        image.encoder(surNoir!, i, clef)
+        tirerLeCache(enCache!, canvas)
+        cache!.encoder(enCache!, i, clef)
+      } else {
+        image.encoder(canvas, i, clef)
+      }
+
+      options.onProgression?.(i / images, tMs)
+
+      /* La file d'attente est bornée à la main. Sans cela on empile cinq mille images
+         décompressées en mémoire pendant que l'encodeur en digère trente, et l'onglet meurt
+         avant la fin du morceau. Attendre ici rend aussi la main à la page, qui peut alors
+         redessiner sa barre de progression et voir passer une interruption. */
+      await image.respirer()
+      if (cache) await cache.respirer()
+    }
+
+    blob = await image.finir()
+    if (cache) blobCache = await cache.finir()
+  } finally {
+    image.fermer()
+    cache?.fermer()
+  }
+
+  options.onProgression?.(1, scene.dureeMs)
+
+  const ext = plan.format === 'mp4' ? '.mp4' : '.webm'
+  const type =
+    plan.format === 'mp4' ? 'video/mp4;codecs=avc1,mp4a.40.2' : 'video/webm;codecs=vp9,opus'
+  return {
+    blob,
+    ext,
+    type,
+    dureeMs: scene.dureeMs,
+    // Exacte par construction : on a produit le nombre d'images demandé, ni plus ni moins.
+    imagesParSeconde: fps,
+    cache: blobCache ? { blob: blobCache, ext, type } : undefined,
+  }
+}
+
+/**
+ * Un canvas de travail, avec son canal alpha — et c'est indispensable.
+ *
+ * On pourrait croire l'inverse, puisque les deux fichiers produits sont opaques : autant
+ * demander un canvas opaque et s'épargner une couche. C'est le contraire qui se passe. Un
+ * canvas sans alpha force chaque pixel à l'opacité complète *au moment où on y dessine*, donc
+ * avant le masquage qui suit — et le cache ressortait uniformément blanc, mesuré. L'alpha est
+ * la matière première ici ; l'opacité vient à la fin, du noir posé dessous.
+ */
+function toileDeTravail(largeur: number, hauteur: number): CanvasRenderingContext2D {
+  const c = document.createElement('canvas')
+  c.width = largeur
+  c.height = hauteur
+  const ctx = c.getContext('2d', { alpha: true })
+  if (!ctx) throw new Error('Impossible de préparer le canvas de rendu.')
+  return ctx
+}
+
+/**
+ * L'image posée sur noir.
+ *
+ * C'est la forme que réclame un cache : là où la scène est à moitié transparente, la couleur
+ * arrive déjà multipliée par son opacité, et le montage n'a plus qu'à ajouter ce qu'il y a
+ * derrière. Poser sur blanc, ou sur le fond du thème, ferait réapparaître cette couleur-là
+ * dans les zones que le cache est censé rendre invisibles.
+ */
+function poserSurNoir(sortie: CanvasRenderingContext2D, source: HTMLCanvasElement): void {
+  sortie.globalCompositeOperation = 'copy'
+  sortie.drawImage(source, 0, 0)
+  sortie.globalCompositeOperation = 'destination-over'
+  sortie.fillStyle = '#000000'
+  sortie.fillRect(0, 0, source.width, source.height)
+  sortie.globalCompositeOperation = 'source-over'
+}
+
+/**
+ * La découpe : blanc là où la scène est opaque, noir là où elle laisse tout passer.
+ *
+ * Le canal alpha ne se lit pas directement — on le transforme en lumière. La scène est
+ * recopiée avec son alpha, puis remplie de blanc « à l'intérieur de ce qui est déjà là », ce
+ * qui garde les demi-teintes des bords : un chiffre lissé garde ses bords lissés, et le voile
+ * à cinquante-cinq pour cent donne un gris à cinquante-cinq pour cent.
+ */
+function tirerLeCache(sortie: CanvasRenderingContext2D, source: HTMLCanvasElement): void {
+  sortie.globalCompositeOperation = 'copy'
+  sortie.drawImage(source, 0, 0)
+  sortie.globalCompositeOperation = 'source-in'
+  sortie.fillStyle = '#ffffff'
+  sortie.fillRect(0, 0, source.width, source.height)
+  sortie.globalCompositeOperation = 'destination-over'
+  sortie.fillStyle = '#000000'
+  sortie.fillRect(0, 0, source.width, source.height)
+  sortie.globalCompositeOperation = 'source-over'
+}
+
+/** Un encodeur, son multiplexeur et de quoi les mener : tout ce qu'une piste demande. */
+function ouvrirPiste(plan: Plan, scene: Scene, fps: number, avecSon: boolean) {
+  const boite = ouvrirBoite(plan, scene.largeur, scene.hauteur, fps)
   let echec: Error | null = null
+
   const encodeurVideo = new VideoEncoder({
     output: (morceau, meta) => boite.ajouterVideo(morceau, meta),
     error: (err) => {
@@ -320,7 +466,7 @@ export async function encoder(
   encodeurVideo.configure(plan.video)
 
   let encodeurAudio: AudioEncoder | null = null
-  if (options.audio && plan.audio) {
+  if (avecSon && plan.audio) {
     encodeurAudio = new AudioEncoder({
       output: (morceau, meta) => boite.ajouterAudio(morceau, meta),
       error: (err) => {
@@ -330,66 +476,37 @@ export async function encoder(
     encodeurAudio.configure(plan.audio)
   }
 
-  const interrompu = () => options.signal?.aborted === true
-
-  let blob: Blob
-  try {
-    if (options.audio && encodeurAudio) encoderLeSon(encodeurAudio, options.audio, scene.dureeMs)
-
-    scene.reinitialiser(0)
-    for (let i = 0; i < images; i++) {
-      if (interrompu()) throw new DOMException('Encodage interrompu.', 'AbortError')
+  return {
+    encodeurAudio,
+    verifier() {
       if (echec) throw echec
-
-      /* L'instant de l'image est calculé, jamais mesuré. C'est toute la différence : le
-         magnétophone datait ce qu'il recevait à l'heure de son arrivée, et il fallait donc que
-         l'arrivée tombe juste. Ici la date précède l'image. */
-      const tMs = (i * 1000) / fps
-      scene.dessiner(ctx, tMs)
-
-      const image = new VideoFrame(canvas, {
+    },
+    encoder(source: CanvasRenderingContext2D | HTMLCanvasElement, i: number, clef: boolean) {
+      const toile = source instanceof HTMLCanvasElement ? source : source.canvas
+      const img = new VideoFrame(toile, {
         timestamp: Math.round((i * 1_000_000) / fps),
         duration: Math.round(1_000_000 / fps),
       })
-      // Une image clef toutes les deux secondes : de quoi se déplacer dans la vidéo au montage
-      // sans faire enfler le fichier. Mesuré sur un export de trois minutes, les images clefs
-      // ne pèsent que quatre pour cent du total — ce n'est pas là que se joue le poids.
-      encodeurVideo.encode(image, optionsImage(plan, i % Math.max(1, Math.round(fps * 2)) === 0))
-      image.close()
-
-      options.onProgression?.(i / images, tMs)
-
-      /* La file d'attente est bornée à la main. Sans cela on empile cinq mille images
-         décompressées en mémoire pendant que l'encodeur en digère trente, et l'onglet meurt
-         avant la fin du morceau. Attendre ici rend aussi la main à la page, qui peut alors
-         redessiner sa barre de progression et voir passer une interruption. */
+      encodeurVideo.encode(img, optionsImage(plan, clef))
+      img.close()
+    },
+    async respirer() {
       if (encodeurVideo.encodeQueueSize > 8) {
         await new Promise<void>((suite) =>
-          encodeurVideo.addEventListener('dequeue', () => suite(), {
-            once: true,
-          }),
+          encodeurVideo.addEventListener('dequeue', () => suite(), { once: true }),
         )
       }
-    }
-
-    await encodeurVideo.flush()
-    if (encodeurAudio) await encodeurAudio.flush()
-    if (echec) throw echec
-    blob = boite.finir()
-  } finally {
-    if (encodeurVideo.state !== 'closed') encodeurVideo.close()
-    if (encodeurAudio && encodeurAudio.state !== 'closed') encodeurAudio.close()
-  }
-
-  options.onProgression?.(1, scene.dureeMs)
-
-  return {
-    blob,
-    ext: plan.format === 'mp4' ? '.mp4' : '.webm',
-    type: plan.format === 'mp4' ? 'video/mp4;codecs=avc1,mp4a.40.2' : 'video/webm;codecs=vp9,opus',
-    dureeMs: scene.dureeMs,
-    // Exacte par construction : on a produit le nombre d'images demandé, ni plus ni moins.
-    imagesParSeconde: fps,
+    },
+    async finir(): Promise<Blob> {
+      await encodeurVideo.flush()
+      if (encodeurAudio) await encodeurAudio.flush()
+      if (echec) throw echec
+      return boite.finir()
+    },
+    fermer() {
+      if (encodeurVideo.state !== 'closed') encodeurVideo.close()
+      if (encodeurAudio && encodeurAudio.state !== 'closed') encodeurAudio.close()
+    },
   }
 }
 

@@ -46,6 +46,9 @@ function reglagesParDefaut(type) {
     format: "mp4",
     // Une tablature se comprime bien : « standard » est déjà large pour du trait sur fond uni.
     qualite: "standard",
+    // La transparence en deux fichiers : neuf fois plus rapide, et en mp4. Sans effet tant
+    // que le fond est opaque.
+    cacheSepare: true,
     fond: "theme",
     // Opacité du fond noir translucide, sans effet sur les autres fonds. Un peu plus de la
     // moitié : assez sombre pour détacher les chiffres, assez clair pour voir la reprise.
@@ -171,6 +174,20 @@ function attacherVideo(data, id, video) {
   return { ok: true, morceau };
 }
 
+/* Le cache d'une vidéo transparente : un second fichier, noir et blanc, qui dit où l'image
+   se voit. Il s'attache à la vidéo déjà déposée plutôt que de venir avec elle — les deux
+   arrivent par deux envois, et le premier doit pouvoir réussir seul. S'il n'y a plus de
+   vidéo à qui l'attacher, c'est que l'envoi précédent a échoué : mieux vaut le dire que
+   garder un cache orphelin. */
+function attacherCache(data, id, cache) {
+  const morceau = trouver(data, id);
+  if (!morceau) return { ok: false, error: "Morceau introuvable." };
+  if (!morceau.video) return { ok: false, error: "Aucune vidéo à qui attacher ce cache." };
+  morceau.video.cache = cache;
+  toucher(morceau);
+  return { ok: true, morceau };
+}
+
 function detacherVideo(data, id) {
   const morceau = trouver(data, id);
   if (!morceau) return { ok: false, error: "Morceau introuvable." };
@@ -195,6 +212,7 @@ function supprimerMorceau(data, id) {
 }
 
 export {
+  attacherCache,
   attacherVideo,
   creerMorceau,
   detacherVideo,

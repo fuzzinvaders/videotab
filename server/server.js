@@ -34,6 +34,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as store from "./store.js";
 import {
+  attacherCache,
   attacherVideo,
   creerMorceau,
   detacherVideo,
@@ -690,10 +691,18 @@ async function handleApi(req, res, pathname) {
   if (action === "video") {
     if (req.method === "GET" || req.method === "HEAD") {
       if (!morceau.video) return sendJson(res, 404, { error: "Aucune vidéo enregistrée." });
-      const nom = `${morceau.titre || "videotab"}${morceau.video.ext}`;
-      return sendFile(req, res, store.videoPath(nomDeVideo(morceau)), {
-        type: MIME_TYPES[morceau.video.ext] || "video/webm",
-        download: query(req).get("telecharger") ? nom : null,
+      const q = query(req);
+      // Le cache se demande à part : c'est un second fichier, pas une variante du premier.
+      const cache = q.get("cache") ? morceau.video.cache : null;
+      if (q.get("cache") && !cache) {
+        return sendJson(res, 404, { error: "Cette vidéo n'a pas de cache." });
+      }
+      const ext = morceau.video.ext;
+      const titre = morceau.titre || "videotab";
+      const nom = cache ? `${titre} — cache${ext}` : `${titre}${ext}`;
+      return sendFile(req, res, store.videoPath(cache ? cache.nom : nomDeVideo(morceau)), {
+        type: MIME_TYPES[ext] || "video/webm",
+        download: q.get("telecharger") ? nom : null,
       });
     }
 
@@ -721,24 +730,29 @@ async function handleApi(req, res, pathname) {
         }
       }
 
+      /* Un export transparent arrive en deux envois : l'image, puis son cache. Le second se
+         reconnaît à ce drapeau et s'accroche à la vidéo que le premier vient d'enregistrer. */
+      const estCache = q.get("cache") === "1";
       const nom = store.nomVideo(morceau.id, ext);
       const { taille } = await receiveFile(req, store.videoPath(nom), VIDEO_MAX_BYTES);
 
       const resultat = store.updateLibrary((data) =>
-        attacherVideo(data, id.value, {
-          nom,
-          ext,
-          taille,
-          dureeMs: duree.value,
-        }),
+        estCache
+          ? attacherCache(data, id.value, { nom, taille })
+          : attacherVideo(data, id.value, { nom, ext, taille, dureeMs: duree.value }),
       );
       if (resultat.ok === false) {
         store.removeQuietly(store.videoPath(nom));
         return sendJson(res, 400, { error: resultat.error });
       }
-      // Les exports précédents partent seulement une fois le nouveau enregistré. Celui qui
-      // résiste encore parce qu'on le lit sera balayé au prochain passage.
-      store.balayerVideos(morceau.id, nom);
+      /* Les exports précédents partent seulement une fois le nouveau enregistré. Celui qui
+         résiste encore parce qu'on le lit sera balayé au prochain passage. Les deux fichiers
+         du même export s'épargnent l'un l'autre : sans quoi le cache effacerait l'image qu'il
+         accompagne, ou l'inverse. */
+      const gardes = [resultat.morceau.video.nom, resultat.morceau.video.cache?.nom].filter(
+        Boolean,
+      );
+      store.balayerVideos(morceau.id, gardes);
       return sendJson(res, 200, {
         ...store.readLibrary(),
         morceau: resultat.morceau,

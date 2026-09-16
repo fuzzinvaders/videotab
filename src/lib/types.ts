@@ -153,6 +153,17 @@ export interface ReglagesVideo {
   cadrage: Cadrage
   /** mp4 pour le montage, WebM pour le web. Voir {@link FormatVideo}. */
   format: FormatVideo
+  /**
+   * Sortir la transparence en deux fichiers — l'image, et sa découpe — au lieu d'un seul.
+   *
+   * Sans effet sur un fond opaque. Sur un fond qui n'en est pas un, c'est le réglage qui
+   * décide de tout le reste : aucun navigateur ne sait encoder un canal alpha par la voie
+   * rapide, si bien qu'un fichier unique impose le WebM et l'encodage en temps réel — trois
+   * minutes d'attente pour trois minutes de morceau. Découpée en deux, la même transparence
+   * repasse par la voie rapide et sort en mp4, neuf fois plus vite. Le montage a une
+   * manipulation de plus à faire, une seule, et toujours la même.
+   */
+  cacheSepare: boolean
   qualite: QualiteVideo
   fond: FondVideo
   /**
@@ -294,6 +305,14 @@ export interface VideoProduite {
   taille: number
   dureeMs: number
   creeLe: string
+  /**
+   * Le cache de la transparence, quand l'export l'a sortie en deux fichiers.
+   *
+   * Les deux ne valent rien séparés : l'un porte l'image posée sur noir, l'autre dit en noir
+   * et blanc où elle se voit. C'est pour cela qu'il vit ici, accroché à la vidéo, et non
+   * comme une vidéo de plus.
+   */
+  cache?: { nom: string; taille: number }
 }
 
 export interface Morceau {

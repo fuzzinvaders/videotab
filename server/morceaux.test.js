@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attacherCache,
   attacherVideo,
   creerMorceau,
   detacherVideo,
@@ -121,6 +122,26 @@ describe("attacherVideo / detacherVideo", () => {
     const result = detacherVideo(data, id);
     expect(result.ancienne.ext).toBe(".webm");
     expect(trouver(data, id).video).toBeNull();
+  });
+});
+
+describe("attacherCache", () => {
+  it("accroche le cache à la vidéo déjà déposée", () => {
+    const data = bibliothequeAvec("gp");
+    const id = data.morceaux[0].id;
+    attacherVideo(data, id, { nom: "v.mp4", ext: ".mp4", taille: 10, dureeMs: 1000 });
+    const result = attacherCache(data, id, { nom: "c.mp4", taille: 3 });
+    expect(result.ok).toBe(true);
+    expect(trouver(data, id).video.cache).toEqual({ nom: "c.mp4", taille: 3 });
+    // La vidéo elle-même n'est pas touchée : le cache s'ajoute, il ne remplace rien.
+    expect(trouver(data, id).video.nom).toBe("v.mp4");
+  });
+
+  it("refuse un cache qui n'accompagnerait rien", () => {
+    const data = bibliothequeAvec("gp");
+    const result = attacherCache(data, data.morceaux[0].id, { nom: "c.mp4", taille: 3 });
+    // Les deux fichiers ne valent rien séparés : un cache orphelin est une erreur, pas un état.
+    expect(result.ok).toBe(false);
   });
 });
 

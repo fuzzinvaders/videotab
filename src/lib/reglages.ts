@@ -48,6 +48,9 @@ export function videoParDefaut(): ReglagesVideo {
     format: 'mp4',
     // Une tablature se comprime bien : « standard » est déjà large pour du trait sur fond uni.
     qualite: 'standard',
+    // La transparence en deux fichiers : neuf fois plus rapide, et en mp4. Sans effet tant
+    // que le fond est opaque.
+    cacheSepare: true,
     fond: 'theme',
     // Un peu plus de la moitié : assez sombre pour détacher les chiffres, assez clair pour
     // qu'on reconnaisse ce qui passe derrière.
@@ -116,6 +119,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     format: parmi(video.format, ['mp4', 'webm'] as const, d.format),
     qualite: parmi(video.qualite, ['legere', 'standard', 'nette'] as const, d.qualite),
+    cacheSepare: video.cacheSepare ?? d.cacheSepare,
     fond: parmi(
       video.fond,
       ['theme', 'noir', 'degrade', 'chroma', 'transparent', 'voile'] as const,

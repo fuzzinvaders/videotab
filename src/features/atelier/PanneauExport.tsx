@@ -30,6 +30,46 @@ const QUALITES: Array<{ id: QualiteVideo; nom: string; aide: string }> = [
   },
 ]
 
+/**
+ * La marche à suivre, écrite là où les deux fichiers apparaissent.
+ *
+ * Deux fichiers sans explication, c'est un problème qu'on laisse à l'utilisateur. La
+ * manipulation est la même partout et ne se fait qu'une fois par montage ; encore faut-il la
+ * connaître, et ce n'est pas le genre de chose qu'on devine.
+ */
+function ModeDEmploiDuCache() {
+  return (
+    <details className="mt-2 text-sm text-slate-400">
+      <summary className="cursor-pointer text-slate-300">Comment s’en servir au montage</summary>
+      <p className="mt-2">
+        Les deux fichiers vont ensemble : l’image est posée sur noir, le cache dit en noir et blanc
+        où elle se voit. C’est ainsi qu’on transporte de la transparence dans un mp4.
+      </p>
+      <ul className="mt-2 list-disc space-y-1 pl-5">
+        <li>
+          <strong className="text-slate-300">DaVinci Resolve</strong> — pose les deux au-dessus de
+          ta reprise, puis dans la page Color relie le cache à l’entrée alpha du nœud de l’image
+          (clic droit sur le nœud, « Add Matte »). Coche « Post-Multiply » si les bords te
+          paraissent doublés.
+        </li>
+        <li>
+          <strong className="text-slate-300">Premiere Pro</strong> — image sur une piste, cache sur
+          celle du dessus, puis l’effet « Track Matte Key » sur l’image : cache en luminance, «
+          Composite Using: Matte Luma ».
+        </li>
+        <li>
+          <strong className="text-slate-300">Final Cut, CapCut, Shotcut</strong> — cherche « luma
+          matte », « luminance key » ou « masque de luminance » : c’est le même principe partout.
+        </li>
+      </ul>
+      <p className="mt-2">
+        Un seul fichier te suffit ? Repasse « Transparence » sur « Un seul fichier WebM » — c’est
+        alors l’attente qui revient.
+      </p>
+    </details>
+  )
+}
+
 function poids(octets: number): string {
   return octets < 1024 * 1024
     ? `${Math.round(octets / 1024)} ko`
@@ -75,6 +115,10 @@ export function PanneauExport({
     fps: number
     /** Le conteneur réellement produit : il n'est pas toujours celui qu'on avait demandé. */
     ext: string
+    /** L'URL de la découpe, quand la transparence est sortie en deux fichiers. */
+    cache: string | null
+    nomCache?: string
+    tailleCache?: number
   } | null>(null)
   const annuler = useRef<AbortController | null>(null)
 
@@ -83,13 +127,17 @@ export function PanneauExport({
   useEffect(() => {
     return () => {
       if (produite) URL.revokeObjectURL(produite.url)
+      if (produite?.cache) URL.revokeObjectURL(produite.cache)
     }
   }, [produite])
 
+  /* Découpée en deux, la transparence repasse par la voie rapide et par le mp4 : c'est le
+     seul moyen, aucun encodeur du navigateur ne sachant écrire un canal alpha. */
+  const enDeuxFichiers = transparente && video.cacheSepare
   const supporte = formatSupporte(transparente, video.format)
   /* Deux voies, deux attentes très différentes : autant le dire avant qu'on appuie. La rapide
      encode plus vite que le morceau ne dure ; l'autre l'enregistre à sa vitesse. */
-  const rapide = voieDEncodage(transparente) === 'rapide'
+  const rapide = voieDEncodage(transparente, video.cacheSepare) === 'rapide'
 
   async function lancer() {
     if (!scene) return
@@ -104,6 +152,7 @@ export function PanneauExport({
         fps: video.fps,
         format: video.format,
         qualite: video.qualite,
+        cacheSepare: video.cacheSepare,
         audio,
         audible,
         signal: annuler.current.signal,
@@ -111,8 +160,12 @@ export function PanneauExport({
       })
 
       if (produite) URL.revokeObjectURL(produite.url)
+      if (produite?.cache) URL.revokeObjectURL(produite.cache)
       setProduite({
         url: URL.createObjectURL(resultat.blob),
+        cache: resultat.cache ? URL.createObjectURL(resultat.cache.blob) : null,
+        nomCache: `${morceau.titre || 'videotab'} — cache${resultat.cache?.ext ?? ''}`,
+        tailleCache: resultat.cache?.blob.size,
         nom: `${morceau.titre || 'videotab'}${resultat.ext}`,
         taille: resultat.blob.size,
         ips: resultat.imagesParSeconde,
@@ -126,7 +179,11 @@ export function PanneauExport({
         await deposerVideo(
           morceau.id,
           resultat.blob,
-          { ext: resultat.ext, dureeMs: resultat.dureeMs },
+          {
+            ext: resultat.ext,
+            dureeMs: resultat.dureeMs,
+            cache: resultat.cache?.blob ?? null,
+          },
           setProgression,
         )
       }
@@ -175,12 +232,32 @@ export function PanneauExport({
 
       {/* Le format et la qualité se règlent ici et non avec la mise en scène : ils ne
           changent rien à ce qu'on voit dans l'aperçu, seulement au fichier qui en sort. */}
+      {transparente ? (
+        <Field
+          label="Transparence"
+          hint={
+            enDeuxFichiers
+              ? 'Aucun navigateur ne sait encoder un canal alpha : découpée en deux, la transparence repasse par l’encodeur rapide et par le mp4. Une manipulation de plus au montage, toujours la même — la marche à suivre s’affiche avec les fichiers.'
+              : 'Un seul fichier, mais alors en WebM et enregistré en temps réel : autant d’attente que le morceau dure. Tous les logiciels de montage ne lisent pas le WebM transparent.'
+          }
+        >
+          <Select
+            value={video.cacheSepare ? 'deux' : 'un'}
+            disabled={encours}
+            onChange={(e) => modifier((v) => ({ ...v, cacheSepare: e.target.value === 'deux' }))}
+          >
+            <option value="deux">Deux fichiers — image et cache, rapide</option>
+            <option value="un">Un seul fichier WebM — temps réel</option>
+          </Select>
+        </Field>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Format"
           hint={
-            transparente
-              ? `Le fond ${video.fond === 'voile' ? '« Noir translucide »' : '« Transparent »'} réclame un canal alpha, que le mp4 ne sait pas transporter : quoi qu’on choisisse ici, la vidéo sortira en WebM — et en temps réel. Repasse sur un fond opaque, ou sur le vert d’incrustation, pour retrouver le mp4.`
+            transparente && !enDeuxFichiers
+              ? `Le fond ${video.fond === 'voile' ? '« Noir translucide »' : '« Transparent »'} réclame un canal alpha, que le mp4 ne sait pas transporter : en un seul fichier, la vidéo sortira en WebM quoi qu’on choisisse ici.`
               : video.format === 'mp4'
                 ? 'Se pose dans n’importe quel logiciel de montage.'
                 : 'Plus léger, mais Resolve et Premiere ne le lisent pas.'
@@ -190,13 +267,13 @@ export function PanneauExport({
               WebM : une case qui affiche autre chose que ce qui va sortir est un mensonge, et
               c'est celui qu'on met le plus longtemps à découvrir — au montage. */}
           <Select
-            value={transparente ? 'webm' : video.format}
-            disabled={encours || transparente}
+            value={transparente && !enDeuxFichiers ? 'webm' : video.format}
+            disabled={encours || (transparente && !enDeuxFichiers)}
             onChange={(e) => modifier((v) => ({ ...v, format: e.target.value as FormatVideo }))}
           >
             <option value="mp4">mp4 — pour le montage</option>
             <option value="webm">
-              {transparente ? 'WebM — imposé par le fond' : 'WebM — pour le web'}
+              {transparente && !enDeuxFichiers ? 'WebM — imposé par le fond' : 'WebM — pour le web'}
             </option>
           </Select>
         </Field>
@@ -272,10 +349,24 @@ export function PanneauExport({
           >
             Télécharger {produite.nom} ({poids(produite.taille)})
           </a>
+          {produite.cache ? (
+            <>
+              <a
+                href={produite.cache}
+                download={produite.nomCache ?? 'cache'}
+                className="mt-1 block text-sm text-amber-400 hover:text-amber-300"
+              >
+                Télécharger le cache ({poids(produite.tailleCache ?? 0)})
+              </a>
+              <ModeDEmploiDuCache />
+            </>
+          ) : null}
           {/* Le format aussi ne se signale que quand il a manqué. Un navigateur sans encodeur
               H.264 rend un WebM sans rien dire, et on ne s'en aperçoit qu'en le posant dans une
               timeline qui le refuse. */}
-          {!transparente && video.format === 'mp4' && produite.ext !== '.mp4' ? (
+          {(!transparente || enDeuxFichiers) &&
+          video.format === 'mp4' &&
+          produite.ext !== '.mp4' ? (
             <p className="mt-2 text-sm text-amber-400">
               Ce navigateur n’a pas d’encodeur mp4 : la vidéo est sortie en WebM. Resolve et
               Premiere ne le lisent pas — essaie depuis Chrome ou Edge.
@@ -305,6 +396,14 @@ export function PanneauExport({
             >
               Télécharger ({poids(morceau.video.taille)})
             </a>
+            {morceau.video.cache ? (
+              <a
+                href={`/api/morceaux/${morceau.id}/video?cache=1&telecharger=1`}
+                className="text-amber-400 hover:text-amber-300"
+              >
+                Télécharger le cache ({poids(morceau.video.cache.taille)})
+              </a>
+            ) : null}
             <button
               onClick={() => void supprimerVideo(morceau.id)}
               className="text-slate-500 hover:text-red-400"

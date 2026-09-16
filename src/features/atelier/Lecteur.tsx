@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { creerApercu, type Apercu } from '../../lib/apercu'
+import { useT } from '../../lib/langue'
 import { formaterDuree } from '../../lib/minutage'
 import type { Scene } from '../../lib/scene'
 
@@ -19,6 +20,7 @@ export function Lecteur({
   audio: AudioBuffer | null
   message?: string | null
 }) {
+  const t = useT()
   const canvas = useRef<HTMLCanvasElement>(null)
   const apercu = useRef<Apercu | null>(null)
   const [position, setPosition] = useState(0)
@@ -125,7 +127,7 @@ export function Lecteur({
         <canvas ref={canvas} className="block h-auto w-full" />
         {!scene ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/80 p-6 text-center text-sm text-slate-400">
-            {message ?? 'Préparation…'}
+            {t(message ?? 'Préparation…')}
           </div>
         ) : null}
       </div>
@@ -135,8 +137,8 @@ export function Lecteur({
           onClick={basculer}
           disabled={!scene}
           className="rounded-lg bg-slate-800 px-3 py-1.5 text-slate-100 transition-colors hover:bg-slate-700 disabled:opacity-40"
-          aria-label={enLecture ? 'Pause' : 'Lecture'}
-          title="Espace"
+          aria-label={enLecture ? t('Pause') : t('Lecture')}
+          title={t('Espace')}
         >
           {enLecture ? '❚❚' : '▶'}
         </button>
@@ -149,7 +151,7 @@ export function Lecteur({
           onChange={(e) => apercu.current?.allerA(Number(e.target.value))}
           disabled={!scene}
           className="flex-1 accent-amber-500"
-          aria-label="Position dans le morceau"
+          aria-label={t('Position dans le morceau')}
         />
         <span className="font-mono text-xs text-slate-400 tabular-nums">
           {formaterDuree(position)} / {formaterDuree(scene?.dureeMs ?? 0)}

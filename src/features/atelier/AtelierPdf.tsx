@@ -17,6 +17,7 @@ import {
   type PageRendue,
   type Placement,
 } from '../../lib/pdf'
+import { useT } from '../../lib/langue'
 import { creerScene, type Feuille } from '../../lib/scene'
 import { themeParId } from '../../lib/themes'
 import type { Morceau } from '../../lib/types'
@@ -36,6 +37,7 @@ import { useReglages } from './useReglages'
  */
 export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: ArrayBuffer }) {
   const { reglages, modifier, enregistre } = useReglages(morceau)
+  const t = useT()
   const { deposerAudio, supprimerAudio } = useMorceaux()
   const pdf = reglages.pdf
   const theme = themeParId(reglages.video.theme)
@@ -184,7 +186,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
     [audio, pdf?.decalageMs, decompteMs, dureeTempsMs, reglages.video.decompteSonore],
   )
 
-  if (!pdf) return <ErrorText>Ce morceau n'a pas de réglages PDF.</ErrorText>
+  if (!pdf) return <ErrorText>{t('Ce morceau n’a pas de réglages PDF.')}</ErrorText>
 
   function majPdf(mutation: (p: NonNullable<typeof pdf>) => NonNullable<typeof pdf>) {
     modifier((r) => ({ ...r, pdf: mutation(r.pdf!) }))
@@ -222,15 +224,16 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
         scene={scene}
         audio={bandeSon}
         message={
-          pages.length === 0 ? etat : 'Découpe d’abord les systèmes : « Détecter les lignes ».'
+          pages.length === 0
+            ? t(etat)
+            : t('Découpe d’abord les systèmes : « Détecter les lignes ».')
         }
       />
 
       <Card className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium text-slate-200">
-            Découpage — {pdf.systemes.length} système
-            {pdf.systemes.length > 1 ? 's' : ''}
+            {t('Découpage — {n} systèmes', { n: pdf.systemes.length })}
           </h2>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={detecter} disabled={pages.length === 0}>
@@ -248,12 +251,12 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
           </div>
         </div>
         <p className="text-sm text-slate-400">
-          Tire un rectangle sur la page pour ajouter une ligne, attrape ses bords pour l'ajuster,
-          change son nombre de mesures dans le coin. L'ordre de lecture suit la page, de haut en
-          bas.
+          {t(
+            'Tire un rectangle sur la page pour ajouter une ligne, attrape ses bords pour l’ajuster, change son nombre de mesures dans le coin. L’ordre de lecture suit la page, de haut en bas.',
+          )}
         </p>
         <p className="text-xs text-slate-500">
-          Pages rendues par{' '}
+          {t('Pages rendues par')}{' '}
           <a
             href="https://mozilla.github.io/pdf.js/"
             target="_blank"
@@ -266,7 +269,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
         </p>
 
         {pages.length === 0 ? (
-          <p className="text-slate-500">{etat}</p>
+          <p className="text-slate-500">{t(etat)}</p>
         ) : (
           <EditeurSystemes
             pages={pages}
@@ -284,9 +287,9 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
         <div className="space-y-4">
           <Card className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-medium text-slate-200">Minutage</h2>
+              <h2 className="font-medium text-slate-200">{t('Minutage')}</h2>
               <span className="text-xs text-slate-500">
-                {enregistre ? 'enregistré' : 'enregistrement…'}
+                {enregistre ? t('enregistré') : t('enregistrement…')}
               </span>
             </div>
 
@@ -340,22 +343,24 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
                 className="w-full accent-amber-500"
               />
               <span className="mt-1 block text-xs text-slate-500">
-                Le temps qui passe avant la première note de la bande-son — l'intro, le décompte du
-                batteur, le silence du début d'enregistrement.
+                {t(
+                  'Le temps qui passe avant la première note de la bande-son — l’intro, le décompte du batteur, le silence du début d’enregistrement.',
+                )}
               </span>
             </label>
 
             <p className="rounded-lg bg-slate-950 px-3 py-2 text-sm text-slate-400">
-              Durée calculée :{' '}
+              {t('Durée calculée :')}{' '}
               <span className="text-amber-300">{formaterDuree(dureeTotaleMs(etapes))}</span>
             </p>
           </Card>
 
           <Card className="space-y-3">
-            <h2 className="font-medium text-slate-200">Bande-son</h2>
+            <h2 className="font-medium text-slate-200">{t('Bande-son')}</h2>
             <p className="text-sm text-slate-400">
-              Un PDF ne contient aucune note qu'une machine puisse jouer. Le seul son possible est
-              celui qu'on apporte : l'enregistrement du morceau, mp3 ou wav.
+              {t(
+                'Un PDF ne contient aucune note qu’une machine puisse jouer. Le seul son possible est celui qu’on apporte : l’enregistrement du morceau, mp3 ou wav.',
+              )}
             </p>
             <input
               ref={champAudio}
@@ -371,7 +376,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
                   onClick={() => void supprimerAudio(morceau.id)}
                   className="shrink-0 text-sm text-slate-500 hover:text-red-400"
                 >
-                  Retirer
+                  {t('Retirer')}
                 </button>
               </div>
             ) : (

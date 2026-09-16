@@ -2,9 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { ErrorText, Field, Input } from '../../components/ui/Field'
 import { useAuth } from '../../hooks/useAuth'
+import { useT } from '../../lib/langue'
 import { AuthShell } from './AuthShell'
 
 export function SetupScreen() {
+  const t = useT()
   const { setup } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -55,7 +57,7 @@ export function SetupScreen() {
         </Field>
         <ErrorText>{error}</ErrorText>
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Création…' : 'Créer le compte'}
+          {busy ? t('Création…') : t('Créer le compte')}
         </Button>
       </form>
     </AuthShell>

@@ -317,6 +317,23 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The interface speaks English.** It follows the browser's language on first load, and a
+  button in the navigation bar switches it; the choice is kept in the browser rather than on
+  the account, because a language is a habit of one machine — and because it has to be right
+  on the sign-in screen, before anyone knows who you are.
+
+  The dictionary is keyed by the French sentence itself, not by an identifier like
+  `export.button.start`. The code stays readable without a lookup, a sentence with no
+  translation shows in French instead of showing a key to the user, and there are no three
+  hundred names to invent. The cost is that fixing a comma in the French silently detaches its
+  translation — so two tests hold the other end: every explicit `t('…')` must have an entry,
+  and no entry may sit unused.
+
+  Most of the text never needed touching. Labels, hints, button captions, placeholders and
+  error messages all pass through the same handful of components, and those translate what
+  they are given — which also means messages coming from the server are translated on their
+  way to the screen, without the server having to know who is reading.
+
 - **Transparency exports nine times faster, in two files.** No browser can encode an alpha
   channel: `VideoEncoder.isConfigSupported` refuses `alpha: 'keep'` on VP9, VP8 and H.264
   alike, and Chrome says so plainly — "Alpha encoding is not currently supported". Any

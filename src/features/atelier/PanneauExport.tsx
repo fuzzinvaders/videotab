@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { ErrorText, Field, Select } from '../../components/ui/Field'
+import { ErrorText, Field, Option, Select } from '../../components/ui/Field'
 import { useMorceaux } from '../../hooks/useMorceaux'
 import { messageOf } from '../../lib/api'
 import { formaterDuree } from '../../lib/minutage'
+import { useT } from '../../lib/langue'
 import { fondAvecAlpha } from '../../lib/reglages'
 import type { Scene } from '../../lib/scene'
 import type { FormatVideo, Morceau, QualiteVideo, ReglagesVideo } from '../../lib/types'
@@ -38,33 +39,41 @@ const QUALITES: Array<{ id: QualiteVideo; nom: string; aide: string }> = [
  * connaître, et ce n'est pas le genre de chose qu'on devine.
  */
 function ModeDEmploiDuCache() {
+  const t = useT()
   return (
     <details className="mt-2 text-sm text-slate-400">
-      <summary className="cursor-pointer text-slate-300">Comment s’en servir au montage</summary>
+      <summary className="cursor-pointer text-slate-300">
+        {t('Comment s’en servir au montage')}
+      </summary>
       <p className="mt-2">
-        Les deux fichiers vont ensemble : l’image est posée sur noir, le cache dit en noir et blanc
-        où elle se voit. C’est ainsi qu’on transporte de la transparence dans un mp4.
+        {t(
+          'Les deux fichiers vont ensemble : l’image est posée sur noir, le cache dit en noir et blanc où elle se voit. C’est ainsi qu’on transporte de la transparence dans un mp4.',
+        )}
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         <li>
-          <strong className="text-slate-300">DaVinci Resolve</strong> — pose les deux au-dessus de
-          ta reprise, puis dans la page Color relie le cache à l’entrée alpha du nœud de l’image
-          (clic droit sur le nœud, « Add Matte »). Coche « Post-Multiply » si les bords te
-          paraissent doublés.
+          <strong className="text-slate-300">DaVinci Resolve</strong>{' '}
+          {t(
+            '— pose les deux au-dessus de ta reprise, puis dans la page Color relie le cache à l’entrée alpha du nœud de l’image (clic droit sur le nœud, « Add Matte »). Coche « Post-Multiply » si les bords te paraissent doublés.',
+          )}
         </li>
         <li>
-          <strong className="text-slate-300">Premiere Pro</strong> — image sur une piste, cache sur
-          celle du dessus, puis l’effet « Track Matte Key » sur l’image : cache en luminance, «
-          Composite Using: Matte Luma ».
+          <strong className="text-slate-300">Premiere Pro</strong>{' '}
+          {t(
+            '— image sur une piste, cache sur celle du dessus, puis l’effet « Track Matte Key » sur l’image : cache en luminance, « Composite Using: Matte Luma ».',
+          )}
         </li>
         <li>
-          <strong className="text-slate-300">Final Cut, CapCut, Shotcut</strong> — cherche « luma
-          matte », « luminance key » ou « masque de luminance » : c’est le même principe partout.
+          <strong className="text-slate-300">Final Cut, CapCut, Shotcut</strong>{' '}
+          {t(
+            '— cherche « luma matte », « luminance key » ou « masque de luminance » : c’est le même principe partout.',
+          )}
         </li>
       </ul>
       <p className="mt-2">
-        Un seul fichier te suffit ? Repasse « Transparence » sur « Un seul fichier WebM » — c’est
-        alors l’attente qui revient.
+        {t(
+          'Un seul fichier te suffit ? Repasse « Transparence » sur « Un seul fichier WebM » — c’est alors l’attente qui revient.',
+        )}
       </p>
     </details>
   )
@@ -98,6 +107,7 @@ export function PanneauExport({
   video: ReglagesVideo
   modifier: (f: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
+  const t = useT()
   const transparente = fondAvecAlpha(video.fond)
   const { deposerVideo, supprimerVideo } = useMorceaux()
   const [encours, setEncours] = useState(false)
@@ -202,32 +212,26 @@ export function PanneauExport({
 
   return (
     <Card className="space-y-3">
-      <h2 className="font-medium text-slate-200">Exporter</h2>
+      <h2 className="font-medium text-slate-200">{t('Exporter')}</h2>
 
       {!supporte ? (
         <ErrorText>
-          Ce navigateur ne sait pas enregistrer de vidéo. Firefox, Chrome, Edge et Safari récents le
-          savent.
+          {t(
+            'Ce navigateur ne sait pas enregistrer de vidéo. Firefox, Chrome, Edge et Safari récents le savent.',
+          )}
         </ErrorText>
       ) : null}
 
       <p className="text-sm text-slate-400">
-        {rapide ? (
-          <>
-            L'encodage se fait ici, dans l'onglet, mais{' '}
-            <strong className="text-slate-300">plus vite que le morceau</strong> : les{' '}
-            {formaterDuree(scene?.dureeMs ?? 0)} de vidéo ne demandent pas{' '}
-            {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Ne ferme pas l'onglet, c'est tout.
-          </>
-        ) : (
-          <>
-            L'encodage se fait ici, dans l'onglet, et{' '}
-            <strong className="text-slate-300">en temps réel</strong> :{' '}
-            {formaterDuree(scene?.dureeMs ?? 0)} de morceau demandent{' '}
-            {formaterDuree(scene?.dureeMs ?? 0)} d'attente. Tu peux aller ailleurs pendant ce
-            temps-là, l'enregistrement continue — mais ne ferme pas l'onglet.
-          </>
-        )}
+        {rapide
+          ? t(
+              'L’encodage se fait ici, dans l’onglet, mais plus vite que le morceau : les {duree} de vidéo ne demandent pas {duree} d’attente. Ne ferme pas l’onglet, c’est tout.',
+              { duree: formaterDuree(scene?.dureeMs ?? 0) },
+            )
+          : t(
+              'L’encodage se fait ici, dans l’onglet, et en temps réel : {duree} de morceau demandent {duree} d’attente. Tu peux aller ailleurs pendant ce temps-là, l’enregistrement continue — mais ne ferme pas l’onglet.',
+              { duree: formaterDuree(scene?.dureeMs ?? 0) },
+            )}
       </p>
 
       {/* Le format et la qualité se règlent ici et non avec la mise en scène : ils ne
@@ -246,8 +250,8 @@ export function PanneauExport({
             disabled={encours}
             onChange={(e) => modifier((v) => ({ ...v, cacheSepare: e.target.value === 'deux' }))}
           >
-            <option value="deux">Deux fichiers — image et cache, rapide</option>
-            <option value="un">Un seul fichier WebM — temps réel</option>
+            <Option value="deux">Deux fichiers — image et cache, rapide</Option>
+            <Option value="un">Un seul fichier WebM — temps réel</Option>
           </Select>
         </Field>
       ) : null}
@@ -257,7 +261,12 @@ export function PanneauExport({
           label="Format"
           hint={
             transparente && !enDeuxFichiers
-              ? `Le fond ${video.fond === 'voile' ? '« Noir translucide »' : '« Transparent »'} réclame un canal alpha, que le mp4 ne sait pas transporter : en un seul fichier, la vidéo sortira en WebM quoi qu’on choisisse ici.`
+              ? t(
+                  'Le fond {fond} réclame un canal alpha, que le mp4 ne sait pas transporter : en un seul fichier, la vidéo sortira en WebM quoi qu’on choisisse ici.',
+                  {
+                    fond: video.fond === 'voile' ? t('« Noir translucide »') : t('« Transparent »'),
+                  },
+                )
               : video.format === 'mp4'
                 ? 'Se pose dans n’importe quel logiciel de montage.'
                 : 'Plus léger, mais Resolve et Premiere ne le lisent pas.'
@@ -271,14 +280,14 @@ export function PanneauExport({
             disabled={encours || (transparente && !enDeuxFichiers)}
             onChange={(e) => modifier((v) => ({ ...v, format: e.target.value as FormatVideo }))}
           >
-            <option value="mp4">mp4 — pour le montage</option>
-            <option value="webm">
+            <Option value="mp4">mp4 — pour le montage</Option>
+            <Option value="webm">
               {transparente && !enDeuxFichiers ? 'WebM — imposé par le fond' : 'WebM — pour le web'}
-            </option>
+            </Option>
           </Select>
         </Field>
 
-        <Field label="Qualité" hint={QUALITES.find((q) => q.id === video.qualite)?.aide}>
+        <Field label="Qualité" hint={t(QUALITES.find((q) => q.id === video.qualite)?.aide ?? '')}>
           <Select
             value={video.qualite}
             disabled={encours}
@@ -286,7 +295,7 @@ export function PanneauExport({
           >
             {QUALITES.map((q) => (
               <option key={q.id} value={q.id}>
-                {q.nom}
+                {t(q.nom)}
               </option>
             ))}
           </Select>
@@ -301,7 +310,7 @@ export function PanneauExport({
           disabled={encours}
           className="h-4 w-4 accent-amber-500"
         />
-        Garder la vidéo sur le serveur
+        {t('Garder la vidéo sur le serveur')}
       </label>
 
       <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -312,7 +321,7 @@ export function PanneauExport({
           disabled={encours}
           className="h-4 w-4 accent-amber-500"
         />
-        Entendre le morceau pendant l'enregistrement
+        {t('Entendre le morceau pendant l’enregistrement')}
       </label>
 
       {encours ? (
@@ -324,8 +333,8 @@ export function PanneauExport({
             />
           </div>
           <p className="text-sm text-slate-400">
-            {etape} {Math.round(progression * 100)} %
-            {!rapide && resteMs > 0 ? ` — reste ${formaterDuree(resteMs)}` : ''}
+            {t(etape)} {Math.round(progression * 100)} %
+            {!rapide && resteMs > 0 ? t(' — reste {duree}', { duree: formaterDuree(resteMs) }) : ''}
           </p>
           <Button variant="secondary" onClick={() => annuler.current?.abort()}>
             Interrompre
@@ -347,7 +356,7 @@ export function PanneauExport({
             download={produite.nom}
             className="text-sm text-amber-400 hover:text-amber-300"
           >
-            Télécharger {produite.nom} ({poids(produite.taille)})
+            {t('Télécharger {nom} ({poids})', { nom: produite.nom, poids: poids(produite.taille) })}
           </a>
           {produite.cache ? (
             <>
@@ -356,7 +365,9 @@ export function PanneauExport({
                 download={produite.nomCache ?? 'cache'}
                 className="mt-1 block text-sm text-amber-400 hover:text-amber-300"
               >
-                Télécharger le cache ({poids(produite.tailleCache ?? 0)})
+                {t('Télécharger le cache ({poids})', {
+                  poids: poids(produite.tailleCache ?? 0),
+                })}
               </a>
               <ModeDEmploiDuCache />
             </>
@@ -368,17 +379,19 @@ export function PanneauExport({
           video.format === 'mp4' &&
           produite.ext !== '.mp4' ? (
             <p className="mt-2 text-sm text-amber-400">
-              Ce navigateur n’a pas d’encodeur mp4 : la vidéo est sortie en WebM. Resolve et
-              Premiere ne le lisent pas — essaie depuis Chrome ou Edge.
+              {t(
+                'Ce navigateur n’a pas d’encodeur mp4 : la vidéo est sortie en WebM. Resolve et Premiere ne le lisent pas — essaie depuis Chrome ou Edge.',
+              )}
             </p>
           ) : null}
           {/* La cadence tenue n'est annoncée que quand elle a manqué : un export réussi n'a
               pas à se vanter, un export pauvre doit se dénoncer avant le montage. */}
           {produite.ips < produite.fps * 0.85 ? (
             <p className="mt-2 text-sm text-amber-400">
-              Cette vidéo n'a tenu que {produite.ips.toFixed(1)} images par seconde sur les{' '}
-              {produite.fps} demandées : la machine n'a pas suivi. Une définition plus petite ou une
-              cadence plus basse donneront un résultat plus fluide.
+              {t(
+                'Cette vidéo n’a tenu que {tenue} images par seconde sur les {demandees} demandées : la machine n’a pas suivi. Une définition plus petite ou une cadence plus basse donneront un résultat plus fluide.',
+                { tenue: produite.ips.toFixed(1), demandees: produite.fps },
+              )}
             </p>
           ) : null}
         </div>
@@ -394,21 +407,21 @@ export function PanneauExport({
               href={`/api/morceaux/${morceau.id}/video?telecharger=1`}
               className="text-amber-400 hover:text-amber-300"
             >
-              Télécharger ({poids(morceau.video.taille)})
+              {t('Télécharger ({poids})', { poids: poids(morceau.video.taille) })}
             </a>
             {morceau.video.cache ? (
               <a
                 href={`/api/morceaux/${morceau.id}/video?cache=1&telecharger=1`}
                 className="text-amber-400 hover:text-amber-300"
               >
-                Télécharger le cache ({poids(morceau.video.cache.taille)})
+                {t('Télécharger le cache ({poids})', { poids: poids(morceau.video.cache.taille) })}
               </a>
             ) : null}
             <button
               onClick={() => void supprimerVideo(morceau.id)}
               className="text-slate-500 hover:text-red-400"
             >
-              Supprimer du serveur
+              {t('Supprimer du serveur')}
             </button>
           </div>
         </div>

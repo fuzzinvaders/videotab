@@ -7,14 +7,16 @@ import { BibliothequePage } from './features/bibliotheque/BibliothequePage'
 import { ComptePage } from './features/compte/ComptePage'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { MorceauxProvider } from './hooks/useMorceaux'
+import { useT } from './lib/langue'
 
 function AppRoutes() {
   const { user, loading, needsSetup } = useAuth()
+  const t = useT()
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-slate-500">
-        Chargement…
+        {t('Chargement…')}
       </div>
     )
   }

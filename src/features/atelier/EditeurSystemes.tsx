@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useT } from '../../lib/langue'
 import { trierSystemes, type PageRendue } from '../../lib/pdf'
 import type { SystemePdf } from '../../lib/types'
 
@@ -223,6 +224,7 @@ function Rectangle({
   surSupprimer: () => void
   surMesures: (mesures: number) => void
 }) {
+  const t = useT()
   const style = {
     left: `${systeme.x0 * 100}%`,
     top: `${systeme.y0 * 100}%`,
@@ -249,14 +251,14 @@ function Rectangle({
           onPointerDown={(e) => e.stopPropagation()}
           onChange={(e) => surMesures(Math.max(1, Number(e.target.value) || 1))}
           className="w-10 bg-transparent text-right text-xs text-amber-300 outline-none"
-          aria-label={`Mesures du système ${numero}`}
+          aria-label={t('Mesures du système {numero}', { numero })}
         />
         <span className="text-[0.6rem] text-slate-400">mes.</span>
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={surSupprimer}
           className="px-1 text-xs text-slate-400 hover:text-red-400"
-          aria-label={`Supprimer le système ${numero}`}
+          aria-label={t('Supprimer le système {numero}', { numero })}
         >
           ✕
         </button>

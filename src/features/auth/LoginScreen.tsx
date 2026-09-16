@@ -2,10 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { ErrorText, Field, Input } from '../../components/ui/Field'
 import { useAuth } from '../../hooks/useAuth'
+import { useT } from '../../lib/langue'
 import { AuthShell } from './AuthShell'
 
 export function LoginScreen() {
   const { login, register } = useAuth()
+  const t = useT()
   const [joining, setJoining] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -59,7 +61,7 @@ export function LoginScreen() {
         ) : null}
         <ErrorText>{error}</ErrorText>
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? 'Un instant…' : joining ? 'Rejoindre' : 'Se connecter'}
+          {busy ? t('Un instant…') : joining ? t('Rejoindre') : t('Se connecter')}
         </Button>
         <button
           type="button"
@@ -69,7 +71,7 @@ export function LoginScreen() {
           }}
           className="w-full text-sm text-slate-400 hover:text-slate-200"
         >
-          {joining ? "J'ai déjà un compte" : "J'ai un code d'invitation"}
+          {joining ? t('J’ai déjà un compte') : t('J’ai un code d’invitation')}
         </button>
       </form>
     </AuthShell>

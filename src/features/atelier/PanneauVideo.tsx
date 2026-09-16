@@ -1,5 +1,6 @@
 import { Card } from '../../components/ui/Card'
-import { Field, Select } from '../../components/ui/Field'
+import { Field, Option, Select } from '../../components/ui/Field'
+import { useT } from '../../lib/langue'
 import { fondAvecAlpha } from '../../lib/reglages'
 import { THEMES, themeParId } from '../../lib/themes'
 import type {
@@ -85,6 +86,7 @@ export function PanneauMiseEnScene({
   video: ReglagesVideo
   modifier: (mutation: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
+  const t = useT()
   const theme = themeParId(video.theme)
   const enBande = video.disposition !== 'page'
   const parBlocs = video.disposition === 'mesures'
@@ -111,9 +113,9 @@ export function PanneauMiseEnScene({
                 onChange={() => modifier((v) => ({ ...v, disposition: choix.id }))}
                 className="accent-amber-500"
               />
-              {choix.nom}
+              {t(choix.nom)}
             </span>
-            <span className="mt-1 block text-xs text-slate-400">{choix.aide}</span>
+            <span className="mt-1 block text-xs text-slate-400">{t(choix.aide)}</span>
           </label>
         ))}
       </div>
@@ -128,9 +130,9 @@ export function PanneauMiseEnScene({
              figurait pas : le violet du thème Néon restait ensuite collé à tous les autres. */
           onChange={(e) => modifier((v) => ({ ...v, theme: themeParId(e.target.value).id }))}
         >
-          {THEMES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nom}
+          {THEMES.map((theme) => (
+            <option key={theme.id} value={theme.id}>
+              {t(theme.nom)}
             </option>
           ))}
         </Select>
@@ -163,7 +165,7 @@ export function PanneauMiseEnScene({
             min={1}
             max={16}
             pas={1}
-            affichage={`${video.mesuresVisibles} mesure${video.mesuresVisibles > 1 ? 's' : ''}`}
+            affichage={t('{n} mesures', { n: video.mesuresVisibles })}
             aide={
               parBlocs
                 ? 'C’est ce réglage qui fait le zoom, et la fenêtre en montre autant qu’il en entre à cette taille-là — parfois une de plus, parfois une de moins, plutôt que d’en couper une.'
@@ -181,7 +183,7 @@ export function PanneauMiseEnScene({
               max={1.5}
               pas={0.05}
               affichage={
-                video.margeBande === 0 ? 'au ras' : `${Math.round(video.margeBande * 100)} %`
+                video.margeBande === 0 ? t('au ras') : `${Math.round(video.margeBande * 100)} %`
               }
               aide="De l’espace au-dessus et en dessous, en proportion de la tablature. À zéro elle touche les bords de la bande ; en ouvrant, on laisse revenir ce qui dépasse — hampes, rythmes, nom de section."
               onChange={(margeBande) => modifier((v) => ({ ...v, margeBande }))}
@@ -192,7 +194,7 @@ export function PanneauMiseEnScene({
               min={0.1}
               max={0.9}
               pas={0.01}
-              affichage={`${Math.round(video.hauteurMax * 100)} % de l’image`}
+              affichage={t('{n} % de l’image', { n: Math.round(video.hauteurMax * 100) })}
               aide="Un plafond, pas une cible : la bande reste aussi courte que la tablature l’exige. Il ne s’applique que si elle le dépasse, et on voit alors plus de mesures que demandé."
               onChange={(hauteurMax) => modifier((v) => ({ ...v, hauteurMax }))}
             />
@@ -208,8 +210,8 @@ export function PanneauMiseEnScene({
                 pas={1}
                 affichage={
                   video.anticipation === 0
-                    ? 'aucune'
-                    : `${video.anticipation} mesure${video.anticipation > 1 ? 's' : ''}`
+                    ? t('aucune')
+                    : t('{n} mesures', { n: video.anticipation })
                 }
                 aide="Les dernières mesures de la fenêtre, montrées avant d’être jouées : elles rouvrent la fenêtre suivante. À une, la page tourne pile en arrivant sur la dernière mesure affichée — le curseur a donc traversé tout l’écran. En demander plus fait tourner plus tôt, et laisse plus de temps pour lire ce qui vient."
                 onChange={(anticipation) => modifier((v) => ({ ...v, anticipation }))}
@@ -221,7 +223,7 @@ export function PanneauMiseEnScene({
                 min={0.1}
                 max={0.7}
                 pas={0.01}
-                affichage={`${Math.round(video.teteX * 100)} % depuis la gauche`}
+                affichage={t('{n} % depuis la gauche', { n: Math.round(video.teteX * 100) })}
                 aide="À gauche, on voit venir la suite de loin ; au milieu, on garde autant de passé que d’avenir."
                 onChange={(teteX) => modifier((v) => ({ ...v, teteX }))}
               />
@@ -259,7 +261,7 @@ export function PanneauMiseEnScene({
         >
           {CADRES.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.nom}
+              {t(c.nom)}
             </option>
           ))}
         </Select>
@@ -276,7 +278,7 @@ export function PanneauMiseEnScene({
           pas={1}
           affichage={
             video.epaisseurCadre === 0
-              ? 'sans trait'
+              ? t('sans trait')
               : `${Math.round(video.epaisseurCadre * (video.largeur / 1920))} px`
           }
           aide={
@@ -298,6 +300,7 @@ export function PanneauVideo({
   video: ReglagesVideo
   modifier: (mutation: (v: ReglagesVideo) => ReglagesVideo) => void
 }) {
+  const t = useT()
   const theme = themeParId(video.theme)
   const definition =
     DEFINITIONS.find((d) => d.largeur === video.largeur && d.hauteur === video.hauteur)?.label ??
@@ -351,8 +354,8 @@ export function PanneauVideo({
           onChange={(e) => modifier((v) => ({ ...v, cadrage: e.target.value as Cadrage }))}
           disabled={video.disposition === 'page'}
         >
-          <option value="image">Image entière</option>
-          <option value="bande">Hauteur de la bande</option>
+          <Option value="image">Image entière</Option>
+          <Option value="bande">Hauteur de la bande</Option>
         </Select>
       </Field>
 
@@ -382,12 +385,12 @@ export function PanneauVideo({
           value={video.fond}
           onChange={(e) => modifier((v) => ({ ...v, fond: e.target.value as FondVideo }))}
         >
-          <option value="theme">Couleur du thème</option>
-          <option value="noir">Noir</option>
-          <option value="voile">Noir translucide</option>
-          <option value="degrade">Noir dégradé — sans bord</option>
-          <option value="chroma">Vert d’incrustation</option>
-          <option value="transparent">Transparent</option>
+          <Option value="theme">Couleur du thème</Option>
+          <Option value="noir">Noir</Option>
+          <Option value="voile">Noir translucide</Option>
+          <Option value="degrade">Noir dégradé — sans bord</Option>
+          <Option value="chroma">Vert d’incrustation</Option>
+          <Option value="transparent">Transparent</Option>
         </Select>
       </Field>
 
@@ -405,7 +408,10 @@ export function PanneauVideo({
       ) : null}
 
       <Repli titre="Curseur">
-        <Field label="Curseur" hint={STYLES.find((s) => s.id === video.curseurStyle)?.aide}>
+        <Field
+          label="Curseur"
+          hint={t(STYLES.find((s) => s.id === video.curseurStyle)?.aide ?? '')}
+        >
           <Select
             value={video.curseurStyle}
             onChange={(e) =>
@@ -415,9 +421,9 @@ export function PanneauVideo({
               }))
             }
           >
-            {STYLES.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nom}
+            {STYLES.map((style) => (
+              <option key={style.id} value={style.id}>
+                {t(style.nom)}
               </option>
             ))}
           </Select>
@@ -440,8 +446,8 @@ export function PanneauVideo({
               }))
             }
           >
-            <option value="glisse">Glissant — il suit la musique en continu</option>
-            <option value="saute">Au temps — il saute de note en note</option>
+            <Option value="glisse">Glissant — il suit la musique en continu</Option>
+            <Option value="saute">Au temps — il saute de note en note</Option>
           </Select>
         </Field>
 
@@ -506,7 +512,11 @@ export function PanneauVideo({
           min={0}
           max={16}
           pas={1}
-          affichage={video.compteAvantTemps === 0 ? 'aucun' : `${video.compteAvantTemps} temps`}
+          affichage={
+            video.compteAvantTemps === 0
+              ? t('aucun')
+              : t('{n} temps', { n: video.compteAvantTemps })
+          }
           aide="Compté en temps et non en secondes : les clics tombent sur la noire du morceau, et le dernier juste avant la première note. Quatre temps font une mesure à quatre-quatre."
           onChange={(compteAvantTemps) => modifier((v) => ({ ...v, compteAvantTemps }))}
         />
@@ -551,6 +561,7 @@ export function PanneauVideo({
  * rechargement suivant.
  */
 function Repli({ titre, children }: { titre: string; children: React.ReactNode }) {
+  const t = useT()
   return (
     <details className="group rounded-lg border border-slate-700 bg-slate-800/40 open:border-slate-600 open:bg-slate-800/70">
       {/* Le marqueur natif est masqué des deux façons qu'il faut : `list-none` pour Firefox,
@@ -564,10 +575,10 @@ function Repli({ titre, children }: { titre: string; children: React.ReactNode }
           >
             <path d="M7 4l7 6-7 6z" />
           </svg>
-          {titre}
+          {t(titre)}
         </span>
-        <span className="text-xs text-slate-400 group-open:hidden">afficher</span>
-        <span className="hidden text-xs text-slate-400 group-open:inline">masquer</span>
+        <span className="text-xs text-slate-400 group-open:hidden">{t('afficher')}</span>
+        <span className="hidden text-xs text-slate-400 group-open:inline">{t('masquer')}</span>
       </summary>
       <div className="space-y-4 border-t border-slate-700 p-3">{children}</div>
     </details>
@@ -585,6 +596,7 @@ function Bascule({
   aide?: string
   onChange: (actif: boolean) => void
 }) {
+  const t = useT()
   return (
     <label className="block text-sm text-slate-300">
       <span className="flex items-center gap-2">
@@ -594,9 +606,9 @@ function Bascule({
           onChange={(e) => onChange(e.target.checked)}
           className="h-4 w-4 accent-amber-500"
         />
-        {label}
+        {t(label)}
       </span>
-      {aide ? <span className="mt-1 block pl-6 text-xs text-slate-500">{aide}</span> : null}
+      {aide ? <span className="mt-1 block pl-6 text-xs text-slate-500">{t(aide)}</span> : null}
     </label>
   )
 }
@@ -620,10 +632,11 @@ function Curseur({
   aide?: string
   onChange: (valeur: number) => void
 }) {
+  const t = useT()
   return (
     <label className="block">
       <span className="mb-1 flex items-center justify-between text-sm font-medium text-slate-300">
-        {label}
+        {t(label)}
         <span className="font-mono text-xs text-slate-500">{affichage}</span>
       </span>
       <input
@@ -635,7 +648,7 @@ function Curseur({
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full accent-amber-500"
       />
-      {aide ? <span className="mt-1 block text-xs text-slate-500">{aide}</span> : null}
+      {aide ? <span className="mt-1 block text-xs text-slate-500">{t(aide)}</span> : null}
     </label>
   )
 }

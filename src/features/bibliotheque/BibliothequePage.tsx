@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card'
 import { ErrorText } from '../../components/ui/Field'
 import { useMorceaux } from '../../hooks/useMorceaux'
 import { messageOf } from '../../lib/api'
+import { useT } from '../../lib/langue'
 import { formaterDuree } from '../../lib/minutage'
 import type { Morceau } from '../../lib/types'
 
@@ -25,6 +26,7 @@ function quand(iso: string): string {
 }
 
 export function BibliothequePage() {
+  const t = useT()
   const { morceaux, chargement, erreur, importer, espaceVideos } = useMorceaux()
   const naviguer = useNavigate()
   const champ = useRef<HTMLInputElement>(null)
@@ -71,12 +73,12 @@ export function BibliothequePage() {
       >
         <div className="text-4xl">🎬</div>
         <h1 className="mt-3 text-xl font-semibold text-slate-100">
-          Dépose une tablature, repars avec une vidéo
+          {t('Dépose une tablature, repars avec une vidéo')}
         </h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-slate-400">
-          Guitar Pro (.gp, .gp3 à .gp5, .gpx), MusicXML, ou un PDF scanné. Les fichiers Guitar Pro
-          apportent leurs notes et leur tempo&nbsp;; un PDF n'est qu'une image, et c'est toi qui lui
-          donneras son minutage dans l'atelier.
+          {t(
+            'Guitar Pro (.gp, .gp3 à .gp5, .gpx), MusicXML, ou un PDF scanné. Les fichiers Guitar Pro apportent leurs notes et leur tempo ; un PDF n’est qu’une image, et c’est toi qui lui donneras son minutage dans l’atelier.',
+          )}
         </p>
         <div className="mt-5">
           <input
@@ -87,7 +89,9 @@ export function BibliothequePage() {
             onChange={(e) => void accepter(e.target.files)}
           />
           <Button onClick={() => champ.current?.click()} disabled={envoi !== null}>
-            {envoi === null ? 'Choisir un fichier' : `Envoi… ${Math.round(envoi * 100)} %`}
+            {envoi === null
+              ? t('Choisir un fichier')
+              : t('Envoi… {part} %', { part: Math.round(envoi * 100) })}
           </Button>
         </div>
         {probleme ? (
@@ -100,10 +104,10 @@ export function BibliothequePage() {
       {erreur ? <ErrorText>{erreur}</ErrorText> : null}
 
       {chargement ? (
-        <p className="text-slate-500">Chargement…</p>
+        <p className="text-slate-500">{t('Chargement…')}</p>
       ) : morceaux.length === 0 ? (
         <p className="text-center text-sm text-slate-500">
-          Rien encore. Le premier fichier déposé ouvrira l'atelier tout seul.
+          {t('Rien encore. Le premier fichier déposé ouvrira l’atelier tout seul.')}
         </p>
       ) : (
         <div className="space-y-3">
@@ -117,7 +121,7 @@ export function BibliothequePage() {
               mégaoctets, et la machine qui héberge fait probablement autre chose à côté. */}
           {espaceVideos > 0 ? (
             <p className="text-right text-xs text-slate-500">
-              Vidéos gardées sur le serveur : {poidsLisible(espaceVideos)}
+              {t('Vidéos gardées sur le serveur : {poids}', { poids: poidsLisible(espaceVideos) })}
             </p>
           ) : null}
         </div>
@@ -135,6 +139,7 @@ function poidsLisible(octets: number): string {
 
 function Vignette({ morceau }: { morceau: Morceau }) {
   const naviguer = useNavigate()
+  const t = useT()
 
   return (
     <Card
@@ -158,13 +163,13 @@ function Vignette({ morceau }: { morceau: Morceau }) {
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
         <span>{quand(morceau.modifieLe)}</span>
         <span>{poids(morceau.fichier.taille)}</span>
-        <span>par {morceau.auteur}</span>
+        <span>{t('par {auteur}', { auteur: morceau.auteur })}</span>
       </div>
 
       {morceau.video ? (
         <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-sm text-amber-300">
           <span>▶</span>
-          <span>Vidéo {formaterDuree(morceau.video.dureeMs)}</span>
+          <span>{t('Vidéo {duree}', { duree: formaterDuree(morceau.video.dureeMs) })}</span>
           <span className="text-slate-500">{poids(morceau.video.taille)}</span>
         </div>
       ) : null}

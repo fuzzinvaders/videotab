@@ -1,7 +1,7 @@
 import * as alphaTab from '@coderline/alphatab'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../../components/ui/Card'
-import { ErrorText, Field, Select } from '../../components/ui/Field'
+import { ErrorText, Field, Option, Select } from '../../components/ui/Field'
 import { avecDecompteAvant, depuis } from '../../lib/audio'
 import {
   appliquerTempo,
@@ -23,6 +23,7 @@ import {
   sectionsDeLaPartition,
   type BandeGp,
 } from '../../lib/gp'
+import { useT } from '../../lib/langue'
 import { creerScene, type Feuille } from '../../lib/scene'
 import { themeParId } from '../../lib/themes'
 import type { Morceau, ReglagesGp } from '../../lib/types'
@@ -41,6 +42,15 @@ import { useReglages } from './useReglages'
  */
 export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: ArrayBuffer }) {
   const { reglages, modifier, enregistre } = useReglages(morceau)
+  const t = useT()
+  /* La traduction rangée dans une référence, pour le seul effet de synthèse. Elle change quand
+     on change de langue, et une dépendance de plus dans cet effet-là relancerait trois minutes
+     de synthèse pour un clic sur « EN ». Le message d'attente, lui, est retraduit à
+     l'affichage par le lecteur. */
+  const traduction = useRef(t)
+  useEffect(() => {
+    traduction.current = t
+  }, [t])
   const gp = reglages.gp
   const video = reglages.video
   const theme = themeParId(video.theme)
@@ -168,7 +178,12 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
         const resultat = await preparerBande(instance, {
           signal: annulation.signal,
           onProgression: (part) =>
-            vivant && setEtat(`Synthèse de la bande-son… ${Math.round(part * 100)} %`),
+            vivant &&
+            setEtat(
+              traduction.current('Synthèse de la bande-son… {part} %', {
+                part: Math.round(part * 100),
+              }),
+            ),
         })
         if (vivant) setBande(resultat)
       } catch (err) {
@@ -275,7 +290,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     [bande, debutMs, dureeTempsMs, reglages.video.compteAvantTemps, reglages.video.decompteSonore],
   )
 
-  if (!gp) return <ErrorText>Ce morceau n'a pas de réglages Guitar Pro.</ErrorText>
+  if (!gp) return <ErrorText>{t('Ce morceau n’a pas de réglages Guitar Pro.')}</ErrorText>
 
   return (
     /* L'aperçu prend toute la largeur, les réglages se rangent dessous en colonnes. En
@@ -327,7 +342,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
                   }))
                 }
               >
-                <option value="-1">Toutes les pistes</option>
+                <Option value="-1">Toutes les pistes</Option>
                 {pistes.map((nom, index) => (
                   <option key={index} value={index}>
                     {nom}
@@ -338,7 +353,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
 
             <label className="block">
               <span className="mb-1 flex items-center justify-between text-sm font-medium text-slate-300">
-                Tempo
+                {t('Tempo')}
                 <span className="font-mono text-xs text-slate-500">{gp.tempoPct} %</span>
               </span>
               <input
@@ -406,7 +421,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
             {/* Le cadrage de la vidéo coupe la mention que le moteur dessine sous la portée :
               elle est rendue ici, où elle reste lisible. */}
             <p className="border-t border-slate-800 pt-3 text-xs text-slate-500">
-              Partition lue, mise en page et jouée par{' '}
+              {t('Partition lue, mise en page et jouée par')}{' '}
               <a
                 href="https://alphatab.net"
                 target="_blank"

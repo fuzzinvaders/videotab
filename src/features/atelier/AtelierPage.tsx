@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { ErrorText, Input } from '../../components/ui/Field'
 import { useMorceaux } from '../../hooks/useMorceaux'
 import { messageOf } from '../../lib/api'
+import { useT } from '../../lib/langue'
 import type { Morceau } from '../../lib/types'
 
 /* alphaTab et pdf.js pèsent à eux deux la moitié de l'application, et chacun ne sert qu'à
@@ -14,6 +15,7 @@ const AtelierGp = lazy(() => import('./AtelierGp').then((m) => ({ default: m.Ate
 const AtelierPdf = lazy(() => import('./AtelierPdf').then((m) => ({ default: m.AtelierPdf })))
 
 export function AtelierPage() {
+  const t = useT()
   const { id } = useParams<{ id: string }>()
   const { morceaux, chargement } = useMorceaux()
   const [octets, setOctets] = useState<ArrayBuffer | null>(null)
@@ -45,11 +47,11 @@ export function AtelierPage() {
     }
   }, [id])
 
-  if (chargement) return <p className="text-slate-500">Chargement…</p>
+  if (chargement) return <p className="text-slate-500">{t('Chargement…')}</p>
   if (!morceau) {
     return (
       <div className="space-y-3">
-        <ErrorText>Ce morceau n'existe plus.</ErrorText>
+        <ErrorText>{t('Ce morceau n’existe plus.')}</ErrorText>
         <Link to="/bibliotheque" className="text-amber-400 hover:text-amber-300">
           ← Retour à la bibliothèque
         </Link>
@@ -62,9 +64,9 @@ export function AtelierPage() {
       <EnTete morceau={morceau} />
       {erreur ? <ErrorText>{erreur}</ErrorText> : null}
       {!octets ? (
-        <p className="text-slate-500">Lecture du fichier…</p>
+        <p className="text-slate-500">{t('Lecture du fichier…')}</p>
       ) : (
-        <Suspense fallback={<p className="text-slate-500">Chargement de l'atelier…</p>}>
+        <Suspense fallback={<p className="text-slate-500">{t('Chargement de l’atelier…')}</p>}>
           {morceau.type === 'gp' ? (
             <AtelierGp morceau={morceau} octets={octets} />
           ) : (
@@ -77,6 +79,7 @@ export function AtelierPage() {
 }
 
 function EnTete({ morceau }: { morceau: Morceau }) {
+  const t = useT()
   const { renommer, supprimer } = useMorceaux()
   const naviguer = useNavigate()
   const [titre, setTitre] = useState(morceau.titre)
@@ -107,7 +110,7 @@ function EnTete({ morceau }: { morceau: Morceau }) {
         <Link
           to="/bibliotheque"
           className="rounded-lg px-2 py-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-          aria-label="Retour à la bibliothèque"
+          aria-label={t('Retour à la bibliothèque')}
         >
           ←
         </Link>
@@ -116,7 +119,7 @@ function EnTete({ morceau }: { morceau: Morceau }) {
           onChange={(e) => setTitre(e.target.value)}
           onBlur={valider}
           className="max-w-xs flex-1 text-lg font-semibold"
-          aria-label="Titre"
+          aria-label={t('Titre')}
         />
         <Input
           value={artiste}
@@ -124,7 +127,7 @@ function EnTete({ morceau }: { morceau: Morceau }) {
           onBlur={valider}
           placeholder="Artiste"
           className="max-w-48"
-          aria-label="Artiste"
+          aria-label={t('Artiste')}
         />
       </div>
       <div className="flex items-center gap-2">

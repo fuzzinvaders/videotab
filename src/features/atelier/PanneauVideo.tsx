@@ -345,7 +345,9 @@ export function PanneauVideo({
                 ? alpha
                   ? 'Vraie transparence, en WebM VP8. À vérifier : tous les logiciels de montage ne la lisent pas.'
                   : 'Ce navigateur ne sait pas encoder la transparence — la vidéo sortira sur le fond du thème. Prends plutôt le fond vert.'
-                : 'Le fond du thème, opaque.'
+                : video.fond === 'noir'
+                  ? 'Un noir plein, quel que soit le thème. Le thème garde la main sur les couleurs de la tablature.'
+                  : 'Le fond du thème, opaque.'
         }
       >
         <Select
@@ -353,6 +355,7 @@ export function PanneauVideo({
           onChange={(e) => modifier((v) => ({ ...v, fond: e.target.value as FondVideo }))}
         >
           <option value="theme">Couleur du thème</option>
+          <option value="noir">Noir</option>
           <option value="voile">Noir translucide</option>
           <option value="chroma">Vert d’incrustation</option>
           <option value="transparent">Transparent</option>

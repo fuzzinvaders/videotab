@@ -263,6 +263,7 @@ export function creerScene(options: OptionsScene): Scene {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, largeur, hauteurImage)
     if (video.fond === 'theme') peindreLeFond(ctx, theme.fond)
+    else if (video.fond === 'noir') peindreLeFond(ctx, '#000000')
     else if (video.fond === 'voile') peindreLeFond(ctx, voileNoir(video.opaciteFond))
     else if (video.fond === 'chroma') {
       /* Le vert ne s'arrondit pas, et ce n'est pas un oubli : c'est lui qui sera détouré, et

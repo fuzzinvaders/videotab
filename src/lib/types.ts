@@ -43,13 +43,18 @@ export type StyleCurseur = 'trait' | 'surlignage' | 'les-deux'
 /**
  * Ce qu'il y a derrière la partition quand la vidéo doit être incrustée ailleurs.
  *
+ * « noir » est un noir plein, pris hors du thème. Un thème choisit ses couleurs pour la
+ * tablature — les cordes, les chiffres, le curseur — et son fond n'en est qu'une conséquence ;
+ * or c'est souvent le noir qu'on veut derrière, quel que soit le reste. Les deux réglages sont
+ * donc séparés : la palette d'un côté, ce qu'il y a derrière de l'autre.
+ *
  * « voile » est le fond noir translucide : la reprise se voit à travers, mais assombrie, et
  * les chiffres de la tablature s'en détachent sans qu'on ait à effacer l'image. C'est le
  * compromis qu'on cherche quand le fond du thème cache trop et que la transparence pure ne
  * donne pas assez de contraste. Comme « transparent », il demande un canal alpha, donc un
  * WebM — et donc l'encodage lent.
  */
-export type FondVideo = 'theme' | 'chroma' | 'transparent' | 'voile'
+export type FondVideo = 'theme' | 'noir' | 'chroma' | 'transparent' | 'voile'
 
 /**
  * Ce que l'image exportée contient.

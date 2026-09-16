@@ -290,6 +290,12 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **A plain black background**, taken outside the theme. A theme picks its colours for the
+  tablature — strings, numbers, cursor — and its background is only a consequence of that;
+  black is often what you want behind, whatever the rest. The two are now separate settings:
+  the palette on one side, what sits behind it on the other. It stays opaque, so it keeps the
+  mp4 and the fast encoder.
+
 - **A translucent black background.** The cover shows through, darkened, and the tablature
   detaches from it without having to erase the picture — the compromise you want when the
   theme background hides too much and pure transparency gives too little contrast. Its opacity

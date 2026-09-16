@@ -108,7 +108,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     format: parmi(video.format, ['mp4', 'webm'] as const, d.format),
     qualite: parmi(video.qualite, ['legere', 'standard', 'nette'] as const, d.qualite),
-    fond: parmi(video.fond, ['theme', 'chroma', 'transparent', 'voile'] as const, d.fond),
+    fond: parmi(video.fond, ['theme', 'noir', 'chroma', 'transparent', 'voile'] as const, d.fond),
     opaciteFond: nombre(video.opaciteFond, d.opaciteFond, 0.1, 1),
     couleur: typeof video.couleur === 'string' ? video.couleur : null,
     curseurStyle: parmi(

@@ -47,6 +47,7 @@ describe('completerVideo', () => {
     expect(fondAvecAlpha('transparent')).toBe(true)
     expect(fondAvecAlpha('voile')).toBe(true)
     expect(fondAvecAlpha('theme')).toBe(false)
+    expect(fondAvecAlpha('noir')).toBe(false)
     // Le vert se détoure au montage : c'est justement la façon de s'en passer.
     expect(fondAvecAlpha('chroma')).toBe(false)
   })

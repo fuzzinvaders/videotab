@@ -2,7 +2,7 @@ import { mesurerScene } from './geometrie'
 import { formaterDuree } from './minutage'
 import { fondAvecAlpha } from './reglages'
 import { themeParId, type Theme } from './themes'
-import type { Cadre, ReglagesVideo, StyleCurseur } from './types'
+import type { ReglagesVideo, StyleCurseur } from './types'
 
 /**
  * La scène : ce qu'on voit, image par image.
@@ -121,9 +121,17 @@ function rayonDeCarte(zone: { h: number }): number {
   return Math.min(zone.h * 0.12, 28)
 }
 
-/** Vrai pour les cadres dont les coins sont arrondis. */
-function cadreArrondi(cadre: Cadre): boolean {
-  return cadre === 'carte' || cadre === 'lueur' || cadre === 'verre'
+/**
+ * Le rayon vraiment applicable, qui vaut zéro quand on ne peut pas découper.
+ *
+ * Arrondir le filet sans pouvoir arrondir l'image donne le pire des deux : une carte aux coins
+ * ronds posée dans un rectangle noir, c'est-à-dire un entourage qu'on n'a pas demandé. Mieux
+ * vaut des coins carrés assumés. C'est donc une seule décision, prise une fois, dont le fond,
+ * le filet, l'ombre et le découpage de la bande découlent tous.
+ */
+function rayonApplicable(video: ReglagesVideo): boolean {
+  const arrondi = video.cadre === 'carte' || video.cadre === 'lueur' || video.cadre === 'verre'
+  return arrondi && video.cadrage === 'bande' && fondAvecAlpha(video.fond)
 }
 
 /** Le noir translucide du fond « voile », à l'opacité demandée. */
@@ -166,6 +174,11 @@ export function creerScene(options: OptionsScene): Scene {
     barreH,
     blocs,
   } = mesurerScene({ video, feuille, avecBandeau: Boolean(titre || artiste) })
+
+  /* Découper les coins n'a de sens que si le vide laissé peut rester vide : voir
+     peindreLeFond. Sur un fond opaque, le vide est du noir. */
+  const coinsDecoupes = rayonApplicable(video)
+  const rayonCarte = coinsDecoupes ? rayonDeCarte(zone) : 0
 
   /* En page, le défilement est lissé d'une image à l'autre : le curseur saute d'une ligne à
      la suivante d'un coup, et une image qui suivrait ce saut donnerait le mal de mer. En
@@ -217,29 +230,33 @@ export function creerScene(options: OptionsScene): Scene {
    *
    * Un rectangle plein derrière un cadre aux coins arrondis, ce sont quatre coins pleins qui
    * dépassent : le cadre a beau être arrondi, la vidéo reste carrée. Le fond épouse donc la
-   * carte — mais seulement quand on a cadré sur la bande, c'est-à-dire quand la carte est le
-   * bord de l'image. Cadrée en 1920×1080, la carte flotte au milieu d'une page qui a le droit
-   * d'être pleine jusqu'aux bords, et lui creuser quatre encoches n'aurait aucun sens.
+   * carte — sous trois conditions, et il a fallu les découvrir une par une.
+   *
+   * Il faut que la carte soit le bord de l'image : cadrée en 1920×1080 elle flotte au milieu
+   * d'une page qui a le droit d'être pleine jusqu'aux bords. Il faut que le cadre soit
+   * arrondi, sinon il n'y a rien à découper. Et il faut surtout que le fond laisse passer
+   * l'image de dessous — c'est la condition qu'on avait oubliée. Creuser quatre encoches dans
+   * un fond opaque ne les rend pas transparentes : elles sortent **noires**, et la vidéo se
+   * retrouve avec un entourage noir autour d'une carte arrondie, ce qui est exactement ce
+   * qu'on voulait éviter. Un fichier opaque a des coins carrés, il n'y a pas à discuter.
    */
   function peindreLeFond(ctx: CanvasRenderingContext2D, remplissage: string) {
     ctx.fillStyle = remplissage
-    if (!cadreArrondi(video.cadre) || video.cadrage !== 'bande') {
+    if (!coinsDecoupes) {
       ctx.fillRect(0, 0, largeur, hauteurImage)
       return
     }
-    // Hors de la zone — le bandeau du titre, la barre de progression — le fond reste carré :
-    // eux ne sont pas dans la carte.
-    ctx.save()
-    ctx.beginPath()
-    ctx.rect(0, 0, largeur, hauteurImage)
-    ctx.rect(zone.x, zone.y, zone.w, zone.h)
-    ctx.clip('evenodd')
-    ctx.fillRect(0, 0, largeur, hauteurImage)
-    ctx.restore()
+    /* Le bandeau du titre et la barre de progression gardent leur fond, carré : ils ne sont
+       pas dans la carte et n'ont pas à en épouser la forme. Tout le reste — les côtés de la
+       carte, et la marge où tombe son ombre — reste vide. C'est précisément ce qu'on avait
+       raté : remplir « tout sauf la zone » peignait cette marge-là, et la carte se retrouvait
+       entourée d'un liseré de voile, c'est-à-dire du cadre qu'on croyait avoir supprimé. */
+    if (bandeauH > 0) ctx.fillRect(0, 0, largeur, bandeauH)
+    if (barreH > 0) ctx.fillRect(0, hauteurImage - barreH, largeur, barreH)
 
     ctx.save()
     ctx.beginPath()
-    ctx.roundRect(zone.x, zone.y, zone.w, zone.h, rayonDeCarte(zone))
+    ctx.roundRect(zone.x, zone.y, zone.w, zone.h, rayonCarte)
     ctx.clip()
     ctx.fillRect(zone.x, zone.y, zone.w, zone.h)
     ctx.restore()
@@ -316,6 +333,7 @@ export function creerScene(options: OptionsScene): Scene {
         couleur,
         largeur,
         hauteur: hauteurImage,
+        rayon: rayonCarte,
       })
       ctx.drawImage(couche, zone.x, zone.y)
 
@@ -346,6 +364,7 @@ export function creerScene(options: OptionsScene): Scene {
         largeur,
         hauteur: hauteurImage,
         trait: traitCadre,
+        rayon: rayonCarte,
       })
 
       // En dernier, une fois le fond, la tablature et le cadre en place : ce qui s'efface aux
@@ -408,10 +427,9 @@ export function creerScene(options: OptionsScene): Scene {
     c.clearRect(0, 0, zone.w, zone.h)
 
     c.save()
-    if (video.cadre === 'carte' || video.cadre === 'lueur') {
-      const rayon = rayonDeCarte(zone)
+    if (rayonCarte > 0) {
       c.beginPath()
-      c.roundRect(0, 0, zone.w, zone.h, rayon)
+      c.roundRect(0, 0, zone.w, zone.h, rayonCarte)
       c.clip()
     }
 
@@ -523,10 +541,12 @@ function dessinerCadreDerriere(
     couleur: string
     largeur: number
     hauteur: number
+    /** Le rayon des coins, déjà arbitré par la scène : zéro quand on ne peut pas découper. */
+    rayon: number
   },
 ) {
   if (o.video.cadre !== 'lueur' && o.video.cadre !== 'verre') return
-  const rayon = rayonDeCarte(o.zone)
+  const rayon = o.rayon
   const verre = o.video.cadre === 'verre'
   ctx.save()
   /* Peint *sous* la bande, halo comme ombre : dessinés par-dessus, ils voileraient les
@@ -536,6 +556,13 @@ function dessinerCadreDerriere(
      tout son intérêt : elle décolle la tablature de la vidéo au lieu de la poser dessus. La
      place où elle tombe lui est réservée par la géométrie — voir margeOmbre. */
   if (verre) {
+    /* Pas d'ombre sans transparence. Elle se peint autour de la carte, et sur un fond opaque
+       il n'y a pas d'autour : la géométrie ne lui a réservé aucune marge, et elle ne ferait
+       plus que noircir les quatre coins arrondis. */
+    if (!fondAvecAlpha(o.video.fond)) {
+      ctx.restore()
+      return
+    }
     /* On ne garde que ce qui déborde. Une ombre se dessine en peignant une forme pleine dont
        le navigateur floute le pourtour : cette forme-là est un moyen, pas un objet, et elle
        n'a rien à faire dans l'image. Tant que la bande était opaque on pouvait la laisser,
@@ -575,10 +602,12 @@ function dessinerCadreDevant(
     hauteur: number
     /** Épaisseur du trait en pixels de cette image-ci, déjà mise à l'échelle. */
     trait: number
+    /** Le rayon des coins, déjà arbitré par la scène : zéro quand on ne peut pas découper. */
+    rayon: number
   },
 ) {
   if (o.video.cadre === 'verre') {
-    const rayon = rayonDeCarte(o.zone)
+    const rayon = o.rayon
     ctx.save()
     /* Un filet blanc à seize pour cent plutôt qu'un trait de couleur : il dit où s'arrête la
        bande sans se faire regarder. Son épaisseur ne suit pas le réglage du cadre — un filet
@@ -588,7 +617,15 @@ function dessinerCadreDevant(
     ctx.lineWidth = Math.max(1, Math.round(o.largeur / 1280))
     const d = ctx.lineWidth / 2
     ctx.beginPath()
-    ctx.roundRect(o.zone.x + d, o.zone.y + d, o.zone.w - 2 * d, o.zone.h - 2 * d, rayon - d)
+    // Jamais négatif : à coins carrés le rayon vaut zéro, et lui retrancher la demi-épaisseur
+    // du filet faisait jeter roundRect — l aperçu restait noir sans rien dire.
+    ctx.roundRect(
+      o.zone.x + d,
+      o.zone.y + d,
+      o.zone.w - 2 * d,
+      o.zone.h - 2 * d,
+      Math.max(0, rayon - d),
+    )
     ctx.stroke()
 
     /* Le reflet : un dégradé blanc très faible sur la moitié haute. C'est ce qui donne
@@ -635,7 +672,7 @@ function dessinerCadreDevant(
       o.zone.y + d,
       Math.max(1, o.zone.w - o.trait),
       Math.max(1, o.zone.h - o.trait),
-      Math.max(0, rayonDeCarte(o.zone) - d),
+      Math.max(0, o.rayon - d),
     )
     ctx.stroke()
     ctx.restore()

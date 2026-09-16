@@ -1,5 +1,6 @@
 import { Card } from '../../components/ui/Card'
 import { Field, Select } from '../../components/ui/Field'
+import { fondAvecAlpha } from '../../lib/reglages'
 import { THEMES, themeParId } from '../../lib/themes'
 import type {
   Cadrage,
@@ -70,6 +71,10 @@ const STYLES: Array<{ id: StyleCurseur; nom: string; aide: string }> = [
 /* Le verre n'y est pas : son filet est fixe et volontairement ténu. L'épaissir en ferait une
    bordure, et la bordure a déjà son cadre — la carte. */
 const AVEC_TRAIT = new Set<Cadre>(['carte', 'lueur', 'bandes', 'accent'])
+
+/* Ceux dont les coins sont arrondis — donc ceux qui ne tiennent leur promesse que sur un fond
+   qui laisse passer l'image de dessous. */
+const COINS_ARRONDIS = new Set<Cadre>(['carte', 'verre', 'lueur'])
 
 const COULEURS = ['#4ade80', '#f59e0b', '#ef4444', '#38bdf8', '#a855f7', '#ec4899', '#ffffff']
 
@@ -241,9 +246,11 @@ export function PanneauMiseEnScene({
       <Field
         label="Encadrement"
         hint={
-          (video.cadre === 'carte' || video.cadre === 'lueur') && video.cadrage !== 'bande'
-            ? 'Les coins arrondis ne découpent l’image que si elle est cadrée sur la bande : sur une image entière, la carte flotte au milieu d’une page qui reste pleine.'
-            : undefined
+          COINS_ARRONDIS.has(video.cadre) && !fondAvecAlpha(video.fond)
+            ? 'Sur un fond opaque, les coins restent carrés : un fichier sans transparence ne sait pas laisser un coin vide, il le remplit de noir. Prends un fond translucide ou transparent pour que la carte se découpe vraiment — et le verre pour qu’elle porte son ombre.'
+            : COINS_ARRONDIS.has(video.cadre) && video.cadrage !== 'bande'
+              ? 'Les coins arrondis ne découpent l’image que si elle est cadrée sur la bande : sur une image entière, la carte flotte au milieu d’une page qui reste pleine.'
+              : undefined
         }
       >
         <Select

@@ -165,6 +165,27 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **No more black surround around a rounded card.** Cutting the corners of an opaque file
+  does not make them transparent — it makes them black, and the video came back from the edit
+  with a black frame around a rounded card, which is the very thing the rounding was meant to
+  avoid. The same went for the glass frame's shadow margin: reserved space that could only be
+  filled with black.
+
+  Rounded corners, the inset and the shadow now exist only when the background lets the image
+  through. On an opaque background the corners are square, the band fills the frame exactly,
+  and the glass keeps only its hairline and its highlight — an opaque file has square corners,
+  there is nothing to argue about. One decision, taken once, from which the background, the
+  rule, the shadow and the clipping all follow; before, each answered for itself and they
+  disagreed.
+
+  A second one found on the way: the veil was painted over everything that was not the band,
+  the shadow margin included, so the card came framed in a translucent border. Only the title
+  strip and the progress bar keep a background of their own now.
+
+  And a third, caught by testing rather than by reading: with square corners the radius is
+  zero, and subtracting half the rule's width from it made `roundRect` throw — the preview
+  went black without a word.
+
 - **The format box no longer claims mp4 while producing WebM.** A background that needs an
   alpha channel — translucent black, or transparent — cannot be written to mp4, and the export
   quietly fell back to WebM while the setting still read "mp4". The box now shows the format

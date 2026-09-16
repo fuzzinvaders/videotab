@@ -1,5 +1,6 @@
 import { decouperEnBlocs, largeurPourTenir, type Blocs } from './blocs'
 import { echelleDefilement } from './echelle'
+import { fondAvecAlpha } from './reglages'
 import type { ReglagesVideo } from './types'
 
 /**
@@ -87,9 +88,17 @@ export function mesurerScene(d: {
      peu d'air tout autour — pris sur la largeur, donc sur la tablature, ce qui est le prix de
      cet habillage-là et la raison pour laquelle les autres ne le paient pas.
 
+     Elle n'existe que si le fond laisse passer l'image de dessous. Sur un fond opaque, cette
+     marge-là ne serait pas du vide autour de la carte mais un cadre noir autour d'elle — et
+     l'ombre qu'elle devait accueillir n'aurait rien à assombrir. Le verre y perd son relief
+     et se réduit à son filet : c'est le prix d'un fichier sans transparence.
+
      Comptée sur la largeur de l'image plutôt que sur la hauteur de la bande, qui n'est pas
      encore connue ici : c'est l'échelle qui en découle, pas l'inverse. */
-  const margeCarte = bande && video.cadre === 'verre' ? Math.max(6, Math.round(largeur * 0.012)) : 0
+  const margeCarte =
+    bande && video.cadre === 'verre' && fondAvecAlpha(video.fond)
+      ? Math.max(6, Math.round(largeur * 0.012))
+      : 0
 
   const tenue =
     parBlocs && feuille.barres ? largeurPourTenir(feuille.barres, video.mesuresVisibles) : 0

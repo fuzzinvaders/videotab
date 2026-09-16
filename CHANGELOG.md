@@ -9,6 +9,12 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The band no longer reserves a third of its height for nothing.** The air above and below
+  the tablature defaulted to 0.35 of its height on each side, which inflated the band by 70 %
+  — that much of the cover hidden behind empty space. It is now 0.16, enough to keep the
+  tablature off the edge and to hold the section names. Pieces already set up keep their own
+  value; the slider is under "Cadrage de la bande".
+
 - **A rounded frame now rounds the video too.** Behind a card with rounded corners sat a
   square background, and its four corners stuck out: the frame was round, the video was not.
   The background now follows the card — but only when the image is cropped to the band, which
@@ -289,6 +295,28 @@ versioning yet, so entries are grouped by the change that shipped them.
   own swatch in the row, so something is always visibly selected.
 
 ### Added
+
+- **Two frames drawn for overlaying, and a background without edges.**
+
+  *Verre* is the one that changes the most for the least: a drop shadow that lifts the band
+  off the video instead of laying it on top, a white hairline at 16 % in place of the heavy
+  coloured rule, and a faint highlight on the top half that gives it thickness. It is the only
+  dressing that asks for anything — room for the shadow to fall into, so the card is inset on
+  all four sides, and that inset is taken from the tablature.
+
+  *Accent* is the opposite: square corners, no relief, a single line of the cursor's colour
+  along the bottom. Nothing in it depends on what shows through, so it is the only one of the
+  new looks that survives an opaque background — and therefore keeps the mp4 and the fast
+  encoder.
+
+  *Noir dégradé* is the veil faded out towards the top and the bottom: no edge at all, nothing
+  to frame. It is how television captions are dressed, and it is the one that dates least.
+
+- **The ends of the band can be faded**, in fixed-bars layout too and not only in scrolling.
+  Useful beyond the look: the sides are exactly where a bar gets cut in half, and a half-bar
+  that fades reads as a continuation where a half-bar sliced clean reads as a mistake. When
+  the background lets the cover through, the fade takes the background with it — otherwise
+  the tablature would dissolve against a veil that kept two hard edges of its own.
 
 - **A plain black background**, taken outside the theme. A theme picks its colours for the
   tablature — strings, numbers, cursor — and its background is only a consequence of that;

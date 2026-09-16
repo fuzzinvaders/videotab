@@ -131,3 +131,32 @@ describe('mesurerScene : le plafond de hauteur', () => {
     }
   })
 })
+
+describe('mesurerScene : la marge du cadre « verre »', () => {
+  it('réserve de l’air tout autour, et lui seul', () => {
+    const verre = mesurer({ cadre: 'verre', cadrage: 'bande' })
+    const nu = mesurer({ cadre: 'aucun', cadrage: 'bande' })
+
+    // La carte est rentrée des quatre côtés : sans cela ses coins arrondis tombent hors champ
+    // et son ombre est coupée net, ce qui est pire que pas d'ombre du tout.
+    expect(verre.zone.x).toBeGreaterThan(0)
+    expect(verre.zone.w).toBe(video().largeur - 2 * verre.zone.x)
+    const juste = verre.zone.h + 2 * verre.zone.y + verre.barreH
+    // Au pixel pair près, comme partout ailleurs : un encodeur refuse une dimension impaire.
+    expect(verre.hauteurImage).toBeGreaterThanOrEqual(juste)
+    expect(verre.hauteurImage - juste).toBeLessThanOrEqual(1)
+
+    // Les autres cadres ne paient rien : la bande touche toujours les bords.
+    expect(nu.zone.x).toBe(0)
+    expect(nu.zone.w).toBe(video().largeur)
+  })
+
+  it('prend cette marge sur la tablature, pas sur l’image', () => {
+    const verre = mesurer({ cadre: 'verre', cadrage: 'bande' })
+    const nu = mesurer({ cadre: 'aucun', cadrage: 'bande' })
+    /* La zone rétrécie tient moins de mesures à échelle égale, donc l'échelle cède : c'est le
+       prix de cet habillage, et il doit se voir dans les chiffres plutôt que déborder. */
+    expect(verre.echelle).toBeLessThan(nu.echelle)
+    expect(verre.zone.h).toBeLessThan(nu.zone.h)
+  })
+})

@@ -28,7 +28,21 @@ export type TypeMorceau = 'gp' | 'pdf'
  */
 export type Disposition = 'page' | 'defilement' | 'mesures'
 
-export type Cadre = 'aucun' | 'carte' | 'lueur' | 'vignette' | 'bandes'
+/**
+ * Comment la bande est habillée.
+ *
+ * « verre » est celui qui a été dessiné pour l'incrustation : coins arrondis, filet blanc à
+ * peine visible, reflet en haut et **ombre portée**. C'est l'ombre qui fait le travail — elle
+ * décolle la bande de la vidéo au lieu de la poser dessus — et c'est elle qui coûte quelque
+ * chose : il faut de la place autour de la bande pour qu'elle tombe quelque part, donc
+ * l'image grandit un peu, et il faut que le fond laisse passer l'image de dessous pour qu'on
+ * la voie.
+ *
+ * « accent » est l'inverse : coins carrés, aucun relief, un seul trait de couleur en bas. Le
+ * seul habillage qui tienne sur un fond opaque, donc le seul qui garde le mp4 et l'export
+ * rapide.
+ */
+export type Cadre = 'aucun' | 'carte' | 'verre' | 'lueur' | 'accent' | 'vignette' | 'bandes'
 
 /**
  * Ce que le curseur montre.
@@ -48,13 +62,17 @@ export type StyleCurseur = 'trait' | 'surlignage' | 'les-deux'
  * or c'est souvent le noir qu'on veut derrière, quel que soit le reste. Les deux réglages sont
  * donc séparés : la palette d'un côté, ce qu'il y a derrière de l'autre.
  *
+ * « degrade » est le même voile, mais effacé vers le haut et vers le bas : la bande n'a plus
+ * d'arête du tout, elle se pose sur l'image sans frontière. C'est l'habillage des bandeaux de
+ * télévision, et celui qui se remarque le moins.
+ *
  * « voile » est le fond noir translucide : la reprise se voit à travers, mais assombrie, et
  * les chiffres de la tablature s'en détachent sans qu'on ait à effacer l'image. C'est le
  * compromis qu'on cherche quand le fond du thème cache trop et que la transparence pure ne
  * donne pas assez de contraste. Comme « transparent », il demande un canal alpha, donc un
  * WebM — et donc l'encodage lent.
  */
-export type FondVideo = 'theme' | 'noir' | 'chroma' | 'transparent' | 'voile'
+export type FondVideo = 'theme' | 'noir' | 'degrade' | 'chroma' | 'transparent' | 'voile'
 
 /**
  * Ce que l'image exportée contient.
@@ -186,6 +204,16 @@ export interface ReglagesVideo {
    * ses doigts sur le manche, l'usage même auquel il est destiné.
    */
   decompteSonore: boolean
+  /**
+   * Effacer la tablature aux deux bouts de la bande.
+   *
+   * Utile au-delà du joli : les côtés sont justement là où une mesure se trouve coupée en
+   * deux, et une moitié de mesure qui s'efface se lit comme une suite, alors qu'une moitié de
+   * mesure tranchée net se lit comme une erreur. En mesures fixes, c'est un arbitrage : la
+   * dernière mesure de la fenêtre est celle qu'on donne à lire en avance, et l'estomper
+   * revient à atténuer ce qu'on avait justement ajouté pour être vu.
+   */
+  bordsFondus: boolean
   fondu: boolean
   bandeau: boolean
   barreDeProgression: boolean

@@ -24,9 +24,11 @@ export function videoParDefaut(): ReglagesVideo {
     theme: THEME_PAR_DEFAUT,
     // Quatre mesures : assez pour voir venir la phrase, assez peu pour lire les chiffres.
     mesuresVisibles: 4,
-    // Un tiers de la hauteur de la tablature de chaque côté : de quoi la décoller du bord sans
-    // que la bande cesse d'être un bandeau.
-    margeBande: 0.35,
+    /* Un sixième de la hauteur de la tablature de chaque côté : de quoi la décoller du bord,
+       et de quoi loger les noms de sections, sans plus. Le défaut était à un tiers, ce qui
+       gonflait la bande de soixante-dix pour cent pour du vide — autant de la reprise qu'on
+       masquait pour rien. */
+    margeBande: 0.16,
     // Un plafond, pas une cible : la bande est aussi courte que la tablature le permet, et
     // cette valeur ne sert qu'à l'empêcher de manger l'image sur une partition très haute.
     hauteurMax: 0.45,
@@ -62,6 +64,8 @@ export function videoParDefaut(): ReglagesVideo {
     compteAvantTemps: 4,
     // Des clics par défaut : un décompte muet ne compte pour personne.
     decompteSonore: true,
+    // Les deux bouts de la bande s'effacent : c'est là que les mesures sont coupées en deux.
+    bordsFondus: true,
     fondu: true,
     bandeau: true,
     barreDeProgression: true,
@@ -103,12 +107,20 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
     hauteurMax: nombre(video.hauteurMax, d.hauteurMax, 0.1, 0.95),
     teteX: nombre(video.teteX, d.teteX, 0.08, 0.7),
     anticipation: nombre(video.anticipation, d.anticipation, 0, 8),
-    cadre: parmi(video.cadre, ['aucun', 'carte', 'lueur', 'vignette', 'bandes'] as const, d.cadre),
+    cadre: parmi(
+      video.cadre,
+      ['aucun', 'carte', 'verre', 'lueur', 'accent', 'vignette', 'bandes'] as const,
+      d.cadre,
+    ),
     epaisseurCadre: nombre(video.epaisseurCadre, d.epaisseurCadre, 0, 24),
     cadrage: parmi(video.cadrage, ['image', 'bande'] as const, d.cadrage),
     format: parmi(video.format, ['mp4', 'webm'] as const, d.format),
     qualite: parmi(video.qualite, ['legere', 'standard', 'nette'] as const, d.qualite),
-    fond: parmi(video.fond, ['theme', 'noir', 'chroma', 'transparent', 'voile'] as const, d.fond),
+    fond: parmi(
+      video.fond,
+      ['theme', 'noir', 'degrade', 'chroma', 'transparent', 'voile'] as const,
+      d.fond,
+    ),
     opaciteFond: nombre(video.opaciteFond, d.opaciteFond, 0.1, 1),
     couleur: typeof video.couleur === 'string' ? video.couleur : null,
     curseurStyle: parmi(
@@ -123,6 +135,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
        et le défaut de quatre temps vaut mieux qu'une conversion inventée. */
     compteAvantTemps: nombre(video.compteAvantTemps, d.compteAvantTemps, 0, 16),
     decompteSonore: video.decompteSonore ?? d.decompteSonore,
+    bordsFondus: video.bordsFondus ?? d.bordsFondus,
     fondu: video.fondu ?? d.fondu,
     bandeau: video.bandeau ?? d.bandeau,
     barreDeProgression: video.barreDeProgression ?? d.barreDeProgression,
@@ -138,7 +151,7 @@ export function completerVideo(video: Partial<ReglagesVideo> | undefined): Regla
  * comparaisons qui finiraient par diverger.
  */
 export function fondAvecAlpha(fond: FondVideo): boolean {
-  return fond === 'transparent' || fond === 'voile'
+  return fond === 'transparent' || fond === 'voile' || fond === 'degrade'
 }
 
 export function completerReglages(reglages: Reglages | undefined, type: TypeMorceau): Reglages {

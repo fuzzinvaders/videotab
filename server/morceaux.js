@@ -27,8 +27,9 @@ function reglagesParDefaut(type) {
     // Quatre mesures à l'écran : c'est le zoom qui se règle, et la hauteur de la bande en
     // découle — aussi courte que la tablature l'exige, ce qu'on veut d'une incrustation.
     mesuresVisibles: 4,
-    // L'air autour de la tablature, en fraction de sa hauteur.
-    margeBande: 0.35,
+    // L'air autour de la tablature, en fraction de sa hauteur : de quoi la décoller du bord
+    // et loger les noms de sections, sans masquer la reprise pour du vide.
+    margeBande: 0.16,
     hauteurMax: 0.45,
     // Un tiers de la largeur : assez de passé pour savoir où l'on est, assez d'avenir pour
     // voir venir la mesure suivante. Au milieu, on perd la moitié de l'anticipation.
@@ -64,6 +65,8 @@ function reglagesParDefaut(type) {
     compteAvantTemps: 4,
     // Des clics pendant le décompte : muet, il ne sert qu'à qui regarde l'écran.
     decompteSonore: true,
+    // Les deux bouts de la bande s'effacent : c'est là que les mesures sont coupées en deux.
+    bordsFondus: true,
     fondu: true,
     bandeau: true,
     barreDeProgression: true,

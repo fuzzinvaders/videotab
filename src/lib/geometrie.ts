@@ -81,6 +81,16 @@ export function mesurerScene(d: {
   /* En mesures fixes, le zoom se règle sur ce que le compte demandé occupe réellement, et non
      sur une mesure médiane : une mesure qui déborde n'y est pas rognée mais renvoyée à la
      fenêtre suivante, si bien qu'en demander quatre en afficherait trois. Voir lib/blocs.ts. */
+  /* La marge du cadre « verre », et elle seule en a une. Une carte qui touche les quatre
+     bords de l'image n'est plus une carte : ses coins arrondis tombent hors champ, son filet
+     se confond avec le bord, et son ombre n'a nulle part où tomber. On lui réserve donc un
+     peu d'air tout autour — pris sur la largeur, donc sur la tablature, ce qui est le prix de
+     cet habillage-là et la raison pour laquelle les autres ne le paient pas.
+
+     Comptée sur la largeur de l'image plutôt que sur la hauteur de la bande, qui n'est pas
+     encore connue ici : c'est l'échelle qui en découle, pas l'inverse. */
+  const margeCarte = bande && video.cadre === 'verre' ? Math.max(6, Math.round(largeur * 0.012)) : 0
+
   const tenue =
     parBlocs && feuille.barres ? largeurPourTenir(feuille.barres, video.mesuresVisibles) : 0
   const largeurMesure =
@@ -88,7 +98,7 @@ export function mesurerScene(d: {
 
   const mise = bande
     ? echelleDefilement({
-        largeurZone: largeur,
+        largeurZone: largeur - 2 * margeCarte,
         hauteurMaxBande: Math.min(libre, hauteur * video.hauteurMax),
         largeurMesure,
         mesuresVisibles: video.mesuresVisibles,
@@ -102,15 +112,20 @@ export function mesurerScene(d: {
      il se pose sans qu'on ait à deviner où est la tablature dedans. La hauteur est arrondie au
      pair — plusieurs encodeurs refusent les dimensions impaires. */
   const cadreSurBande = Boolean(mise) && video.cadrage === 'bande'
+  // Cadrée sur la bande, l'image s'arrêterait pile au bord de la carte : on l'agrandit de la
+  // marge réservée plus haut, sans quoi l'ombre serait coupée net.
+  const margeOmbre = cadreSurBande ? margeCarte : 0
   const hauteurImage = cadreSurBande
-    ? 2 * Math.ceil((bandeauH + mise!.hauteurBande + barreH) / 2)
+    ? 2 * Math.ceil((bandeauH + mise!.hauteurBande + barreH + 2 * margeOmbre) / 2)
     : hauteur
 
   const zone = mise
     ? {
-        x: 0,
-        y: cadreSurBande ? bandeauH : bandeauH + Math.round((libre - mise.hauteurBande) / 2),
-        w: largeur,
+        x: margeCarte,
+        y: cadreSurBande
+          ? bandeauH + margeOmbre
+          : bandeauH + Math.round((libre - mise.hauteurBande) / 2),
+        w: largeur - 2 * margeCarte,
         h: mise.hauteurBande,
       }
     : {

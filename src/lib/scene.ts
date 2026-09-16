@@ -123,7 +123,7 @@ function rayonDeCarte(zone: { h: number }): number {
 
 /** Vrai pour les cadres dont les coins sont arrondis. */
 function cadreArrondi(cadre: Cadre): boolean {
-  return cadre === 'carte' || cadre === 'lueur'
+  return cadre === 'carte' || cadre === 'lueur' || cadre === 'verre'
 }
 
 /** Le noir translucide du fond « voile », à l'opacité demandée. */
@@ -146,6 +146,11 @@ export function creerScene(options: OptionsScene): Scene {
      pas le tempo : on le lui donne, et sans lui elle retombe sur deux temps par seconde. */
   const dureeTempsMs = Math.max(1, options.dureeTempsMs ?? 500)
   const compteAvantMs = Math.max(0, video.compteAvantTemps) * dureeTempsMs
+  /* Effacer les bouts de la bande n'a pas le même sens selon ce qu'il y a derrière. Sur un
+     fond opaque, il n'y a que la tablature à dissoudre, et le fond reste. Sur un fond qui
+     laisse passer la reprise, il faut effacer les deux ensemble — sans quoi la tablature
+     s'efface sur un voile qui, lui, garde ses deux arêtes franches. */
+  const fonduSurLeFond = video.bordsFondus && fondAvecAlpha(video.fond)
   const {
     bande,
     parBlocs,
@@ -240,6 +245,34 @@ export function creerScene(options: OptionsScene): Scene {
     ctx.restore()
   }
 
+  /**
+   * Le voile, effacé vers le haut et vers le bas.
+   *
+   * Sans arête, la bande n'a plus de limite à défendre : elle n'a donc besoin ni de cadre ni
+   * de coins arrondis, et elle survit à n'importe quelle image derrière elle. Le dégradé ne
+   * couvre que la zone — au-dessus et en dessous, le bandeau et la barre gardent le voile
+   * plein, sans quoi le titre flotterait sur rien.
+   */
+  function peindreLeFondDegrade(ctx: CanvasRenderingContext2D) {
+    const plein = voileNoir(video.opaciteFond)
+    if (zone.y > 0) {
+      ctx.fillStyle = plein
+      ctx.fillRect(0, 0, largeur, zone.y)
+    }
+    const bas = zone.y + zone.h
+    if (bas < hauteurImage) {
+      ctx.fillStyle = plein
+      ctx.fillRect(0, bas, largeur, hauteurImage - bas)
+    }
+    const degrade = ctx.createLinearGradient(0, zone.y, 0, bas)
+    degrade.addColorStop(0, voileNoir(0))
+    degrade.addColorStop(0.26, plein)
+    degrade.addColorStop(0.74, plein)
+    degrade.addColorStop(1, voileNoir(0))
+    ctx.fillStyle = degrade
+    ctx.fillRect(zone.x, zone.y, zone.w, zone.h)
+  }
+
   function reinitialiser(tMs = 0) {
     derniereImageMs = tMs
     scroll = positionVoulue(options.curseurA(tMs))
@@ -265,6 +298,7 @@ export function creerScene(options: OptionsScene): Scene {
     if (video.fond === 'theme') peindreLeFond(ctx, theme.fond)
     else if (video.fond === 'noir') peindreLeFond(ctx, '#000000')
     else if (video.fond === 'voile') peindreLeFond(ctx, voileNoir(video.opaciteFond))
+    else if (video.fond === 'degrade') peindreLeFondDegrade(ctx)
     else if (video.fond === 'chroma') {
       /* Le vert ne s'arrondit pas, et ce n'est pas un oubli : c'est lui qui sera détouré, et
          c'est donc lui qui doit occuper les coins. Un coin laissé vide y ferait un trou que le
@@ -275,7 +309,14 @@ export function creerScene(options: OptionsScene): Scene {
 
     if (couche2d) {
       composerLaBande(couche2d, { curseur, scroll })
-      dessinerCadreDerriere(ctx, { zone, video, theme, couleur })
+      dessinerCadreDerriere(ctx, {
+        zone,
+        video,
+        theme,
+        couleur,
+        largeur,
+        hauteur: hauteurImage,
+      })
       ctx.drawImage(couche, zone.x, zone.y)
 
       /* Le fondu du tournement de page. La fenêtre qu'on quitte est redessinée par-dessus la
@@ -306,6 +347,10 @@ export function creerScene(options: OptionsScene): Scene {
         hauteur: hauteurImage,
         trait: traitCadre,
       })
+
+      // En dernier, une fois le fond, la tablature et le cadre en place : ce qui s'efface aux
+      // deux bouts s'efface pour de bon, filet compris.
+      if (bande && fonduSurLeFond) effacerLesBords(ctx, zone.x, zone.y, zone.w, zone.h)
     }
 
     if (bandeauH > 0) {
@@ -428,10 +473,11 @@ export function creerScene(options: OptionsScene): Scene {
       })
     }
 
-    /* Les bords ne s'effacent qu'en défilement. En mesures, la dernière mesure de la fenêtre
-       est justement celle qu'on donne à lire en avance : l'estomper reviendrait à cacher ce
-       qu'on vient d'ajouter pour être vu. */
-    if (bande && !parBlocs) effacerLesBords(c, zone.w, zone.h)
+    /* Les bords s'effacent sur la couche seule quand le fond est opaque : la tablature se
+       dissout alors dans le fond, qui reste plein. Quand le fond laisse passer l'image de
+       dessous, c'est lui aussi qu'il faut effacer, et cela se fait plus tard, sur l'image
+       entière — sinon le voile garderait deux arêtes franches là où la tablature s'efface. */
+    if (bande && video.bordsFondus && !fonduSurLeFond) effacerLesBords(c, 0, 0, zone.w, zone.h)
     c.restore()
   }
 
@@ -448,22 +494,22 @@ export function creerScene(options: OptionsScene): Scene {
 /* Les deux bouts de la bande s'effacent en dégradé plutôt que d'être coupés net. Une mesure
    qui apparaît d'un coup au bord de l'image attire l'œil au mauvais moment ; une mesure qui
    se lève doucement se laisse oublier jusqu'à ce qu'elle arrive. */
-function effacerLesBords(c: CanvasRenderingContext2D, w: number, h: number) {
+function effacerLesBords(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
   const fondu = Math.min(w * 0.12, 220)
   c.save()
   c.globalCompositeOperation = 'destination-out'
 
-  const gauche = c.createLinearGradient(0, 0, fondu, 0)
+  const gauche = c.createLinearGradient(x, 0, x + fondu, 0)
   gauche.addColorStop(0, 'rgba(0,0,0,1)')
   gauche.addColorStop(1, 'rgba(0,0,0,0)')
   c.fillStyle = gauche
-  c.fillRect(0, 0, fondu, h)
+  c.fillRect(x, y, fondu, h)
 
-  const droite = c.createLinearGradient(w - fondu, 0, w, 0)
+  const droite = c.createLinearGradient(x + w - fondu, 0, x + w, 0)
   droite.addColorStop(0, 'rgba(0,0,0,0)')
   droite.addColorStop(1, 'rgba(0,0,0,1)')
   c.fillStyle = droite
-  c.fillRect(w - fondu, 0, fondu, h)
+  c.fillRect(x + w - fondu, y, fondu, h)
 
   c.restore()
 }
@@ -475,13 +521,40 @@ function dessinerCadreDerriere(
     video: ReglagesVideo
     theme: Theme
     couleur: string
+    largeur: number
+    hauteur: number
   },
 ) {
-  if (o.video.cadre !== 'lueur') return
+  if (o.video.cadre !== 'lueur' && o.video.cadre !== 'verre') return
   const rayon = rayonDeCarte(o.zone)
+  const verre = o.video.cadre === 'verre'
   ctx.save()
-  // Le halo est peint *sous* la bande : dessiné par-dessus, il voilerait les chiffres qu'il
-  // est censé mettre en valeur.
+  /* Peint *sous* la bande, halo comme ombre : dessinés par-dessus, ils voileraient les
+     chiffres qu'ils sont censés mettre en valeur.
+
+     L'ombre du verre est la seule chose de tout l'habillage qui sorte de la bande, et c'est
+     tout son intérêt : elle décolle la tablature de la vidéo au lieu de la poser dessus. La
+     place où elle tombe lui est réservée par la géométrie — voir margeOmbre. */
+  if (verre) {
+    /* On ne garde que ce qui déborde. Une ombre se dessine en peignant une forme pleine dont
+       le navigateur floute le pourtour : cette forme-là est un moyen, pas un objet, et elle
+       n'a rien à faire dans l'image. Tant que la bande était opaque on pouvait la laisser,
+       recouverte ; sous un voile à cinquante pour cent elle traversait, et le verre virait au
+       noir. Le découpage la retire et ne laisse que l'ombre autour. */
+    ctx.beginPath()
+    ctx.rect(0, 0, o.largeur, o.hauteur)
+    ctx.roundRect(o.zone.x, o.zone.y, o.zone.w, o.zone.h, rayon)
+    ctx.clip('evenodd')
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)'
+    ctx.shadowBlur = Math.round(o.zone.h * 0.18)
+    ctx.shadowOffsetY = Math.round(o.zone.h * 0.06)
+    ctx.fillStyle = '#000000'
+    ctx.beginPath()
+    ctx.roundRect(o.zone.x, o.zone.y, o.zone.w, o.zone.h, rayon)
+    ctx.fill()
+    ctx.restore()
+    return
+  }
   ctx.shadowColor = o.couleur
   ctx.shadowBlur = Math.round(o.zone.h * 0.22)
   ctx.fillStyle = o.theme.papier ?? o.theme.fond
@@ -504,6 +577,47 @@ function dessinerCadreDevant(
     trait: number
   },
 ) {
+  if (o.video.cadre === 'verre') {
+    const rayon = rayonDeCarte(o.zone)
+    ctx.save()
+    /* Un filet blanc à seize pour cent plutôt qu'un trait de couleur : il dit où s'arrête la
+       bande sans se faire regarder. Son épaisseur ne suit pas le réglage du cadre — un filet
+       de verre épais n'est plus un filet, c'est une bordure, et c'est le cadre « carte » qui
+       est fait pour ça. */
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)'
+    ctx.lineWidth = Math.max(1, Math.round(o.largeur / 1280))
+    const d = ctx.lineWidth / 2
+    ctx.beginPath()
+    ctx.roundRect(o.zone.x + d, o.zone.y + d, o.zone.w - 2 * d, o.zone.h - 2 * d, rayon - d)
+    ctx.stroke()
+
+    /* Le reflet : un dégradé blanc très faible sur la moitié haute. C'est ce qui donne
+       l'épaisseur — sans lui, la bande est un rectangle sombre aux coins arrondis. */
+    const reflet = ctx.createLinearGradient(0, o.zone.y, 0, o.zone.y + o.zone.h * 0.5)
+    reflet.addColorStop(0, 'rgba(255, 255, 255, 0.10)')
+    reflet.addColorStop(1, 'rgba(255, 255, 255, 0)')
+    ctx.fillStyle = reflet
+    ctx.beginPath()
+    ctx.roundRect(o.zone.x, o.zone.y, o.zone.w, o.zone.h, rayon)
+    ctx.fill()
+    ctx.restore()
+    return
+  }
+
+  if (o.video.cadre === 'accent') {
+    ctx.save()
+    /* Un seul trait, en bas, de la couleur du curseur — et une ligne claire d'un pixel en
+       haut pour fermer la bande. C'est le seul habillage qui tienne sur un fond opaque : rien
+       n'y dépend de ce qu'on voit à travers, donc rien n'y réclame de canal alpha. */
+    const epais = Math.max(2, o.trait > 0 ? o.trait : Math.round(o.largeur / 480))
+    ctx.fillStyle = o.couleur
+    ctx.fillRect(o.zone.x, o.zone.y + o.zone.h - epais, o.zone.w, epais)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)'
+    ctx.fillRect(o.zone.x, o.zone.y, o.zone.w, Math.max(1, Math.round(o.largeur / 1920)))
+    ctx.restore()
+    return
+  }
+
   if (o.video.cadre === 'carte' || o.video.cadre === 'lueur') {
     if (o.trait <= 0) return
     ctx.save()

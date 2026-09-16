@@ -39,6 +39,8 @@ const DISPOSITIONS: Array<{ id: Disposition; nom: string; aide: string }> = [
 
 const CADRES: Array<{ id: Cadre; nom: string }> = [
   { id: 'aucun', nom: 'Aucun' },
+  { id: 'verre', nom: 'Verre — filet fin, reflet et ombre portée' },
+  { id: 'accent', nom: 'Accent — un trait de couleur en bas' },
   { id: 'carte', nom: 'Carte — coins arrondis et filet' },
   { id: 'lueur', nom: 'Lueur — halo de la couleur du curseur' },
   { id: 'bandes', nom: 'Bandes — fond translucide et liserés' },
@@ -65,7 +67,9 @@ const STYLES: Array<{ id: StyleCurseur; nom: string; aide: string }> = [
 
 /* Les encadrements qui tracent un trait, et donc les seuls dont l'épaisseur veuille dire
    quelque chose. La vignette n'assombrit que les bords ; « aucun » ne dessine rien. */
-const AVEC_TRAIT = new Set<Cadre>(['carte', 'lueur', 'bandes'])
+/* Le verre n'y est pas : son filet est fixe et volontairement ténu. L'épaissir en ferait une
+   bordure, et la bordure a déjà son cadre — la carte. */
+const AVEC_TRAIT = new Set<Cadre>(['carte', 'lueur', 'bandes', 'accent'])
 
 const COULEURS = ['#4ade80', '#f59e0b', '#ef4444', '#38bdf8', '#a855f7', '#ec4899', '#ffffff']
 
@@ -221,6 +225,19 @@ export function PanneauMiseEnScene({
         </>
       ) : null}
 
+      {enBande ? (
+        <Bascule
+          label="Effacer les bouts de la bande"
+          actif={video.bordsFondus}
+          aide={
+            video.disposition === 'mesures'
+              ? 'Les côtés sont là où une mesure se trouve coupée en deux. En mesures fixes c’est un arbitrage : la dernière mesure affichée est celle qu’on donne à lire en avance, et l’estomper atténue ce qu’on avait ajouté pour être vu.'
+              : 'Les côtés sont là où une mesure se trouve coupée en deux : une moitié qui s’efface se lit comme une suite, une moitié tranchée net se lit comme une erreur.'
+          }
+          onChange={(bordsFondus) => modifier((v) => ({ ...v, bordsFondus }))}
+        />
+      ) : null}
+
       <Field
         label="Encadrement"
         hint={
@@ -337,17 +354,21 @@ export function PanneauVideo({
         hint={
           video.fond === 'chroma'
             ? 'Un vert plein, à détourer dans le montage. Ça marche partout, y compris sur Safari.'
-            : video.fond === 'voile'
+            : video.fond === 'degrade'
               ? alpha
-                ? 'La reprise se voit à travers, assombrie. Comme la transparence, ça impose le WebM et l’encodage en temps réel.'
-                : 'Ce navigateur ne sait pas encoder la transparence — le voile sortira opaque. Prends plutôt le fond vert.'
-              : video.fond === 'transparent'
+                ? 'Le voile s’efface vers le haut et vers le bas : la bande n’a plus d’arête du tout. Comme la transparence, ça impose le WebM et l’encodage en temps réel.'
+                : 'Ce navigateur ne sait pas encoder la transparence — le dégradé sortira opaque. Prends plutôt le fond vert.'
+              : video.fond === 'voile'
                 ? alpha
-                  ? 'Vraie transparence, en WebM VP8. À vérifier : tous les logiciels de montage ne la lisent pas.'
-                  : 'Ce navigateur ne sait pas encoder la transparence — la vidéo sortira sur le fond du thème. Prends plutôt le fond vert.'
-                : video.fond === 'noir'
-                  ? 'Un noir plein, quel que soit le thème. Le thème garde la main sur les couleurs de la tablature.'
-                  : 'Le fond du thème, opaque.'
+                  ? 'La reprise se voit à travers, assombrie. Comme la transparence, ça impose le WebM et l’encodage en temps réel.'
+                  : 'Ce navigateur ne sait pas encoder la transparence — le voile sortira opaque. Prends plutôt le fond vert.'
+                : video.fond === 'transparent'
+                  ? alpha
+                    ? 'Vraie transparence, en WebM VP8. À vérifier : tous les logiciels de montage ne la lisent pas.'
+                    : 'Ce navigateur ne sait pas encoder la transparence — la vidéo sortira sur le fond du thème. Prends plutôt le fond vert.'
+                  : video.fond === 'noir'
+                    ? 'Un noir plein, quel que soit le thème. Le thème garde la main sur les couleurs de la tablature.'
+                    : 'Le fond du thème, opaque.'
         }
       >
         <Select
@@ -357,12 +378,13 @@ export function PanneauVideo({
           <option value="theme">Couleur du thème</option>
           <option value="noir">Noir</option>
           <option value="voile">Noir translucide</option>
+          <option value="degrade">Noir dégradé — sans bord</option>
           <option value="chroma">Vert d’incrustation</option>
           <option value="transparent">Transparent</option>
         </Select>
       </Field>
 
-      {video.fond === 'voile' ? (
+      {video.fond === 'voile' || video.fond === 'degrade' ? (
         <Curseur
           label="Opacité du fond"
           valeur={video.opaciteFond}
@@ -548,21 +570,26 @@ function Repli({ titre, children }: { titre: string; children: React.ReactNode }
 function Bascule({
   label,
   actif,
+  aide,
   onChange,
 }: {
   label: string
   actif: boolean
+  aide?: string
   onChange: (actif: boolean) => void
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-slate-300">
-      <input
-        type="checkbox"
-        checked={actif}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-amber-500"
-      />
-      {label}
+    <label className="block text-sm text-slate-300">
+      <span className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={actif}
+          onChange={(e) => onChange(e.target.checked)}
+          className="h-4 w-4 accent-amber-500"
+        />
+        {label}
+      </span>
+      {aide ? <span className="mt-1 block pl-6 text-xs text-slate-500">{aide}</span> : null}
     </label>
   )
 }

@@ -175,6 +175,11 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **The language switch looks like a button now.** Two letters on their own in a navigation
+  bar do not read as one — they pass for a label, and nobody clicks a label. A globe in front
+  says what it is before you have read it, the way the two tabs say what they are, and an
+  outline says it can be pressed.
+
 - **No more black surround around a rounded card.** Cutting the corners of an opaque file
   does not make them transparent — it makes them black, and the video came back from the edit
   with a black frame around a rounded card, which is the very thing the rounding was meant to

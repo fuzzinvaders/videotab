@@ -1,28 +1,157 @@
 @import 'tailwindcss';
 
 /**
- * Les deux apparences, et la façon dont elles tiennent en si peu de lignes.
+ * Les apparences, et la façon dont elles tiennent en si peu de lignes.
  *
  * Tailwind 4 ne pose pas des couleurs dans les classes, il pose des variables : `bg-slate-950`
- * compile en `background-color: var(--color-slate-950)`. Redéfinir ces variables-là sous un
- * sélecteur suffit donc à rhabiller toute l'application — pas une classe à toucher dans les
- * quarante fichiers de l'interface, et rien à oublier.
+ * compile en `background-color: var(--color-slate-950)`, et `rounded-xl` en
+ * `border-radius: var(--radius-xl)`. Redéfinir ces variables sous un sélecteur suffit donc à
+ * rhabiller toute l'application — pas une classe à toucher dans les quarante fichiers de
+ * l'interface, et rien à oublier.
  *
- * L'échelle est **retournée** pour l'apparence claire. Dans le code, `slate-950` veut dire « le
- * fond de la page » et `slate-100` « le texte le plus appuyé » ; ce sont ces rôles-là qui
- * comptent, pas la clarté. On garde donc les rôles et on inverse les teintes, ce qui évite de
- * réécrire chaque classe à l'envers — et ce qui explique qu'un `text-slate-950` doive être
- * chassé du code quand il désigne vraiment du texte sombre : voir `text-neutral-950`, qui ne
- * bouge dans aucune des deux.
+ * Deux axes indépendants, posés en attributs sur la racine : `data-style` dit la forme,
+ * `data-clarte` dit s'il fait jour ou nuit. Quatre combinaisons, quatre palettes.
  *
- * Les couleurs viennent de presetbook : des gris chauds plutôt que bleutés, une ocre plutôt
- * qu'une ambre, et ses accents — brique, sapin, ardoise bleue — pour le danger, le succès et
- * les étiquettes.
+ * L'échelle des gris est **retournée** en clair. Dans ce code, `slate-950` veut dire « le fond
+ * de la page » et `slate-100` « le texte le plus appuyé » ; ce sont ces rôles-là qui comptent,
+ * pas la clarté. On garde donc les rôles et on inverse les teintes, ce qui évite de réécrire
+ * chaque classe à l'envers — et ce qui oblige à chasser du code les `text-slate-950` qui
+ * désignaient vraiment du texte sombre : voir `text-neutral-950`, qui ne bouge dans aucune.
  */
-[data-theme='papier'] {
+
+/* ---------- Ardoise, en clair : les mêmes gris bleutés, retournés ---------- */
+[data-clarte='clair'] {
   color-scheme: light;
 
-  /* Les gris, du fond de page au texte le plus noir. */
+  --color-slate-950: #e2e8f0;
+  --color-slate-900: #f8fafc;
+  --color-slate-800: #e9eef5;
+  --color-slate-700: #cbd5e1;
+  --color-slate-600: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-400: #475569;
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #0f172a;
+  --color-slate-50: #020617;
+
+  /* L'ambre s'assombrit : la même teinte qu'en sombre serait illisible sur du papier, et
+     surtout ne porterait plus le texte blanc des boutons. */
+  --color-amber-300: #92400e;
+  --color-amber-400: #b45309;
+  --color-amber-500: #d97706;
+  --color-amber-600: #b45309;
+  --color-amber-700: #92400e;
+  --color-amber-950: #fef3c7;
+
+  --color-red-300: #991b1b;
+  --color-red-400: #b91c1c;
+  --color-red-500: #b91c1c;
+  --color-red-600: #b91c1c;
+  --color-red-950: #fee2e2;
+  --color-emerald-300: #065f46;
+  --color-emerald-400: #047857;
+  --color-emerald-950: #d1fae5;
+  --color-sky-300: #0369a1;
+  --color-sky-950: #e0f2fe;
+}
+
+/**
+ * ---------- Atelier : la forme de presetbook ----------
+ *
+ * Ce n'est plus une affaire de couleurs. Presque tous les coins tombent à deux ou trois
+ * pixels, les titres passent en capitales serrées, les petites étiquettes en chasse fixe
+ * espacée, et chaque carte prend un filet de couleur au flanc. C'est une mise en page de
+ * catalogue imprimé, là où l'ardoise est un tableau de bord.
+ *
+ * Les polices restent celles du système. presetbook charge Archivo et IBM Plex depuis Google ;
+ * ici l'application doit fonctionner hors ligne et sans appeler personne, alors on reprend le
+ * **système typographique** — graisse, capitales, interlettrage, chasse fixe pour les données —
+ * plutôt que les fontes elles-mêmes. C'est ce système-là qui fait l'essentiel de l'allure.
+ */
+[data-style='atelier'] {
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
+}
+
+/* Les titres : capitales, graisse pleine, interlettrage resserré sur les grands et ouvert sur
+   les petits — c'est ce contraste qui donne le ton éditorial. */
+[data-style='atelier'] h1 {
+  /* Le grand titre en capitales serrées, et nettement plus gros qu'ailleurs : c'est lui qui
+     donne le ton, et une page de catalogue s'ouvre sur un nom, pas sur une ligne de plus. */
+  font-size: clamp(26px, 3.6vw, 36px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+}
+
+[data-style='atelier'] h2 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Les valeurs et les étiquettes en chasse fixe respirent un peu plus : c'est ce qui les fait
+   lire comme des données et non comme du texte. */
+[data-style='atelier'] .font-mono {
+  letter-spacing: 0.06em;
+}
+
+/* Le filet de couleur au flanc des cartes, la signature de presetbook. Il est posé en
+   `box-shadow` plutôt qu'en bordure : une bordure décalerait le contenu de trois pixels, et
+   toutes les cartes de l'atelier sont alignées les unes à côté des autres. */
+[data-style='atelier'] .carte {
+  box-shadow: inset 3px 0 0 0 var(--color-amber-500);
+}
+
+/* Un filet franc sous la barre de navigation, comme le trait qui ferme un ours de journal. */
+[data-style='atelier'] nav {
+  border-bottom-width: 2px;
+  border-color: var(--color-slate-300);
+}
+
+/* ---------- Atelier : les gris chauds de presetbook ---------- */
+[data-style='atelier'][data-clarte='sombre'] {
+  --color-slate-950: #121412;
+  --color-slate-900: #1c1e1c;
+  --color-slate-800: #242724;
+  --color-slate-700: #3c413b;
+  --color-slate-600: #4e544c;
+  --color-slate-500: #7c8178;
+  --color-slate-400: #a8ada3;
+  --color-slate-300: #c3c7c0;
+  --color-slate-200: #dfe2de;
+  --color-slate-100: #eceee9;
+  --color-slate-50: #ffffff;
+
+  /* L'ocre de presetbook à la place de l'ambre, et ses accents : brique, sapin, bleu d'atelier. */
+  --color-amber-300: #f0c88f;
+  --color-amber-400: #e0ad68;
+  --color-amber-500: #d79a4f;
+  --color-amber-600: #c2883f;
+  --color-amber-700: #a9742f;
+  --color-amber-950: #33260f;
+  --color-red-300: #eb9184;
+  --color-red-400: #e0705f;
+  --color-red-500: #e0705f;
+  --color-red-600: #c85a4a;
+  --color-red-950: #391b16;
+  --color-emerald-300: #8bcfae;
+  --color-emerald-400: #5fb893;
+  --color-emerald-950: #122c24;
+  --color-sky-300: #6fbac6;
+  --color-sky-950: #10292e;
+}
+
+[data-style='atelier'][data-clarte='clair'] {
+  color-scheme: light;
+
   --color-slate-950: #e4e4e0;
   --color-slate-900: #f7f7f5;
   --color-slate-800: #ecece8;
@@ -35,16 +164,12 @@
   --color-slate-100: #181917;
   --color-slate-50: #101010;
 
-  /* L'ocre de presetbook à la place de l'ambre : c'est la couleur de l'accent, celle des
-     boutons, du curseur et des liens. Assez foncée pour porter du texte blanc. */
   --color-amber-300: #6f420f;
   --color-amber-400: #8a5a11;
   --color-amber-500: #9e5f19;
   --color-amber-600: #8a5214;
   --color-amber-700: #6f420f;
   --color-amber-950: #f1e3cf;
-
-  /* La brique pour le danger, le sapin pour ce qui a réussi, l'ardoise bleue pour les PDF. */
   --color-red-300: #7d231c;
   --color-red-400: #a62f26;
   --color-red-500: #a62f26;

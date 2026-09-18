@@ -18,19 +18,22 @@
     <title>Videotab</title>
     <!-- L'apparence posée avant le premier pixel. Sans ça, qui travaille en clair verrait
          l'ardoise clignoter le temps que React démarre — un défaut qu'on ne voit qu'une fois
-         déployé, et à chaque chargement. La même règle qu'au démarrage de l'application, à
-         garder identique : voir src/lib/apparence.tsx. -->
+         déployé, et à chaque chargement. Mêmes règles qu’au démarrage de l’application, à
+         garder identiques : voir src/lib/apparence.tsx. -->
     <script>
       try {
-        var choix = localStorage.getItem('videotab.apparence')
-        document.documentElement.dataset.theme =
-          choix === 'papier' || choix === 'ardoise'
-            ? choix
+        var racine = document.documentElement
+        var style = localStorage.getItem('videotab.style')
+        racine.dataset.style = style === 'atelier' ? 'atelier' : 'ardoise'
+        var clarte = localStorage.getItem('videotab.clarte')
+        racine.dataset.clarte =
+          clarte === 'clair' || clarte === 'sombre'
+            ? clarte
             : matchMedia('(prefers-color-scheme: light)').matches
-              ? 'papier'
-              : 'ardoise'
+              ? 'clair'
+              : 'sombre'
       } catch (e) {
-        /* Navigation privée : on garde l'apparence par défaut. */
+        /* Navigation privée : on garde l’apparence par défaut. */
       }
     </script>
   </head>

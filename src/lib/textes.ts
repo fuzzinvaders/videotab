@@ -19,6 +19,8 @@ export const ANGLAIS: Record<string, string> = {
   'Passer en français': 'Passer en français',
   'Switch to English': 'Switch to English',
   'Passer en clair': 'Switch to the light look',
+  'Passer au style Atelier': 'Switch to the Workshop style',
+  'Revenir au style Ardoise': 'Back to the Slate style',
   'Passer en sombre': 'Switch to the dark look',
   Chargement: 'Loading',
   'Chargement…': 'Loading…',

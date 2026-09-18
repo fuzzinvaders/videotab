@@ -42,18 +42,36 @@ function BoutonLangue() {
   )
 }
 
-/* Deux apparences, donc un bouton qui bascule, comme pour la langue. Il montre celle vers
-   laquelle il mène : le soleil quand on est dans le sombre, la lune quand on est dans le
-   clair. Montrer celle où l'on est n'apprendrait rien — on la voit. */
-function BoutonApparence() {
-  const { apparence, choisir } = useApparence()
+/* Deux boutons parce que ce sont deux questions, et qu'on y répond séparément : la forme
+   d'un côté, le jour ou la nuit de l'autre. Chacun montre ce vers quoi il mène, jamais où
+   l'on est — on le voit déjà. */
+function BoutonStyle() {
+  const { style, choisirStyle } = useApparence()
   const { t } = useLangue()
-  const sombre = apparence === 'ardoise'
+  const atelier = style === 'atelier'
+  const dire = atelier ? 'Revenir au style Ardoise' : 'Passer au style Atelier'
+  return (
+    <button
+      type="button"
+      onClick={() => choisirStyle(atelier ? 'ardoise' : 'atelier')}
+      className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-2 text-base leading-none transition-colors hover:border-slate-600 hover:bg-slate-800"
+      aria-label={t(dire)}
+      title={t(dire)}
+    >
+      {atelier ? '🎛️' : '🗂️'}
+    </button>
+  )
+}
+
+function BoutonClarte() {
+  const { clarte, choisirClarte } = useApparence()
+  const { t } = useLangue()
+  const sombre = clarte === 'sombre'
   const dire = sombre ? 'Passer en clair' : 'Passer en sombre'
   return (
     <button
       type="button"
-      onClick={() => choisir(sombre ? 'papier' : 'ardoise')}
+      onClick={() => choisirClarte(sombre ? 'clair' : 'sombre')}
       className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-2 text-base leading-none transition-colors hover:border-slate-600 hover:bg-slate-800"
       aria-label={t(dire)}
       title={t(dire)}
@@ -75,7 +93,8 @@ export function NavBar() {
             <span>{t(onglet.label)}</span>
           </NavLink>
         ))}
-        <BoutonApparence />
+        <BoutonStyle />
+        <BoutonClarte />
         <BoutonLangue />
       </div>
     </nav>

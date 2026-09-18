@@ -63,12 +63,15 @@ describe('completerVideo', () => {
     expect(complet.curseurStyle).toBe(videoParDefaut().curseurStyle)
   })
 
-  /* Les mesures fixes sont arrivées après le défilement : un morceau enregistré avec elles
-     doit se rouvrir dessus, et un morceau plus ancien retrouver le défilement sans rien dire.
-     C'est tout ce que garantit l'absence de migration, et ça se vérifie. */
-  it('accepte la disposition en mesures fixes, arrivée après les autres', () => {
-    expect(completerVideo({ disposition: 'mesures' }).disposition).toBe('mesures')
-    expect(completerVideo({}).disposition).toBe('defilement')
+  /* Chaque disposition enregistrée doit se rouvrir telle quelle, et un morceau qui n'en porte
+     aucune retrouver celle du jour. C'est tout ce que garantit l'absence de migration, et
+     c'est ce qui se vérifie ici — pas le défaut lui-même, qui est un choix de produit et a
+     déjà changé une fois. */
+  it('rouvre chaque disposition telle qu’elle a été enregistrée', () => {
+    for (const disposition of ['page', 'defilement', 'mesures'] as const) {
+      expect(completerVideo({ disposition }).disposition).toBe(disposition)
+    }
+    expect(completerVideo({}).disposition).toBe(videoParDefaut().disposition)
     expect(completerVideo({}).anticipation).toBe(videoParDefaut().anticipation)
   })
 

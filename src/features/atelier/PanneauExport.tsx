@@ -115,7 +115,10 @@ export function PanneauExport({
   const [etape, setEtape] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
   const [garder, setGarder] = useState(true)
-  const [audible, setAudible] = useState(true)
+  /* Muet pendant l'export. Par la voie rapide, la bande-son n'est de toute façon pas jouée —
+     l'encodage n'a plus rien à voir avec le temps du morceau — et par la voie lente, entendre
+     trois minutes de synthétiseur n'a jamais aidé personne. */
+  const [audible, setAudible] = useState(false)
   const [produite, setProduite] = useState<{
     url: string
     nom: string

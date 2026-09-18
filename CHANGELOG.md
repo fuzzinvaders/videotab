@@ -9,6 +9,16 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **The defaults are now the settings an overlay actually wants.** They had been chosen one
+  at a time, each sensible on its own, and together they made a video nobody would ship:
+  full 1080p frame, theme background, no frame, a title strip repeating what the video below
+  already says. Ten of them change — fixed bars, five bars on screen, cropped to the band,
+  black background, card frame at 6 px, white cursor, line only, no title strip, ends not
+  faded, and silence while exporting.
+
+  Only new pieces are affected. Everything already in the library keeps what it was saved
+  with, which is the whole point of settings being stored per piece.
+
 - **The band no longer reserves a third of its height for nothing.** The air above and below
   the tablature defaulted to 0.35 of its height on each side, which inflated the band by 70 %
   — that much of the cover hidden behind empty space. It is now 0.16, enough to keep the

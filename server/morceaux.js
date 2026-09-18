@@ -20,13 +20,13 @@ function reglagesParDefaut(type) {
     largeur: 1920,
     hauteur: 1080,
     fps: 30,
-    // Le défilement horizontal plutôt que la page : c'est la disposition qui sert à incruster
-    // une tablature dans une vidéo de reprise, et c'est ce pour quoi on vient ici.
-    disposition: "defilement",
+    // Les mesures fixes : la bande reste immobile et c'est le curseur qui la traverse. Sur
+    // une tablature serrée, un chiffre qui ne bouge pas se déchiffre — celui qui glisse, non.
+    disposition: "mesures",
     theme: "cordes",
-    // Quatre mesures à l'écran : c'est le zoom qui se règle, et la hauteur de la bande en
+    // Cinq mesures à l'écran : c'est le zoom qui se règle, et la hauteur de la bande en
     // découle — aussi courte que la tablature l'exige, ce qu'on veut d'une incrustation.
-    mesuresVisibles: 4,
+    mesuresVisibles: 5,
     // L'air autour de la tablature, en fraction de sa hauteur : de quoi la décoller du bord
     // et loger les noms de sections, sans masquer la reprise pour du vide.
     margeBande: 0.16,
@@ -37,10 +37,12 @@ function reglagesParDefaut(type) {
     // Une mesure d'avance en mode « mesures » : la fenêtre en montre une de plus qu'elle n'en
     // fait jouer, et cette mesure-là ouvre la suivante.
     anticipation: 1,
-    cadre: "aucun",
+    // La carte : coins arrondis et filet, de quoi dire où la bande s'arrête sur une reprise.
+    cadre: "carte",
     // Épaisseur du trait du cadre, en pixels d'une image large de 1920.
-    epaisseurCadre: 3,
-    cadrage: "image",
+    epaisseurCadre: 6,
+    // Cadré sur la bande : la vidéo pèse ce qu'elle montre et se pose telle quelle au montage.
+    cadrage: "bande",
     // Le mp4 : le seul format qui se pose sans discuter dans un logiciel de montage, et le
     // montage est la destination de cette vidéo. Le WebM reste au choix, pour le web.
     format: "mp4",
@@ -49,14 +51,16 @@ function reglagesParDefaut(type) {
     // La transparence en deux fichiers : neuf fois plus rapide, et en mp4. Sans effet tant
     // que le fond est opaque.
     cacheSepare: true,
-    fond: "theme",
+    // Le noir, pris hors du thème : celui-ci garde la main sur les couleurs de la tablature.
+    fond: "noir",
     // Opacité du fond noir translucide, sans effet sur les autres fonds. Un peu plus de la
     // moitié : assez sombre pour détacher les chiffres, assez clair pour voir la reprise.
     opaciteFond: 0.55,
-    // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
-    // choisi une, et continue de la suivre quand on change de thème.
-    couleur: null,
-    curseurStyle: "les-deux",
+    // Le blanc : sur une incrustation, le curseur doit se distinguer de la tablature qu'il
+    // traverse plutôt que s'accorder avec elle. « Auto » reste à un clic.
+    couleur: "#ffffff",
+    // Le trait seul : sur une tablature serrée, le surlignage se confond avec le trait.
+    curseurStyle: "trait",
     // Le curseur glisse d'une note à l'autre plutôt que d'y sauter.
     curseurGlisse: true,
     // Le surlignage situe le temps en cours, le trait vif dit où l'on en est dedans. Trop
@@ -68,10 +72,13 @@ function reglagesParDefaut(type) {
     compteAvantTemps: 4,
     // Des clics pendant le décompte : muet, il ne sert qu'à qui regarde l'écran.
     decompteSonore: true,
-    // Les deux bouts de la bande s'effacent : c'est là que les mesures sont coupées en deux.
-    bordsFondus: true,
+    // Les bouts ne s'effacent pas : en mesures fixes, la dernière mesure affichée est celle
+    // qu'on donne à lire en avance, et l'estomper atténuerait ce qu'on voulait montrer.
+    bordsFondus: false,
     fondu: true,
-    bandeau: true,
+    // Pas de bandeau de titre : sur une incrustation, la vidéo qui porte la tablature le dit
+    // déjà, et le redire prendrait de la hauteur à la tablature.
+    bandeau: false,
     barreDeProgression: true,
   };
 

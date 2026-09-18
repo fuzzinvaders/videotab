@@ -18,12 +18,13 @@ export function videoParDefaut(): ReglagesVideo {
     largeur: 1920,
     hauteur: 1080,
     fps: 30,
-    // Le défilement horizontal par défaut : c'est la disposition qui sert à incruster une
-    // tablature dans une vidéo de reprise, et c'est de loin l'usage le plus fréquent.
-    disposition: 'defilement',
+    /* Les mesures fixes plutôt que le défilement. Les deux servent à incruster une tablature
+       dans une vidéo de reprise, mais sur une tablature serrée un chiffre qui glisse se suit
+       sans se déchiffrer : la bande immobile se lit. Le défilement reste à un clic. */
+    disposition: 'mesures',
     theme: THEME_PAR_DEFAUT,
-    // Quatre mesures : assez pour voir venir la phrase, assez peu pour lire les chiffres.
-    mesuresVisibles: 4,
+    // Cinq mesures : assez pour voir venir la phrase, assez peu pour lire les chiffres.
+    mesuresVisibles: 5,
     /* Un sixième de la hauteur de la tablature de chaque côté : de quoi la décoller du bord,
        et de quoi loger les noms de sections, sans plus. Le défaut était à un tiers, ce qui
        gonflait la bande de soixante-dix pour cent pour du vide — autant de la reprise qu'on
@@ -37,12 +38,16 @@ export function videoParDefaut(): ReglagesVideo {
     teteX: 0.33,
     // Une mesure d'avance : de quoi lire ce qui vient sans que la fenêtre tourne pour si peu.
     anticipation: 1,
-    cadre: 'aucun',
-    // Trois pixels sur une image de 1920 : un filet qu'on voit sans qu'il prenne la vedette.
-    epaisseurCadre: 3,
-    // L'image entière par défaut : c'est le format qu'on attend d'une vidéo, et le cadrage sur
-    // la bande ne prend son sens qu'une fois qu'on sait qu'on va l'incruster.
-    cadrage: 'image',
+    /* La carte : coins arrondis et filet. Sur un fond opaque les coins restent carrés — un
+       fichier sans transparence ne sait pas laisser un coin vide — mais le filet suffit à
+       dire où la bande s'arrête, ce qu'aucun bord franc ne fait sur une vidéo. */
+    cadre: 'carte',
+    // Six pixels sur une image de 1920 : un filet qui tient à distance d'incrustation.
+    epaisseurCadre: 6,
+    /* Cadré sur la bande : la vidéo ne porte plus les huit cents pixels de vide au-dessus et
+       en dessous, elle pèse ce qu'elle montre et se pose au montage sans qu'on ait à deviner
+       où est la tablature dedans. C'est l'usage même de l'application. */
+    cadrage: 'bande',
     // Le mp4 : c'est le seul format qui se pose sans discuter dans un logiciel de montage,
     // et le montage est la destination de cette vidéo.
     format: 'mp4',
@@ -51,14 +56,19 @@ export function videoParDefaut(): ReglagesVideo {
     // La transparence en deux fichiers : neuf fois plus rapide, et en mp4. Sans effet tant
     // que le fond est opaque.
     cacheSepare: true,
-    fond: 'theme',
+    /* Le noir plutôt que la couleur du thème : le thème choisit les couleurs de la tablature,
+       et ce qu'on veut derrière est presque toujours du noir, quel que soit le reste. */
+    fond: 'noir',
     // Un peu plus de la moitié : assez sombre pour détacher les chiffres, assez clair pour
     // qu'on reconnaisse ce qui passe derrière.
     opaciteFond: 0.55,
-    // Rien plutôt qu'une couleur : le curseur prend celle du thème tant que personne n'en a
-    // choisi une, et continue de la suivre à chaque changement de thème.
-    couleur: null,
-    curseurStyle: 'les-deux',
+    /* Le blanc, et non la couleur du thème. Sur une incrustation, le curseur doit se
+       distinguer de la tablature qu'il traverse plutôt que s'accorder avec elle ; « Auto »
+       reste à un clic pour qui veut le voir suivre la palette. */
+    couleur: '#ffffff',
+    /* Le trait seul. Les deux disent la même chose, et sur une tablature serrée ils se
+       gênent : le surlignage se confond avec le trait qui le traverse. */
+    curseurStyle: 'trait',
     // Glissant par défaut : c'est le mouvement le plus juste, et le seul qui ait un sens
     // quand la bande défile. En mesures fixes, sauter de note en note se défend mieux.
     curseurGlisse: true,
@@ -67,10 +77,14 @@ export function videoParDefaut(): ReglagesVideo {
     compteAvantTemps: 4,
     // Des clics par défaut : un décompte muet ne compte pour personne.
     decompteSonore: true,
-    // Les deux bouts de la bande s'effacent : c'est là que les mesures sont coupées en deux.
-    bordsFondus: true,
+    /* Les bouts de la bande ne s'effacent pas. En mesures fixes, la dernière mesure affichée
+       est justement celle qu'on donne à lire en avance : l'estomper reviendrait à atténuer ce
+       qu'on avait ajouté pour être vu. En défilement, c'est l'inverse, et une case le dit. */
+    bordsFondus: false,
     fondu: true,
-    bandeau: true,
+    /* Pas de bandeau de titre : sur une incrustation, le titre est déjà dans la vidéo qui
+       porte la tablature, et il prendrait de la hauteur à celle-ci pour le redire. */
+    bandeau: false,
     barreDeProgression: true,
   }
 }

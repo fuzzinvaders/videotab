@@ -18,6 +18,8 @@ export const ANGLAIS: Record<string, string> = {
   Compte: 'Account',
   'Passer en français': 'Passer en français',
   'Switch to English': 'Switch to English',
+  'Passer en clair': 'Switch to the light look',
+  'Passer en sombre': 'Switch to the dark look',
   Chargement: 'Loading',
   'Chargement…': 'Loading…',
   'Un instant…': 'One moment…',

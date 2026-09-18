@@ -5,7 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#020617" />
-    <meta name="description" content="Transforme une tablature Guitar Pro ou PDF en vidéo, curseur de lecture compris" />
+    <meta
+      name="description"
+      content="Transforme une tablature Guitar Pro ou PDF en vidéo, curseur de lecture compris"
+    />
     <!-- iOS ignore le manifest : sans ces trois lignes, « Sur l'écran d'accueil » produit
          un raccourci qui rouvre Safari avec une capture d'écran en guise d'icône. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,6 +16,23 @@
     <meta name="apple-mobile-web-app-title" content="Videotab" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Videotab</title>
+    <!-- L'apparence posée avant le premier pixel. Sans ça, qui travaille en clair verrait
+         l'ardoise clignoter le temps que React démarre — un défaut qu'on ne voit qu'une fois
+         déployé, et à chaque chargement. La même règle qu'au démarrage de l'application, à
+         garder identique : voir src/lib/apparence.tsx. -->
+    <script>
+      try {
+        var choix = localStorage.getItem('videotab.apparence')
+        document.documentElement.dataset.theme =
+          choix === 'papier' || choix === 'ardoise'
+            ? choix
+            : matchMedia('(prefers-color-scheme: light)').matches
+              ? 'papier'
+              : 'ardoise'
+      } catch (e) {
+        /* Navigation privée : on garde l'apparence par défaut. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

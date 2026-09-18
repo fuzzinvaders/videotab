@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useApparence } from '../lib/apparence'
 import { useLangue } from '../lib/langue'
 
 /* Deux onglets, et c'est tout ce qu'il y a. L'atelier n'y figure pas : on n'y va jamais
@@ -41,6 +42,27 @@ function BoutonLangue() {
   )
 }
 
+/* Deux apparences, donc un bouton qui bascule, comme pour la langue. Il montre celle vers
+   laquelle il mène : le soleil quand on est dans le sombre, la lune quand on est dans le
+   clair. Montrer celle où l'on est n'apprendrait rien — on la voit. */
+function BoutonApparence() {
+  const { apparence, choisir } = useApparence()
+  const { t } = useLangue()
+  const sombre = apparence === 'ardoise'
+  const dire = sombre ? 'Passer en clair' : 'Passer en sombre'
+  return (
+    <button
+      type="button"
+      onClick={() => choisir(sombre ? 'papier' : 'ardoise')}
+      className="flex shrink-0 items-center rounded-lg border border-slate-700 px-2.5 py-2 text-base leading-none transition-colors hover:border-slate-600 hover:bg-slate-800"
+      aria-label={t(dire)}
+      title={t(dire)}
+    >
+      {sombre ? '☀️' : '🌙'}
+    </button>
+  )
+}
+
 export function NavBar() {
   const { t } = useLangue()
   return (
@@ -53,6 +75,7 @@ export function NavBar() {
             <span>{t(onglet.label)}</span>
           </NavLink>
         ))}
+        <BoutonApparence />
         <BoutonLangue />
       </div>
     </nav>

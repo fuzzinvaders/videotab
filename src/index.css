@@ -1,4 +1,61 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/**
+ * Les deux apparences, et la façon dont elles tiennent en si peu de lignes.
+ *
+ * Tailwind 4 ne pose pas des couleurs dans les classes, il pose des variables : `bg-slate-950`
+ * compile en `background-color: var(--color-slate-950)`. Redéfinir ces variables-là sous un
+ * sélecteur suffit donc à rhabiller toute l'application — pas une classe à toucher dans les
+ * quarante fichiers de l'interface, et rien à oublier.
+ *
+ * L'échelle est **retournée** pour l'apparence claire. Dans le code, `slate-950` veut dire « le
+ * fond de la page » et `slate-100` « le texte le plus appuyé » ; ce sont ces rôles-là qui
+ * comptent, pas la clarté. On garde donc les rôles et on inverse les teintes, ce qui évite de
+ * réécrire chaque classe à l'envers — et ce qui explique qu'un `text-slate-950` doive être
+ * chassé du code quand il désigne vraiment du texte sombre : voir `text-neutral-950`, qui ne
+ * bouge dans aucune des deux.
+ *
+ * Les couleurs viennent de presetbook : des gris chauds plutôt que bleutés, une ocre plutôt
+ * qu'une ambre, et ses accents — brique, sapin, ardoise bleue — pour le danger, le succès et
+ * les étiquettes.
+ */
+[data-theme='papier'] {
+  color-scheme: light;
+
+  /* Les gris, du fond de page au texte le plus noir. */
+  --color-slate-950: #e4e4e0;
+  --color-slate-900: #f7f7f5;
+  --color-slate-800: #ecece8;
+  --color-slate-700: #ccccc6;
+  --color-slate-600: #b6b6af;
+  --color-slate-500: #84887f;
+  --color-slate-400: #52564f;
+  --color-slate-300: #3c413b;
+  --color-slate-200: #23251f;
+  --color-slate-100: #181917;
+  --color-slate-50: #101010;
+
+  /* L'ocre de presetbook à la place de l'ambre : c'est la couleur de l'accent, celle des
+     boutons, du curseur et des liens. Assez foncée pour porter du texte blanc. */
+  --color-amber-300: #6f420f;
+  --color-amber-400: #8a5a11;
+  --color-amber-500: #9e5f19;
+  --color-amber-600: #8a5214;
+  --color-amber-700: #6f420f;
+  --color-amber-950: #f1e3cf;
+
+  /* La brique pour le danger, le sapin pour ce qui a réussi, l'ardoise bleue pour les PDF. */
+  --color-red-300: #7d231c;
+  --color-red-400: #a62f26;
+  --color-red-500: #a62f26;
+  --color-red-600: #a62f26;
+  --color-red-950: #f4deda;
+  --color-emerald-300: #1b5340;
+  --color-emerald-400: #22654f;
+  --color-emerald-950: #d6e7e0;
+  --color-sky-300: #1f6470;
+  --color-sky-950: #d6e8eb;
+}
 
 :root {
   color-scheme: dark;
@@ -6,8 +63,10 @@
 
 body {
   margin: 0;
-  background-color: #020617;
-  color: #f1f5f9;
+  /* Les mêmes variables que les classes : le fond de la page suit l'apparence sans avoir à
+     répéter ses couleurs ici. */
+  background-color: var(--color-slate-950);
+  color: var(--color-slate-100);
   font-family:
     system-ui,
     -apple-system,
@@ -16,9 +75,9 @@ body {
     sans-serif;
 }
 
-/* Les champs date et nombre restent lisibles en thème sombre sur iOS, où le
-   navigateur les peint autrement du reste du formulaire. */
+/* Les champs date et nombre restent lisibles quelle que soit l'apparence : sur iOS, le
+   navigateur les peint autrement du reste du formulaire s'il se trompe de sens. */
 input[type='date'],
 input[type='number'] {
-  color-scheme: dark;
+  color-scheme: inherit;
 }

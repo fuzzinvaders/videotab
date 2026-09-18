@@ -460,7 +460,7 @@ export function PanneauVideo({
             <button
               onClick={() => modifier((v) => ({ ...v, couleur: null }))}
               style={{ backgroundColor: theme.curseur }}
-              className={`flex h-8 items-center rounded-full px-3 text-xs font-medium text-slate-950 ring-offset-2 ring-offset-slate-900 transition-all ${
+              className={`flex h-8 items-center rounded-full px-3 text-xs font-medium text-neutral-950 ring-offset-2 ring-offset-slate-900 transition-all ${
                 video.couleur === null ? 'ring-2 ring-slate-100' : ''
               }`}
               title="Reprendre la couleur du thème"

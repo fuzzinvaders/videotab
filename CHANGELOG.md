@@ -332,6 +332,26 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **A second look, and a button to switch to it.** "Ardoise" is the original one: dark, blue,
+  amber accent. "Papier" comes from presetbook, the other application of the house — warm
+  greys instead of blue ones, ochre instead of amber, and light instead of dark, with its
+  brick, pine and slate-blue accents for danger, success and labels.
+
+  It is called an *appearance*, not a theme: "theme" is already taken, and by the most visible
+  thing in the workshop — the palette of the tab being filmed. Two of them in the same
+  sentence would have made half the settings ambiguous.
+
+  It costs almost nothing, and that is worth saying. Tailwind 4 does not put colours in
+  classes, it puts variables: `bg-slate-950` compiles to `background-color:
+  var(--color-slate-950)`. Redefining those variables under one selector re-dresses the whole
+  application — no class touched in forty files, and nothing forgotten. The scale is inverted
+  for the light look, since `slate-950` means "the page background" in this code and
+  `slate-100` "the strongest text": the roles are what matter, not the lightness.
+
+  The appearance is applied by a short script at the top of the page, before React starts —
+  otherwise anyone working in the light one would watch the dark one flash on every load. That
+  duplicates the start-up rule, deliberately, and a test holds the two copies together.
+
 - **The interface speaks English.** It follows the browser's language on first load, and a
   button in the navigation bar switches it; the choice is kept in the browser rather than on
   the account, because a language is a habit of one machine — and because it has to be right

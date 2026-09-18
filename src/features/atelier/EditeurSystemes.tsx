@@ -238,7 +238,7 @@ function Rectangle({
       onPointerDown={(e) => surPoignee(e, 'deplacer')}
       className="absolute cursor-move touch-none border-2 border-amber-500 bg-amber-500/15"
     >
-      <span className="absolute -top-0.5 -left-0.5 rounded-br bg-amber-500 px-1.5 text-xs font-bold text-slate-950">
+      <span className="absolute -top-0.5 -left-0.5 rounded-br bg-amber-500 px-1.5 text-xs font-bold text-neutral-950">
         {numero}
       </span>
 

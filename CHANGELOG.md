@@ -342,7 +342,9 @@ versioning yet, so entries are grouped by the change that shipped them.
   Two points are enough when the tempo holds; add more wherever the take breathes. The
   attached file then becomes the video's soundtrack, in place of the synthesis.
 
-  Points are set by **tapping**: start playback and hit T on each bar as it is announced. You
+  Points are set by **tapping**: the tap button sits right under the preview, so the tab
+  stays in sight while you hit T on each bar as it is announced — hunting for a button in a
+  column of settings is how you miss the bar you were aiming at. You
   aim with your ear instead of with the mouse, which is both faster and more accurate. Output
   latency is compensated — what you hear was scheduled some fifty milliseconds earlier — while
   reaction time is not, because it cannot be measured; it is near enough constant that

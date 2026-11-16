@@ -27,8 +27,31 @@ import type { PointCalage } from '../../lib/types'
  * fatigue, du morceau. On ne le devine donc pas — mais comme il est à peu près constant, il
  * suffit de décaler tous les points du même montant une fois la frappe finie. C'est à quoi
  * sert le réglage d'ensemble, à régler une fois en regardant l'aperçu.
+ *
+ * La frappe est séparée en deux endroits, et c'est voulu. Le bouton sur lequel on tape se tient
+ * **sous l'aperçu**, pour qu'on voie la tablature pendant qu'on frappe : c'est elle le repère,
+ * et chercher le bouton des yeux dans une colonne de réglages fait rater la mesure. Le reste —
+ * le pas, la mesure de départ, la liste des points — reste avec les autres réglages, où l'on
+ * ne va qu'avant et après.
  */
-export function PanneauCalage({
+export interface Frappe {
+  disponible: boolean
+  enMarche: boolean
+  mesureEnCours: number
+  nombreDeMesures: number
+  pas: number
+  setPas: (pas: number) => void
+  depart: number
+  setDepart: (mesure: number) => void
+  mesures: number[]
+  calage: PointCalage[]
+  onChange: (points: PointCalage[]) => void
+  lancer: () => void
+  arreter: () => void
+  taper: () => void
+}
+
+export function useFrappe({
   audio,
   mesures,
   calage,
@@ -39,8 +62,7 @@ export function PanneauCalage({
   mesures: number[]
   calage: PointCalage[]
   onChange: (points: PointCalage[]) => void
-}) {
-  const t = useT()
+}): Frappe {
   const [pas, setPas] = useState(4)
   const [depart, setDepart] = useState(1)
   const [mesureEnCours, setMesureEnCours] = useState(1)
@@ -61,27 +83,29 @@ export function PanneauCalage({
 
   useEffect(() => arreter, [arreter])
 
-  async function lancer() {
-    if (!audio) return
-    arreter()
-    const ctx = await reveillerAudio()
-    const premiere = Math.min(Math.max(1, depart), mesures.length)
-    prochaine.current = premiere
-    setMesureEnCours(premiere)
+  const lancer = useCallback(() => {
+    void (async () => {
+      if (!audio) return
+      arreter()
+      const ctx = await reveillerAudio()
+      const premiere = Math.min(Math.max(1, depart), mesures.length)
+      prochaine.current = premiere
+      setMesureEnCours(premiere)
 
-    /* On démarre là où le calage actuel situe cette mesure : inutile de réécouter le morceau
-       depuis le début pour corriger la fin. Sans point, c'est la partition qui répond. */
-    const dansLAudio = Math.max(0, deformerLeTemps(calage)(mesures[premiere - 1] ?? 0)) / 1000
-    const lecteur = ctx.createBufferSource()
-    lecteur.buffer = audio
-    lecteur.connect(ctx.destination)
-    lecteur.onended = () => setEnMarche(false)
-    latence.current = latenceSortieMs(ctx)
-    origine.current = ctx.currentTime - dansLAudio
-    lecteur.start(0, dansLAudio)
-    source.current = lecteur
-    setEnMarche(true)
-  }
+      /* On démarre là où le calage actuel situe cette mesure : inutile de réécouter le morceau
+         depuis le début pour corriger la fin. Sans point, c'est la partition qui répond. */
+      const dansLAudio = Math.max(0, deformerLeTemps(calage)(mesures[premiere - 1] ?? 0)) / 1000
+      const lecteur = ctx.createBufferSource()
+      lecteur.buffer = audio
+      lecteur.connect(ctx.destination)
+      lecteur.onended = () => setEnMarche(false)
+      latence.current = latenceSortieMs(ctx)
+      origine.current = ctx.currentTime - dansLAudio
+      lecteur.start(0, dansLAudio)
+      source.current = lecteur
+      setEnMarche(true)
+    })()
+  }, [arreter, audio, calage, depart, mesures])
 
   const taper = useCallback(() => {
     const index = prochaine.current
@@ -117,6 +141,64 @@ export function PanneauCalage({
     return () => window.removeEventListener('keydown', surTouche)
   }, [enMarche, taper])
 
+  return {
+    disponible: Boolean(audio) && mesures.length > 0,
+    enMarche,
+    mesureEnCours,
+    nombreDeMesures: mesures.length,
+    pas,
+    setPas,
+    depart,
+    setDepart,
+    mesures,
+    calage,
+    onChange,
+    lancer,
+    arreter,
+    taper,
+  }
+}
+
+/**
+ * La barre de frappe, à poser sous l'aperçu.
+ *
+ * Elle ne contient que ce sur quoi on appuie : pendant qu'on tape, les yeux sont sur la
+ * tablature, et tout ce qui demanderait de les en détourner est à sa place ailleurs.
+ */
+export function BandeDeFrappe({ frappe }: { frappe: Frappe }) {
+  const t = useT()
+  if (!frappe.disponible) return null
+
+  const fini = frappe.mesureEnCours > frappe.nombreDeMesures
+  return (
+    <div className="flex items-center gap-2">
+      {frappe.enMarche ? (
+        <>
+          <button
+            type="button"
+            onClick={frappe.taper}
+            className="flex-1 rounded-lg bg-amber-600 px-4 py-5 text-lg font-semibold text-white transition-colors hover:bg-amber-500"
+          >
+            {fini ? t('Fini') : t('Mesure {n} — tape (T)', { n: frappe.mesureEnCours })}
+          </button>
+          <Button variant="secondary" onClick={frappe.arreter}>
+            Arrêter
+          </Button>
+        </>
+      ) : (
+        <Button variant="secondary" onClick={frappe.lancer} className="w-full">
+          Lancer et taper
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/** Les réglages de la frappe et les points qu'elle a posés : tout ce qui se consulte à froid. */
+export function PanneauCalage({ frappe }: { frappe: Frappe }) {
+  const t = useT()
+  const { calage, mesures, onChange } = frappe
+
   function decalerTout(ms: number) {
     onChange(calage.map((p) => ({ ...p, audioMs: p.audioMs + ms })))
   }
@@ -128,7 +210,7 @@ export function PanneauCalage({
     return index >= 0 ? index + 1 : null
   }
 
-  if (!audio) {
+  if (!frappe.disponible) {
     return (
       <Card className="space-y-3">
         <h2 className="font-medium text-slate-200">{t('Calage sur l’enregistrement')}</h2>
@@ -146,16 +228,16 @@ export function PanneauCalage({
       <h2 className="font-medium text-slate-200">{t('Calage sur l’enregistrement')}</h2>
       <p className="text-sm text-slate-400">
         {t(
-          'Lance la lecture et tape sur T à chaque mesure annoncée. Deux points suffisent si le tempo est régulier ; ajoutes-en là où la reprise respire.',
+          'Le bouton de frappe est sous l’aperçu, pour que tu voies la tablature pendant que tu tapes. Deux points suffisent si le tempo est régulier ; ajoutes-en là où la reprise respire.',
         )}
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Taper toutes les">
           <Select
-            value={String(pas)}
-            disabled={enMarche}
-            onChange={(e) => setPas(Number(e.target.value))}
+            value={String(frappe.pas)}
+            disabled={frappe.enMarche}
+            onChange={(e) => frappe.setPas(Number(e.target.value))}
           >
             <Option value="1">1 mesure</Option>
             <Option value="2">2 mesures</Option>
@@ -165,9 +247,9 @@ export function PanneauCalage({
         </Field>
         <Field label="Commencer à la mesure">
           <Select
-            value={String(depart)}
-            disabled={enMarche}
-            onChange={(e) => setDepart(Number(e.target.value))}
+            value={String(frappe.depart)}
+            disabled={frappe.enMarche}
+            onChange={(e) => frappe.setDepart(Number(e.target.value))}
           >
             {mesures.map((_, index) => (
               <option key={index} value={index + 1}>
@@ -177,27 +259,6 @@ export function PanneauCalage({
           </Select>
         </Field>
       </div>
-
-      {enMarche ? (
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={taper}
-            className="w-full rounded-lg bg-amber-600 px-4 py-6 text-lg font-semibold text-white transition-colors hover:bg-amber-500"
-          >
-            {mesureEnCours > mesures.length
-              ? t('Fini')
-              : t('Mesure {n} — tape (T)', { n: mesureEnCours })}
-          </button>
-          <Button variant="secondary" onClick={arreter} className="w-full">
-            Arrêter
-          </Button>
-        </div>
-      ) : (
-        <Button onClick={() => void lancer()} className="w-full">
-          Lancer et taper
-        </Button>
-      )}
 
       {points.length > 0 ? (
         <div className="space-y-2">

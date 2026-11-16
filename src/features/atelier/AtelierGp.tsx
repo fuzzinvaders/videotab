@@ -31,7 +31,7 @@ import { creerScene, type Feuille } from '../../lib/scene'
 import { themeParId } from '../../lib/themes'
 import type { Morceau, ReglagesGp } from '../../lib/types'
 import { Lecteur } from './Lecteur'
-import { PanneauCalage } from './PanneauCalage'
+import { BandeDeFrappe, PanneauCalage, useFrappe } from './PanneauCalage'
 import { PanneauExport } from './PanneauExport'
 import { PanneauMiseEnScene, PanneauVideo } from './PanneauVideo'
 import { useReglages } from './useReglages'
@@ -303,6 +303,16 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   const dureeTempsMs =
     api.current?.score && gp ? dureeDUnTemps(api.current.score, gp.tempoPct) : 500
 
+  /* La frappe vit ici plutôt que dans l'un des deux composants qui l'affichent : le bouton
+     sur lequel on tape se tient sous l'aperçu, ses réglages dans la colonne, et les deux
+     doivent parler de la même session. */
+  const frappe = useFrappe({
+    audio: enregistrement,
+    mesures: parcours?.mesures ?? [],
+    calage,
+    onChange: (points) => modifier((r) => ({ ...r, calage: points })),
+  })
+
   const scene = useMemo(() => {
     if (!feuille || !bande || !gp || !parcours) return null
     const instance = api.current
@@ -378,6 +388,11 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
           collant ne tient que dans les limites de son parent, et une enveloppe à sa taille le
           laisserait filer dès le premier réglage. */}
       <Lecteur scene={scene} audio={audio} message={etat} />
+
+      {/* Sous l'aperçu, et pas ailleurs : on tape en regardant la tablature, qui est le seul
+          repère utile. Chercher le bouton des yeux dans une colonne de réglages fait rater la
+          mesure qu'on visait. */}
+      <BandeDeFrappe frappe={frappe} />
 
       {/* alphaTab veut un élément attaché au document et large pour dessiner : une
           partition mise en page sur une largeur nulle sort en une colonne d'une mesure.
@@ -542,12 +557,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
             )}
           </Card>
 
-          <PanneauCalage
-            audio={enregistrement}
-            mesures={parcours?.mesures ?? []}
-            calage={calage}
-            onChange={(points) => modifier((r) => ({ ...r, calage: points }))}
-          />
+          <PanneauCalage frappe={frappe} />
 
           <PanneauExport
             morceau={morceau}

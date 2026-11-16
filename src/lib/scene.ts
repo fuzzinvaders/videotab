@@ -76,6 +76,36 @@ export interface Curseur {
   bloc?: { x: number; w: number }
   /** La ligne en cours : le curseur y laisse une traînée (PDF, qui ne sait que ça). */
   ligne?: { x0: number; x1: number }
+  /**
+   * Place la vue mais ne se dessine pas.
+   *
+   * C'est ce qu'il faut pendant une intro : la tablature doit déjà être là où la musique va
+   * entrer — sinon elle y arriverait en sursaut — mais rien ne doit désigner une note tant
+   * qu'aucune ne sonne. Un curseur absent ne ferait pas l'affaire : la vue retomberait au
+   * début du morceau, et l'entrée se ferait par un défilement que personne n'a demandé.
+   */
+  discret?: boolean
+}
+
+/**
+ * Le même curseur, mais qui attend son heure.
+ *
+ * Avant l'instant d'entrée, il reste figé là où il sera à ce moment-là, et ne se dessine pas.
+ * La tablature est donc à sa place, immobile, pendant que l'intro de l'enregistrement joue.
+ *
+ * Le gel est pris à l'instant d'entrée lui-même, et non à la position courante : ce qui compte
+ * est que rien ne bouge jusqu'à l'entrée, pas que le départ soit joli.
+ */
+export function curseurQuiAttend(
+  curseurA: (tMs: number) => Curseur | null,
+  entreeMs: number,
+): (tMs: number) => Curseur | null {
+  if (!(entreeMs > 0)) return curseurA
+  return (tMs: number) => {
+    if (tMs >= entreeMs) return curseurA(tMs)
+    const gele = curseurA(entreeMs)
+    return gele ? { ...gele, discret: true } : null
+  }
 }
 
 export interface Scene {
@@ -466,7 +496,7 @@ export function creerScene(options: OptionsScene): Scene {
       c.drawImage(tuile.source, tuile.x, tuile.y, tuile.w, tuile.h)
     }
 
-    if (etat.curseur && !etat.sansCurseur) {
+    if (etat.curseur && !etat.curseur.discret && !etat.sansCurseur) {
       dessinerCurseur(c, etat.curseur, {
         couleur,
         opacite: video.opacite,

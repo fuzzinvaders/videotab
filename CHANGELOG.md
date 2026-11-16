@@ -341,6 +341,19 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The cursor can wait for its bar.** A recording often opens on something you do not play
+  — a bar of percussion, a count-in, four beats of drums — and that has to be heard all the
+  same. "The cursor comes in at bar N" leaves it playing: the tab is already parked where the
+  music will enter, perfectly still, and nothing points at a note until there is a note to
+  point at.
+
+  It waits rather than cuts, which is what separates it from "start at the first note" just
+  below it. Nothing is trimmed; the video opens on the recording's own beginning.
+
+  A cursor merely absent would not have done: the view would have fallen back to the start of
+  the piece and entered on a scroll nobody asked for. So before its bar the cursor is frozen
+  exactly where it will be, and simply not drawn.
+
 - **The tab can follow a real recording.** A score plays at its written tempo, exact to the
   millisecond. A take does not: it breathes, it drags on the bridge, it slows on the last bar.
   Laying one over the other with a single offset holds for a few bars, then the cursor points

@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ErrorText, Field, Option, Select } from '../../components/ui/Field'
 import { avecDecompteAvant, decoderFichierAudio, depuis } from '../../lib/audio'
-import { deformerLeTemps } from '../../lib/calage'
+import { deformerLeTemps, instantDansLAudio } from '../../lib/calage'
 import {
   appliquerTempo,
   appliquerTheme,
@@ -27,7 +27,7 @@ import {
   type BandeGp,
 } from '../../lib/gp'
 import { useT } from '../../lib/langue'
-import { creerScene, type Feuille } from '../../lib/scene'
+import { creerScene, curseurQuiAttend, type Feuille } from '../../lib/scene'
 import { themeParId } from '../../lib/themes'
 import type { Morceau, ReglagesGp } from '../../lib/types'
 import type { Apercu } from '../../lib/apercu'
@@ -344,6 +344,16 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
      l'instant de l'enregistrement ne soit pas celui de la vidéo. */
   const decalageMs = Math.max(0, reglages.video.compteAvantTemps) * dureeTempsMs
 
+  /* L'instant où le curseur entre, dans le temps de la scène. Il part d'une mesure, traverse
+     le calage pour tomber dans l'enregistrement, puis le décompte et le rognage pour tomber
+     dans la vidéo — les trois mondes que ce fichier doit tenir ensemble. */
+  const entreeSceneMs = useMemo(() => {
+    const mesure = gp?.curseurEntreMesure ?? 1
+    if (mesure <= 1 || mesures.length === 0) return 0
+    const partitionMs = mesures[Math.min(mesure, mesures.length) - 1] ?? 0
+    return instantDansLAudio(calageAffiche, partitionMs) - debutMs + decalageMs
+  }, [gp?.curseurEntreMesure, mesures, calageAffiche, debutMs, decalageMs])
+
   // Le pont, remis à jour après chaque rendu : la frappe le lira au moment où l'on appuie.
   useEffect(() => {
     pont.current = { debutMs, decalageMs }
@@ -374,11 +384,12 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       titre: morceau.titre,
       artiste: morceau.artiste,
       dureeTempsMs,
-      curseurA: curseurDepuisAncres(
-        parcours.ancres,
-        decalageMs,
-        reglages.video.curseurGlisse,
-        debutMs,
+      /* Le curseur attend sa mesure, s'il doit en attendre une. La tablature est alors déjà
+         posée là où la musique va entrer, immobile, pendant que l'intro de l'enregistrement
+         joue : voir curseurQuiAttend. */
+      curseurA: curseurQuiAttend(
+        curseurDepuisAncres(parcours.ancres, decalageMs, reglages.video.curseurGlisse, debutMs),
+        entreeSceneMs,
       ),
     })
   }, [
@@ -387,6 +398,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     parcours,
     debutMs,
     decalageMs,
+    entreeSceneMs,
     dureeSourceMs,
     dureeTempsMs,
     reglages.video,
@@ -518,6 +530,33 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
                   modifier((r) => ({ ...r, gp: { ...gp, afficherTablature } }))
                 }
               />
+              {/* Attendre, et non rogner : l'intro continue de jouer, la tablature est déjà
+                  à sa place, et seul le curseur se retient d'entrer. */}
+              <Field
+                label="Le curseur entre à la mesure"
+                hint={
+                  (gp.curseurEntreMesure ?? 1) > 1
+                    ? 'L’intro joue, la tablature attend à cette mesure, et le curseur n’entre qu’au moment où les notes commencent.'
+                    : 'À utiliser quand l’enregistrement s’ouvre sur ce qu’on ne joue pas : une mesure de percussions, un décompte, quatre temps de batterie.'
+                }
+              >
+                <Select
+                  value={String(gp.curseurEntreMesure ?? 1)}
+                  onChange={(e) =>
+                    modifier((r) => ({
+                      ...r,
+                      gp: { ...gp, curseurEntreMesure: Number(e.target.value) },
+                    }))
+                  }
+                >
+                  {(mesures.length > 0 ? mesures : [0]).map((_, index) => (
+                    <option key={index} value={index + 1}>
+                      {index + 1}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
               <Bascule
                 label="Commencer à la première note"
                 actif={gp.demarrerALaPremiereNote}

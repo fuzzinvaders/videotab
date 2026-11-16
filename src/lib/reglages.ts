@@ -234,6 +234,8 @@ export function completerReglages(reglages: Reglages | undefined, type: TypeMorc
       /* Éteints par défaut : ils font remonter le bord haut de la bande sur toute la longueur
          du morceau, et tout le travail du recadrage est justement de la serrer. */
       sections: gp?.sections ?? false,
+      // Le curseur part avec le morceau : attendre est le cas particulier, pas la règle.
+      curseurEntreMesure: nombre(gp?.curseurEntreMesure, 1, 1, 2048),
       // On garde le morceau entier par défaut : rogner est un choix, pas une évidence, et
       // certaines intros muettes sont voulues.
       demarrerALaPremiereNote: gp?.demarrerALaPremiereNote ?? false,

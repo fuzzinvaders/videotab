@@ -118,6 +118,11 @@ export const ANGLAIS: Record<string, string> = {
   'Portée classique': 'Standard notation',
   Tablature: 'Tab',
   'Commencer à la première note': 'Start at the first note',
+  'Le curseur entre à la mesure': 'The cursor comes in at bar',
+  'L’intro joue, la tablature attend à cette mesure, et le curseur n’entre qu’au moment où les notes commencent.':
+    'The intro plays, the tab waits at that bar, and the cursor only comes in when the notes do.',
+  'À utiliser quand l’enregistrement s’ouvre sur ce qu’on ne joue pas : une mesure de percussions, un décompte, quatre temps de batterie.':
+    'For when the recording opens on something you do not play: a bar of percussion, a count-in, four beats of drums.',
   'Rythmique sous la tablature': 'Rhythm under the tab',
   'Noms de sections au-dessus': 'Section names above',
   'Métronome dans la bande-son': 'Metronome in the soundtrack',

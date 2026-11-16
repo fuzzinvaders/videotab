@@ -118,6 +118,9 @@ function reglagesParDefaut(type) {
       afficherTablature: true,
       // La rythmique sous la tablature : sans elle, un chiffre ne dit pas la durée.
       rythme: true,
+      // Le curseur entre avec le morceau. Au-delà de 1, il attend la mesure dite pendant
+      // que l'intro de l'enregistrement joue — une mesure de percussions, un décompte.
+      curseurEntreMesure: 1,
       // Les noms de sections sont éteints : ils font remonter le bord haut de la bande sur
       // toute la longueur du morceau, alors que le recadrage cherche à la serrer.
       sections: false,

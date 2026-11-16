@@ -257,6 +257,17 @@ export interface ReglagesGp {
    */
   sections: boolean
   /**
+   * La mesure à laquelle le curseur entre en scène. 1 pour qu'il parte tout de suite.
+   *
+   * Un enregistrement s'ouvre souvent sur quelque chose qu'on ne joue pas — une mesure de
+   * percussions, un décompte, quatre temps de batterie — et qu'il faut pourtant laisser
+   * entendre. Pendant ce temps la tablature est déjà posée là où la musique va entrer, et le
+   * curseur ne désigne rien : il n'y a encore rien à désigner.
+   *
+   * À ne pas confondre avec le rognage ci-dessous, qui coupe le début au lieu de l'attendre.
+   */
+  curseurEntreMesure: number
+  /**
    * Commencer la vidéo à la première note plutôt qu'à la première mesure.
    *
    * Un fichier commence là où le morceau commence, pas là où l'instrument entre : une basse

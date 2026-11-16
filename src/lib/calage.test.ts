@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deformerLeTemps, facteursDeTempo, pointsValides } from './calage'
+import { deformerLeTemps, facteursDeTempo, instantDansLAudio, pointsValides } from './calage'
 
 describe('pointsValides', () => {
   it('remet les points dans l’ordre de la partition', () => {
@@ -123,5 +123,21 @@ describe('facteursDeTempo', () => {
 
   it('n’en donne aucun tant qu’il n’y a pas deux points', () => {
     expect(facteursDeTempo([{ partitionMs: 0, audioMs: 0 }])).toEqual([])
+  })
+})
+
+describe('instantDansLAudio', () => {
+  it('place une mesure là où le calage la met, pas là où la partition la mettrait', () => {
+    /* Le cas qui a motivé la fonction : l'enregistrement s'ouvre sur une mesure de percussions
+       que la tablature ne compte pas, donc tout y arrive une mesure plus tard. Se placer sur
+       la mesure 3 doit mener à son instant dans la reprise, pas au sien dans la partition. */
+    const mesure = (n: number) => (n - 1) * 2000
+    const calage = [
+      { partitionMs: mesure(1), audioMs: 2000 },
+      { partitionMs: mesure(5), audioMs: 10_000 },
+    ]
+    expect(instantDansLAudio(calage, mesure(3))).toBeCloseTo(6000, 6)
+    // Sans point, les deux mondes coïncident : il n'y a rien pour les distinguer.
+    expect(instantDansLAudio([], mesure(3))).toBe(mesure(3))
   })
 })

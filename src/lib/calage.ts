@@ -117,3 +117,18 @@ export function facteursDeTempo(points: PointCalage[]): number[] {
   }
   return facteurs
 }
+
+/**
+ * Où tombe, dans l'enregistrement, un instant de la partition.
+ *
+ * C'est `deformerLeTemps` appliqué une fois, et ça n'existe que pour le nom. Les deux mondes
+ * se comptent en millisecondes et rien ne les distingue à la lecture : un instant de partition
+ * glissé là où l'on attendait un instant d'enregistrement passe la compilation sans un mot, et
+ * ne se voit qu'à l'usage — la lecture se place une mesure trop loin sur un morceau dont
+ * l'enregistrement commence par une intro que la tablature ne compte pas.
+ *
+ * C'est arrivé. D'où cette fonction, dont le nom dit dans quel monde on arrive.
+ */
+export function instantDansLAudio(calage: PointCalage[], partitionMs: number): number {
+  return deformerLeTemps(calage)(partitionMs)
+}

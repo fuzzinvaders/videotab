@@ -175,6 +175,15 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **"Start at bar N" follows the sync points again**, instead of the score's own clock. The
+  distinction only shows itself on a recording that opens with something the tab does not
+  count — a bar of percussion, a count-in — where every bar of the tab then lands a bar later
+  in the take: picking bar 3 dropped you at bar 2. The score time was being handed straight to
+  the function that expects a time in the recording; both are milliseconds, both are numbers,
+  and nothing said otherwise. There is now a function whose name says which of the two worlds
+  it arrives in, and a test for the intro case. The start menu also shows where each bar falls
+  in the recording, so what it refers to is visible rather than implied.
+
 - **The language switch looks like a button now.** Two letters on their own in a navigation
   bar do not read as one — they pass for a label, and nobody clicks a label. A globe in front
   says what it is before you have read it, the way the two tabs say what they are, and an

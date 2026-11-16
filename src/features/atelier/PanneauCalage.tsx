@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Field, Option, Select } from '../../components/ui/Field'
 import type { Apercu } from '../../lib/apercu'
-import { facteursDeTempo } from '../../lib/calage'
+import { deformerLeTemps, facteursDeTempo, instantDansLAudio } from '../../lib/calage'
 import { useT } from '../../lib/langue'
 import { formaterDuree } from '../../lib/minutage'
 import type { PointCalage } from '../../lib/types'
@@ -117,9 +117,13 @@ export function useFrappe({
     /* On gèle avant de jouer, et non après : la scène ne doit pas se refaire entre le
        moment où l'on se place et celui où la lecture démarre. */
     setGele(calage)
-    /* On démarre là où le calage actuel situe cette mesure : inutile de réécouter le morceau
-       depuis le début pour corriger la fin. Sans point, c'est la partition qui répond. */
-    lecteur.allerA(Math.max(0, versScene(mesures[premiere - 1] ?? 0)))
+    /* On démarre là où le **calage** situe cette mesure, et non là où la partition la
+       placerait : c'est toute la différence quand l'enregistrement s'ouvre sur une intro que
+       la tablature ne compte pas, et c'est aussi ce qui permet de reprendre la frappe au
+       milieu sans réécouter le morceau depuis le début. Sans point posé, les deux coïncident
+       et c'est la partition qui répond. */
+    const dansLAudio = instantDansLAudio(calage, mesures[premiere - 1] ?? 0)
+    lecteur.allerA(Math.max(0, versScene(dansLAudio)))
     void lecteur.jouer()
     setEnMarche(true)
   }, [actif, calage, commandes, depart, mesures, versScene])
@@ -231,6 +235,10 @@ export function PanneauCalage({ frappe }: { frappe: Frappe }) {
     onChange(calage.map((p) => ({ ...p, audioMs: p.audioMs + ms })))
   }
 
+  /* Où chaque mesure tombe dans l'enregistrement, pour que le menu de départ dise à quoi
+     il se réfère. La déformation est construite une fois : la reconstruire par mesure la
+     ferait trier ses points quatre-vingts fois pour rien. */
+  const dansLAudio = deformerLeTemps(calage)
   const points = [...calage].sort((a, b) => a.partitionMs - b.partitionMs)
   const facteurs = facteursDeTempo(points)
   const numeroDe = (partitionMs: number) => {
@@ -279,9 +287,9 @@ export function PanneauCalage({ frappe }: { frappe: Frappe }) {
             disabled={frappe.enMarche}
             onChange={(e) => frappe.setDepart(Number(e.target.value))}
           >
-            {mesures.map((_, index) => (
+            {mesures.map((mesure, index) => (
               <option key={index} value={index + 1}>
-                {index + 1}
+                {index + 1} — {formaterDuree(Math.max(0, dansLAudio(mesure)))}
               </option>
             ))}
           </Select>

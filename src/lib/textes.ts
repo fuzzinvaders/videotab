@@ -390,8 +390,8 @@ export const ANGLAIS: Record<string, string> = {
   'Calage sur l’enregistrement': 'Syncing to the recording',
   'Joins un enregistrement — ta reprise, ou la bande d’accompagnement — et la tablature pourra le suivre au lieu de suivre son tempo écrit.':
     'Attach a recording — your own take, or a backing track — and the tab can follow it instead of its written tempo.',
-  'Le bouton de frappe est sous l’aperçu, pour que tu voies la tablature pendant que tu tapes. Deux points suffisent si le tempo est régulier ; ajoutes-en là où la reprise respire.':
-    'The tap button sits under the preview, so you can watch the tab while you tap. Two points are enough if the tempo holds; add more wherever the take breathes.',
+  'Le bouton de frappe est sous l’aperçu, pour que tu voies la tablature pendant que tu tapes. La lecture démarre deux mesures avant celle que tu vises — ou au tout début, décompte compris — pour te laisser entrer dans le mouvement.':
+    'The tap button sits under the preview, so you can watch the tab while you tap. Playback starts two bars before the one you are aiming at — or at the very beginning, count-in included — to let you get into the swing of it.',
   'Taper toutes les': 'Tap every',
   '1 mesure': '1 bar',
   '2 mesures': '2 bars',

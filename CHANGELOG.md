@@ -9,6 +9,14 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Changed
 
+- **Tapping starts a couple of bars early, so you can get into the swing of it.** It used to
+  drop you straight onto the bar you were aiming at, out of silence, which is no way to hit
+  anything in time. The run-up is counted in bars rather than seconds — it is the music that
+  prepares you, and two bars last what they last at the tempo of the piece.
+
+  When the run-up reaches back past the first bar, playback starts at the very beginning of
+  the video, count-in included: its clicks are there precisely to bring in the first beat.
+
 - **The defaults are now the settings an overlay actually wants.** They had been chosen one
   at a time, each sensible on its own, and together they made a video nobody would ship:
   full 1080p frame, theme background, no frame, a title strip repeating what the video below

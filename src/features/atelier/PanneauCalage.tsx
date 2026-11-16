@@ -45,6 +45,10 @@ import type { PointCalage } from '../../lib/types'
  * musique. Les points s'accumulent pendant qu'on tape, et c'est en relançant qu'on voit la
  * tablature suivre mieux — ce qui est aussi la bonne façon de vérifier son travail.
  */
+/* Deux mesures d'élan avant celle qu'on vise. Assez pour prendre le mouvement, assez peu
+   pour ne pas réécouter le morceau à chaque reprise de la frappe. */
+const MESURES_DE_PREPARATION = 2
+
 export interface Frappe {
   disponible: boolean
   enMarche: boolean
@@ -117,13 +121,20 @@ export function useFrappe({
     /* On gèle avant de jouer, et non après : la scène ne doit pas se refaire entre le
        moment où l'on se place et celui où la lecture démarre. */
     setGele(calage)
-    /* On démarre là où le **calage** situe cette mesure, et non là où la partition la
-       placerait : c'est toute la différence quand l'enregistrement s'ouvre sur une intro que
-       la tablature ne compte pas, et c'est aussi ce qui permet de reprendre la frappe au
-       milieu sans réécouter le morceau depuis le début. Sans point posé, les deux coïncident
-       et c'est la partition qui répond. */
-    const dansLAudio = instantDansLAudio(calage, mesures[premiere - 1] ?? 0)
-    lecteur.allerA(Math.max(0, versScene(dansLAudio)))
+    /* On ne démarre pas sur la mesure à taper, mais quelques mesures avant : taper juste,
+       c'est entrer dans le mouvement du morceau, et personne n'y entre depuis le silence. La
+       préparation est comptée en mesures et non en secondes — c'est la musique qui prépare, et
+       deux mesures durent ce qu'elles durent au tempo du morceau.
+
+       Quand elle remonte avant la première mesure, on repart du tout début de la vidéo,
+       décompte compris : ses clics sont justement là pour amener la première frappe.
+
+       Le départ passe par le **calage** et non par la partition : c'est toute la différence
+       quand l'enregistrement s'ouvre sur une intro que la tablature ne compte pas. Sans point
+       posé, les deux coïncident et c'est la partition qui répond. */
+    const avant = premiere - 1 - MESURES_DE_PREPARATION
+    const debutScene = avant <= 0 ? 0 : versScene(instantDansLAudio(calage, mesures[avant] ?? 0))
+    lecteur.allerA(Math.max(0, debutScene))
     void lecteur.jouer()
     setEnMarche(true)
   }, [actif, calage, commandes, depart, mesures, versScene])
@@ -264,7 +275,7 @@ export function PanneauCalage({ frappe }: { frappe: Frappe }) {
       <h2 className="font-medium text-slate-200">{t('Calage sur l’enregistrement')}</h2>
       <p className="text-sm text-slate-400">
         {t(
-          'Le bouton de frappe est sous l’aperçu, pour que tu voies la tablature pendant que tu tapes. Deux points suffisent si le tempo est régulier ; ajoutes-en là où la reprise respire.',
+          'Le bouton de frappe est sous l’aperçu, pour que tu voies la tablature pendant que tu tapes. La lecture démarre deux mesures avant celle que tu vises — ou au tout début, décompte compris — pour te laisser entrer dans le mouvement.',
         )}
       </p>
 

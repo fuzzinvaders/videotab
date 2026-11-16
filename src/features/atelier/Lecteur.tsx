@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { creerApercu, type Apercu } from '../../lib/apercu'
 import { useT } from '../../lib/langue'
 import { formaterDuree } from '../../lib/minutage'
@@ -15,10 +15,20 @@ export function Lecteur({
   scene,
   audio,
   message,
+  commandes,
 }: {
   scene: Scene | null
   audio: AudioBuffer | null
   message?: string | null
+  /**
+   * De quoi piloter l'aperçu depuis l'extérieur.
+   *
+   * Une seule chose en a besoin : le calage sur un enregistrement, qui fait jouer l'aperçu
+   * pendant qu'on tape les mesures. Il aurait pu ouvrir sa propre lecture, mais alors on
+   * entendrait la bande-son deux fois et on taperait sur une horloge pendant que l'image en
+   * suit une autre. Mieux vaut une seule lecture, celle qu'on regarde.
+   */
+  commandes?: RefObject<Apercu | null>
 }) {
   const t = useT()
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -30,6 +40,7 @@ export function Lecteur({
     if (!canvas.current || !scene) return
     const lecteur = creerApercu(canvas.current, scene, { audio, onTemps: setPosition })
     apercu.current = lecteur
+    if (commandes) commandes.current = lecteur
     // Pas sur la toute première image : la vidéo commence par un fondu au noir, et un
     // aperçu entièrement noir donne l'impression que rien n'a marché. On se pose juste
     // après, là où il y a quelque chose à voir.
@@ -38,7 +49,11 @@ export function Lecteur({
     return () => {
       lecteur.detruire()
       apercu.current = null
+      if (commandes) commandes.current = null
     }
+    // `commandes` est une référence stable : la mettre en dépendance ferait recréer l'aperçu
+    // sans raison, et couperait la lecture en cours à chaque rendu du parent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, audio])
 
   function basculer() {

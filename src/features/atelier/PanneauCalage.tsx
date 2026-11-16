@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Field, Option, Select } from '../../components/ui/Field'
-import { contexteAudio, latenceSortieMs, reveillerAudio } from '../../lib/audio'
-import { deformerLeTemps, facteursDeTempo } from '../../lib/calage'
+import type { Apercu } from '../../lib/apercu'
+import { facteursDeTempo } from '../../lib/calage'
 import { useT } from '../../lib/langue'
 import { formaterDuree } from '../../lib/minutage'
 import type { PointCalage } from '../../lib/types'
@@ -33,10 +33,28 @@ import type { PointCalage } from '../../lib/types'
  * et chercher le bouton des yeux dans une colonne de réglages fait rater la mesure. Le reste —
  * le pas, la mesure de départ, la liste des points — reste avec les autres réglages, où l'on
  * ne va qu'avant et après.
+ *
+ * C'est **l'aperçu lui-même qui joue** pendant la frappe, et non une lecture ouverte à côté.
+ * Ouvrir la sienne ferait entendre la bande-son deux fois, et surtout ferait taper sur une
+ * horloge pendant que la tablature en suivrait une autre. Une seule lecture, donc, celle qu'on
+ * regarde — et l'instant qu'elle rapporte est déjà celui qu'on entend, latence de sortie
+ * retranchée, ce qui dispense la frappe d'y penser.
+ *
+ * Le calage est **gelé le temps d'une session**. Chaque point posé déforme le temps, donc
+ * refait la scène, donc couperait la lecture en cours : la première frappe arrêterait la
+ * musique. Les points s'accumulent pendant qu'on tape, et c'est en relançant qu'on voit la
+ * tablature suivre mieux — ce qui est aussi la bonne façon de vérifier son travail.
  */
 export interface Frappe {
   disponible: boolean
   enMarche: boolean
+  /**
+   * Le calage que la scène doit afficher : gelé pendant une session, vivant sinon.
+   *
+   * C'est l'atelier qui s'en sert pour construire le parcours, et c'est ce qui permet aux
+   * points de s'ajouter sans que l'image bouge sous les yeux de celui qui tape.
+   */
+  calageAffiche: PointCalage[]
   mesureEnCours: number
   nombreDeMesures: number
   pas: number
@@ -52,67 +70,76 @@ export interface Frappe {
 }
 
 export function useFrappe({
-  audio,
+  actif,
+  commandes,
   mesures,
   calage,
   onChange,
+  versScene,
+  versAudio,
 }: {
-  audio: AudioBuffer | null
+  /** Vrai dès qu'un enregistrement est joint : sans lui, il n'y a rien à caler. */
+  actif: boolean
+  /** L'aperçu, qui joue et qui dit où il en est. */
+  commandes: RefObject<Apercu | null>
   /** L'instant de départ de chaque mesure, dans le temps de la partition. */
   mesures: number[]
   calage: PointCalage[]
   onChange: (points: PointCalage[]) => void
+  /** De l'instant de l'enregistrement à celui de la scène, décompte et rognage compris. */
+  versScene: (audioMs: number) => number
+  /** Et le chemin inverse, celui que prend chaque frappe. */
+  versAudio: (sceneMs: number) => number
 }): Frappe {
   const [pas, setPas] = useState(4)
   const [depart, setDepart] = useState(1)
   const [mesureEnCours, setMesureEnCours] = useState(1)
   const [enMarche, setEnMarche] = useState(false)
-  const source = useRef<AudioBufferSourceNode | null>(null)
-  /* L'instant du contexte audio auquel l'enregistrement a commencé à jouer, et la latence
-     mesurée à ce moment-là. Dans des références, et non dans l'état : la frappe les lit à
-     l'instant où elle tombe, et un rendu de retard suffirait à fausser le repère. */
-  const origine = useRef(0)
-  const latence = useRef(0)
+  /* Le calage tel qu'il était au lancement. Tant qu'il est posé, c'est lui que la scène
+     affiche : voir l'explication en tête de fichier. */
+  const [gele, setGele] = useState<PointCalage[] | null>(null)
   const prochaine = useRef(1)
 
   const arreter = useCallback(() => {
-    source.current?.stop()
-    source.current = null
+    commandes.current?.pause()
+    setGele(null)
     setEnMarche(false)
-  }, [])
+  }, [commandes])
 
   useEffect(() => arreter, [arreter])
 
   const lancer = useCallback(() => {
-    void (async () => {
-      if (!audio) return
-      arreter()
-      const ctx = await reveillerAudio()
-      const premiere = Math.min(Math.max(1, depart), mesures.length)
-      prochaine.current = premiere
-      setMesureEnCours(premiere)
+    const lecteur = commandes.current
+    if (!actif || !lecteur || mesures.length === 0) return
+    const premiere = Math.min(Math.max(1, depart), mesures.length)
+    prochaine.current = premiere
+    setMesureEnCours(premiere)
+    /* On gèle avant de jouer, et non après : la scène ne doit pas se refaire entre le
+       moment où l'on se place et celui où la lecture démarre. */
+    setGele(calage)
+    /* On démarre là où le calage actuel situe cette mesure : inutile de réécouter le morceau
+       depuis le début pour corriger la fin. Sans point, c'est la partition qui répond. */
+    lecteur.allerA(Math.max(0, versScene(mesures[premiere - 1] ?? 0)))
+    void lecteur.jouer()
+    setEnMarche(true)
+  }, [actif, calage, commandes, depart, mesures, versScene])
 
-      /* On démarre là où le calage actuel situe cette mesure : inutile de réécouter le morceau
-         depuis le début pour corriger la fin. Sans point, c'est la partition qui répond. */
-      const dansLAudio = Math.max(0, deformerLeTemps(calage)(mesures[premiere - 1] ?? 0)) / 1000
-      const lecteur = ctx.createBufferSource()
-      lecteur.buffer = audio
-      lecteur.connect(ctx.destination)
-      lecteur.onended = () => setEnMarche(false)
-      latence.current = latenceSortieMs(ctx)
-      origine.current = ctx.currentTime - dansLAudio
-      lecteur.start(0, dansLAudio)
-      source.current = lecteur
-      setEnMarche(true)
-    })()
-  }, [arreter, audio, calage, depart, mesures])
+  /* La lecture s'arrête d'elle-même au bout de l'enregistrement. Sans cette veille, le bouton
+     continuerait d'annoncer une mesure à taper devant une image figée. */
+  useEffect(() => {
+    if (!enMarche) return
+    const veille = window.setInterval(() => {
+      if (!commandes.current?.estEnLecture()) arreter()
+    }, 250)
+    return () => clearInterval(veille)
+  }, [arreter, commandes, enMarche])
 
   const taper = useCallback(() => {
     const index = prochaine.current
-    if (!enMarche || index > mesures.length) return
-    const ctx = contexteAudio()
-    // L'instant entendu, et non l'instant programmé : voir l'explication en tête de fichier.
-    const audioMs = (ctx.currentTime - origine.current) * 1000 - latence.current
+    const lecteur = commandes.current
+    if (!enMarche || !lecteur || index > mesures.length) return
+    // L'aperçu rapporte l'instant qu'on entend, latence déjà retranchée : voir en tête.
+    const audioMs = versAudio(lecteur.position())
     const partitionMs = mesures[index - 1]
     if (partitionMs === undefined) return
     onChange([
@@ -122,7 +149,7 @@ export function useFrappe({
     const suivante = Math.min(index + pas, mesures.length + 1)
     prochaine.current = suivante
     setMesureEnCours(suivante)
-  }, [calage, enMarche, mesures, onChange, pas])
+  }, [calage, commandes, enMarche, mesures, onChange, pas, versAudio])
 
   /* La touche T, et la touche Entrée. L'espace est déjà prise par l'aperçu, qui écoute la
      fenêtre entière : la lui disputer donnerait un comportement qui dépend de l'ordre dans
@@ -142,7 +169,8 @@ export function useFrappe({
   }, [enMarche, taper])
 
   return {
-    disponible: Boolean(audio) && mesures.length > 0,
+    disponible: actif && mesures.length > 0,
+    calageAffiche: gele ?? calage,
     enMarche,
     mesureEnCours,
     nombreDeMesures: mesures.length,

@@ -342,15 +342,22 @@ versioning yet, so entries are grouped by the change that shipped them.
   Two points are enough when the tempo holds; add more wherever the take breathes. The
   attached file then becomes the video's soundtrack, in place of the synthesis.
 
-  Points are set by **tapping**: the tap button sits right under the preview, so the tab
-  stays in sight while you hit T on each bar as it is announced — hunting for a button in a
-  column of settings is how you miss the bar you were aiming at. You
+  Points are set by **tapping**: the preview plays while you tap, so the tab scrolls under
+  your eyes and gives you the landmark you are aiming at. The tap button sits right under it —
+  hunting for a button in a column of settings is how you miss the bar you meant. It is the
+  preview itself that plays, not a second playback opened alongside: one soundtrack, one clock,
+  and the instant it reports is already the one you hear, output latency subtracted. You
   aim with your ear instead of with the mouse, which is both faster and more accurate. Output
   latency is compensated — what you hear was scheduled some fifty milliseconds earlier — while
   reaction time is not, because it cannot be measured; it is near enough constant that
   shifting every point by the same amount afterwards fixes it, which is what the ±20 ms
   buttons are for. Each segment shows the tempo ratio it implies, so a bar tapped one too late
   stands out at a glance.
+
+  The sync table is frozen for the duration of a tapping run. Each point bends time, which
+  rebuilds the scene, which would cut the playback short — the first tap would stop the music.
+  Points pile up while you tap, and it is on the next run that you see the tab follow better,
+  which is also the right way to check your work.
 
   The warping applies once, to the table of anchors, and everything downstream — cursor, window
   packing, page turns, count-in — carries on without knowing time has been bent. That is what

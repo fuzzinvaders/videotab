@@ -1,5 +1,5 @@
 import * as alphaTab from '@coderline/alphatab'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ErrorText, Field, Option, Select } from '../../components/ui/Field'
@@ -30,6 +30,7 @@ import { useT } from '../../lib/langue'
 import { creerScene, type Feuille } from '../../lib/scene'
 import { themeParId } from '../../lib/themes'
 import type { Morceau, ReglagesGp } from '../../lib/types'
+import type { Apercu } from '../../lib/apercu'
 import { Lecteur } from './Lecteur'
 import { BandeDeFrappe, PanneauCalage, useFrappe } from './PanneauCalage'
 import { PanneauExport } from './PanneauExport'
@@ -50,6 +51,8 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   const { reglages, modifier, enregistre } = useReglages(morceau)
   const { deposerAudio, supprimerAudio } = useMorceaux()
   const champAudio = useRef<HTMLInputElement>(null)
+  /* L'aperçu, pour que la frappe le fasse jouer : une seule lecture, celle qu'on regarde. */
+  const commandesLecteur = useRef<Apercu | null>(null)
   const t = useT()
   /* La traduction rangée dans une référence, pour le seul effet de synthèse. Elle change quand
      on change de langue, et une dépendance de plus dans cet effet-là relancerait trois minutes
@@ -255,6 +258,45 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
      relevé le parcours sous forme de table plutôt que de le recalculer à chaque image. */
   const calage = useMemo(() => reglages.calage ?? [], [reglages.calage])
 
+  /* L'instant de chaque mesure, relevé à part du parcours. Il ne dépend d'aucun calage — ce
+     sont les tics de la partition — et c'est justement ce qui permet à la frappe de s'en
+     servir sans attendre le parcours, lequel attend le calage que la frappe produit. */
+  const mesures = useMemo(() => {
+    const instance = api.current
+    return feuille && bande && instance ? instantsDesMesures(instance, bande.reperes) : []
+  }, [feuille, bande])
+
+  /* Le pont entre le temps de l'enregistrement et celui de la scène. Il passe par une
+     référence et non par les valeurs elles-mêmes : celles-ci se calculent plus bas, à partir
+     du parcours, qui se calcule à partir du calage que cette session-ci produit. Lire la
+     dernière valeur connue au moment où l'on en a besoin — c'est-à-dire quand l'utilisateur
+     appuie — dénoue le cercle sans rien figer. */
+  const pont = useRef({ debutMs: 0, decalageMs: 0 })
+  const versScene = useCallback(
+    (audioMs: number) => audioMs - pont.current.debutMs + pont.current.decalageMs,
+    [],
+  )
+  const versAudio = useCallback(
+    (sceneMs: number) => sceneMs + pont.current.debutMs - pont.current.decalageMs,
+    [],
+  )
+
+  /* La frappe vit ici plutôt que dans l'un des deux composants qui l'affichent : le bouton
+     sur lequel on tape se tient sous l'aperçu, ses réglages dans la colonne, et les deux
+     doivent parler de la même session. */
+  const frappe = useFrappe({
+    actif: Boolean(enregistrement),
+    commandes: commandesLecteur,
+    mesures,
+    calage,
+    onChange: (points) => modifier((r) => ({ ...r, calage: points })),
+    versScene,
+    versAudio,
+  })
+  /* Le calage que la scène doit montrer : gelé tant qu'on tape, pour que les points ajoutés
+     ne refassent pas l'image sous les yeux de celui qui vise la mesure suivante. */
+  const calageAffiche = frappe.calageAffiche
+
   const parcours = useMemo(() => {
     const instance = api.current
     if (!feuille || !bande || !gp || !instance?.score) return null
@@ -268,20 +310,15 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       bande.dureeMs,
       etendue?.y0 ?? 0,
     )
-    const deformer = deformerLeTemps(calage)
-    const ancres = calage.length
+    const deformer = deformerLeTemps(calageAffiche)
+    const ancres = calageAffiche.length
       ? brutes.map((ancre) => ({ ...ancre, tempsMs: deformer(ancre.tempsMs) }))
       : brutes
     // La première note, et non le premier temps : une mesure de silence est faite de temps
     // qui ne sonnent pas, et c'est précisément elle qu'on veut pouvoir sauter.
     const premiere = ancres.find((a) => a.sonne)
-    return {
-      etendue,
-      ancres,
-      premiereNoteMs: premiere ? premiere.tempsMs : 0,
-      mesures: instantsDesMesures(instance, bande.reperes),
-    }
-  }, [feuille, bande, gp, calage])
+    return { etendue, ancres, premiereNoteMs: premiere ? premiere.tempsMs : 0 }
+  }, [feuille, bande, gp, calageAffiche])
 
   /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note.
    *
@@ -290,7 +327,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
    *  couperait le début de l'enregistrement à un endroit arbitraire — un défaut qui ressemble
    *  à un bug d'export alors qu'il ne vient que d'un réglage resté allumé. Une fois le calage
    *  posé, l'instant est connu dans l'enregistrement et le rognage reprend son sens. */
-  const calageUtilisable = !enregistrement || calage.length > 0
+  const calageUtilisable = !enregistrement || calageAffiche.length > 0
   const debutMs =
     gp?.demarrerALaPremiereNote && calageUtilisable ? (parcours?.premiereNoteMs ?? 0) : 0
 
@@ -303,21 +340,19 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   const dureeTempsMs =
     api.current?.score && gp ? dureeDUnTemps(api.current.score, gp.tempoPct) : 500
 
-  /* La frappe vit ici plutôt que dans l'un des deux composants qui l'affichent : le bouton
-     sur lequel on tape se tient sous l'aperçu, ses réglages dans la colonne, et les deux
-     doivent parler de la même session. */
-  const frappe = useFrappe({
-    audio: enregistrement,
-    mesures: parcours?.mesures ?? [],
-    calage,
-    onChange: (points) => modifier((r) => ({ ...r, calage: points })),
-  })
+  /* Le décompte ouvre la scène et le rognage lui mange son début : deux raisons pour que
+     l'instant de l'enregistrement ne soit pas celui de la vidéo. */
+  const decalageMs = Math.max(0, reglages.video.compteAvantTemps) * dureeTempsMs
+
+  // Le pont, remis à jour après chaque rendu : la frappe le lira au moment où l'on appuie.
+  useEffect(() => {
+    pont.current = { debutMs, decalageMs }
+  }, [debutMs, decalageMs])
 
   const scene = useMemo(() => {
     if (!feuille || !bande || !gp || !parcours) return null
     const instance = api.current
     if (!instance?.score) return null
-    const decalageMs = Math.max(0, reglages.video.compteAvantTemps) * dureeTempsMs
     // La largeur d'une mesure vient du rendu, pas d'un réglage : c'est elle qui permet de
     // demander « quatre mesures à l'écran » plutôt qu'une hauteur en pixels.
     // Les barres, elles, servent à tourner la page sur une mesure entière plutôt qu'au milieu.
@@ -351,6 +386,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     bande,
     parcours,
     debutMs,
+    decalageMs,
     dureeSourceMs,
     dureeTempsMs,
     reglages.video,
@@ -387,7 +423,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
       {/* L'aperçu est un enfant direct de la page, et non d'une enveloppe à lui : un élément
           collant ne tient que dans les limites de son parent, et une enveloppe à sa taille le
           laisserait filer dès le premier réglage. */}
-      <Lecteur scene={scene} audio={audio} message={etat} />
+      <Lecteur scene={scene} audio={audio} message={etat} commandes={commandesLecteur} />
 
       {/* Sous l'aperçu, et pas ailleurs : on tape en regardant la tablature, qui est le seul
           repère utile. Chercher le bouton des yeux dans une colonne de réglages fait rater la

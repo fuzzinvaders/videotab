@@ -183,6 +183,15 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Fixed
 
+- **Playback no longer stops a second after every change.** Each save returns the whole
+  library, so a fresh settings object with identical contents; the workshop replaced its own
+  with it, which rebuilt the scene, which rebuilt the preview — and the preview was playing.
+  It showed up while syncing a tab: the music stopped just after the first tap, and it was
+  the tap that had caused it. Settings that come back unchanged are now left alone.
+
+  The round trip was already rebuilding the scene after every slider move; it just did not
+  show when nothing was playing.
+
 - **"Start at bar N" follows the sync points again**, instead of the score's own clock. The
   distinction only shows itself on a recording that opens with something the tab does not
   count — a bar of percussion, a count-in — where every bar of the tab then lands a bar later

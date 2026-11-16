@@ -19,11 +19,24 @@ export function useReglages(morceau: Morceau) {
   const [enregistre, setEnregistre] = useState(true)
   const aEcrire = useRef<Reglages | null>(null)
 
-  // Un morceau rechargé depuis le serveur (un autre onglet, un retour en arrière) remplace
-  // l'état local — sauf si on a justement une écriture en attente, qui serait sinon
-  // écrasée par la version qu'elle est en train de remplacer.
+  /* Un morceau rechargé depuis le serveur (un autre onglet, un retour en arrière) remplace
+     l'état local — sauf si on a justement une écriture en attente, qui serait sinon écrasée
+     par la version qu'elle est en train de remplacer.
+
+     Et sauf, surtout, si rien n'a changé. Chaque sauvegarde renvoie la bibliothèque entière,
+     donc un objet de réglages neuf au contenu identique ; le remplacer referait la scène, et
+     refaire la scène recrée l'aperçu — ce qui coupait la lecture une seconde après chaque
+     geste. On le voyait surtout en calant une tablature : la musique s'arrêtait juste après
+     la première frappe, et c'est elle qui l'avait déclenchée.
+
+     La comparaison passe par JSON : les deux objets sortent de completerReglages, qui écrit
+     toujours ses clefs dans le même ordre, et ils tiennent en quelques centaines d'octets. */
   useEffect(() => {
-    if (!aEcrire.current) setReglages(completerReglages(morceau.reglages, morceau.type))
+    if (aEcrire.current) return
+    const venant = completerReglages(morceau.reglages, morceau.type)
+    setReglages((actuels) =>
+      JSON.stringify(actuels) === JSON.stringify(venant) ? actuels : venant,
+    )
   }, [morceau.reglages, morceau.type])
 
   useEffect(() => {

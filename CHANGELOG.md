@@ -337,7 +337,7 @@ versioning yet, so entries are grouped by the change that shipped them.
   Laying one over the other with a single offset holds for a few bars, then the cursor points
   at a note nobody is playing.
 
-  So: attach your take or a backing track, then set sync points — .
+  So: attach your take or a backing track, then set sync points: “this bar starts here”.
   Between two points time stretches linearly; past the ends it keeps the neighbouring slope.
   Two points are enough when the tempo holds; add more wherever the take breathes. The
   attached file then becomes the video's soundtrack, in place of the synthesis.

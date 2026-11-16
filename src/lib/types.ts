@@ -279,6 +279,18 @@ export interface SystemePdf {
   mesures: number
 }
 
+/**
+ * Un repère entre la partition et l'enregistrement : « cette mesure-là commence ici ».
+ *
+ * Il vit dans les réglages parce qu'il se pose à la main, une fois, et qu'il doit survivre à
+ * la fermeture de l'onglet comme n'importe quel autre choix. Voir lib/calage.ts pour ce qu'on
+ * en fait.
+ */
+export interface PointCalage {
+  partitionMs: number
+  audioMs: number
+}
+
 export interface FichierJoint {
   nom: string
   ext: string
@@ -291,13 +303,29 @@ export interface ReglagesPdf {
   battementsParMesure: number
   mesuresParSysteme: number
   decalageMs: number
-  audio: FichierJoint | null
+  /** @deprecated L'enregistrement a déménagé à la racine des réglages : voir `Reglages.audio`.
+   *  Le champ reste lu pour les morceaux enregistrés avant le déménagement. */
+  audio?: FichierJoint | null
 }
 
 export interface Reglages {
   video: ReglagesVideo
   gp?: ReglagesGp
   pdf?: ReglagesPdf
+  /**
+   * L'enregistrement sur lequel caler la tablature — ta reprise, ou la bande d'accompagnement.
+   *
+   * Il vit à la racine et non sous `pdf`, où il a commencé : un PDF n'a pas de son du tout et
+   * doit en apporter un, mais une tablature Guitar Pro a elle aussi le droit de préférer un
+   * vrai enregistrement à la synthèse. Les anciens morceaux le portent encore à l'ancienne
+   * place, d'où la reprise au chargement.
+   */
+  audio?: FichierJoint | null
+  /**
+   * Les points de calage, s'il y en a. Sans eux, la partition est sa propre référence et
+   * l'enregistrement joint n'est qu'une bande-son de remplacement, jouée telle quelle.
+   */
+  calage?: PointCalage[]
 }
 
 export interface VideoProduite {

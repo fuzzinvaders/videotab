@@ -82,9 +82,15 @@ function reglagesParDefaut(type) {
     barreDeProgression: true,
   };
 
+  /* L'enregistrement joint et son calage vivent à la racine : les deux types de morceau
+     peuvent en avoir un, un PDF parce qu'il n'a aucun son, une tablature Guitar Pro parce
+     qu'une vraie reprise vaut mieux qu'un synthétiseur. */
+  const commun = { audio: null, calage: [] };
+
   if (type === "pdf") {
     return {
       video,
+      ...commun,
       pdf: {
         // Le découpage en systèmes est vide tant que personne n'a ouvert l'atelier : c'est
         // là qu'il est détecté automatiquement puis corrigé à la main.
@@ -93,15 +99,13 @@ function reglagesParDefaut(type) {
         battementsParMesure: 4,
         mesuresParSysteme: 4,
         decalageMs: 0,
-        // Une bande-son facultative, importée à part : un PDF ne contient aucune note au
-        // sens où on pourrait la jouer, donc le seul son possible est celui qu'on apporte.
-        audio: null,
       },
     };
   }
 
   return {
     video,
+    ...commun,
     gp: {
       // -1 : toutes les pistes. C'est le réglage juste pour regarder, mais rarement celui
       // qu'on veut filmer — l'atelier propose de n'en garder qu'une dès l'ouverture.

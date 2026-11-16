@@ -332,6 +332,33 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The tab can follow a real recording.** A score plays at its written tempo, exact to the
+  millisecond. A take does not: it breathes, it drags on the bridge, it slows on the last bar.
+  Laying one over the other with a single offset holds for a few bars, then the cursor points
+  at a note nobody is playing.
+
+  So: attach your take or a backing track, then set sync points — .
+  Between two points time stretches linearly; past the ends it keeps the neighbouring slope.
+  Two points are enough when the tempo holds; add more wherever the take breathes. The
+  attached file then becomes the video's soundtrack, in place of the synthesis.
+
+  Points are set by **tapping**: start playback and hit T on each bar as it is announced. You
+  aim with your ear instead of with the mouse, which is both faster and more accurate. Output
+  latency is compensated — what you hear was scheduled some fifty milliseconds earlier — while
+  reaction time is not, because it cannot be measured; it is near enough constant that
+  shifting every point by the same amount afterwards fixes it, which is what the ±20 ms
+  buttons are for. Each segment shows the tempo ratio it implies, so a bar tapped one too late
+  stands out at a glance.
+
+  The warping applies once, to the table of anchors, and everything downstream — cursor, window
+  packing, page turns, count-in — carries on without knowing time has been bent. That is what
+  recording the run as a table rather than recomputing it per frame was worth.
+
+  The attached recording moved from the PDF settings up to the piece: a PDF has no sound of its
+  own and must bring one, but a Guitar Pro file is just as entitled to prefer a real take over
+  a synthesiser. Pieces saved before the move still carry it at the old address and relocate on
+  their way into the workshop.
+
 - **A second look, and two buttons: style and daylight.** They are two questions, answered
   separately. The *style* says the shape — corners, weights, rules, capitals — and the
   *lightness* says only whether it is day or night. Rolled into one setting, you would have to

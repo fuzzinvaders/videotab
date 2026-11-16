@@ -1,5 +1,5 @@
 import { THEME_PAR_DEFAUT } from './themes'
-import type { FondVideo, Reglages, ReglagesVideo, TypeMorceau } from './types'
+import type { FondVideo, PointCalage, Reglages, ReglagesVideo, TypeMorceau } from './types'
 
 /**
  * Les réglages complétés, champ manquant par champ manquant.
@@ -172,20 +172,46 @@ export function fondAvecAlpha(fond: FondVideo): boolean {
   return fond === 'transparent' || fond === 'voile' || fond === 'degrade'
 }
 
+/**
+ * Les points de calage, nettoyés de ce qui n'en est pas.
+ *
+ * Ils arrivent d'un fichier JSON que personne ne valide en écriture : un tableau d'objets
+ * quelconques y passerait sans bruit, et ressortirait en NaN au milieu du calcul du curseur.
+ * Le tri et la cohérence, eux, sont l'affaire de lib/calage.ts.
+ */
+function pointsDeCalage(valeur: unknown): PointCalage[] {
+  if (!Array.isArray(valeur)) return []
+  return valeur
+    .filter(
+      (p): p is PointCalage =>
+        Boolean(p) &&
+        Number.isFinite((p as PointCalage).partitionMs) &&
+        Number.isFinite((p as PointCalage).audioMs),
+    )
+    .map((p) => ({ partitionMs: p.partitionMs, audioMs: p.audioMs }))
+}
+
 export function completerReglages(reglages: Reglages | undefined, type: TypeMorceau): Reglages {
   const video = completerVideo(reglages?.video)
+  /* L'enregistrement joint a commencé sous `pdf`, où un PDF muet en avait seul besoin. Il
+     sert maintenant aux deux, donc il vit à la racine ; les morceaux d'avant le portent
+     encore à l'ancienne place, et c'est ici qu'ils déménagent — une fois, sans migration de
+     fichier, simplement parce que tout passe par cette fonction en entrant dans l'atelier. */
+  const audio = reglages?.audio ?? reglages?.pdf?.audio ?? null
+  const calage = pointsDeCalage(reglages?.calage)
 
   if (type === 'pdf') {
     const pdf = reglages?.pdf
     return {
       video,
+      audio,
+      calage,
       pdf: {
         systemes: Array.isArray(pdf?.systemes) ? pdf.systemes : [],
         bpm: nombre(pdf?.bpm, 90, 20, 300),
         battementsParMesure: nombre(pdf?.battementsParMesure, 4, 1, 16),
         mesuresParSysteme: nombre(pdf?.mesuresParSysteme, 4, 1, 64),
         decalageMs: nombre(pdf?.decalageMs, 0, 0, 60_000),
-        audio: pdf?.audio ?? null,
       },
     }
   }
@@ -193,6 +219,8 @@ export function completerReglages(reglages: Reglages | undefined, type: TypeMorc
   const gp = reglages?.gp
   return {
     video,
+    audio,
+    calage,
     gp: {
       piste: nombre(gp?.piste, -1, -1, 64),
       tempoPct: nombre(gp?.tempoPct, 100, 40, 150),

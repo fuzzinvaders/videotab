@@ -640,3 +640,21 @@ export function curseurDepuisAncres(
     return { x: glisse ? courbe(tMs) : ancre.x, y: ancre.y, h: ancre.h, bloc: ancre.bloc }
   }
 }
+
+/**
+ * L'instant où commence chaque mesure, dans le temps de la partition.
+ *
+ * C'est la grille sur laquelle on frappe pour caler la tablature sur un enregistrement : on
+ * tape à la mesure, pas à la milliseconde. Les instants viennent des tics de départ du modèle,
+ * relus dans la table que la synthèse a produite — donc du même temps que le curseur, et non
+ * d'un tempo moyen recalculé à côté.
+ *
+ * Les reprises ne sont pas dépliées ici : une mesure jouée deux fois n'a qu'un départ, le
+ * premier. Caler un morceau à reprises demande donc de poser des points de part et d'autre,
+ * ce que la frappe permet de toute façon.
+ */
+export function instantsDesMesures(api: alphaTab.AlphaTabApi, reperes: Repere[]): number[] {
+  const score = api.score
+  if (!score || reperes.length === 0) return []
+  return score.masterBars.map((mesure) => tempsA(reperes, mesure.start))
+}

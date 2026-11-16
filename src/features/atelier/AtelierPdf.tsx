@@ -83,7 +83,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
   // ---- La bande-son rapportée, s'il y en a une ----
 
   useEffect(() => {
-    if (!pdf?.audio) {
+    if (!reglages.audio) {
       setAudio(null)
       return
     }
@@ -96,7 +96,7 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
     return () => {
       vivant = false
     }
-  }, [morceau.id, pdf?.audio?.nom])
+  }, [morceau.id, reglages.audio?.nom])
 
   // ---- Le minutage, recalculé à chaque réglage ----
 
@@ -369,9 +369,9 @@ export function AtelierPdf({ morceau, octets }: { morceau: Morceau; octets: Arra
               className="hidden"
               onChange={(e) => void envoyerAudio(e.target.files?.[0])}
             />
-            {pdf.audio ? (
+            {reglages.audio ? (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-950 px-3 py-2">
-                <span className="truncate text-sm text-slate-300">{pdf.audio.nom}</span>
+                <span className="truncate text-sm text-slate-300">{reglages.audio.nom}</span>
                 <button
                   onClick={() => void supprimerAudio(morceau.id)}
                   className="shrink-0 text-sm text-slate-500 hover:text-red-400"

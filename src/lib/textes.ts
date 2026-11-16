@@ -379,6 +379,28 @@ export const ANGLAIS: Record<string, string> = {
   'Un seul fichier te suffit ? Repasse « Transparence » sur « Un seul fichier WebM » — c’est alors l’attente qui revient.':
     'One file is enough for you? Switch “Transparency” back to “A single WebM file” — the waiting then comes back.',
 
+  // ---- Calage sur un enregistrement ----
+  'Par défaut, c’est alphaTab qui joue la partition. Joins ta reprise ou une bande d’accompagnement pour que la vidéo porte le vrai son — et que la tablature le suive.':
+    'By default alphaTab plays the score. Attach your own take, or a backing track, so the video carries the real sound — and the tab follows it.',
+  'Calage sur l’enregistrement': 'Syncing to the recording',
+  'Joins un enregistrement — ta reprise, ou la bande d’accompagnement — et la tablature pourra le suivre au lieu de suivre son tempo écrit.':
+    'Attach a recording — your own take, or a backing track — and the tab can follow it instead of its written tempo.',
+  'Lance la lecture et tape sur T à chaque mesure annoncée. Deux points suffisent si le tempo est régulier ; ajoutes-en là où la reprise respire.':
+    'Start playback and hit T on each bar as it is announced. Two points are enough if the tempo holds; add more wherever the take breathes.',
+  'Taper toutes les': 'Tap every',
+  '1 mesure': '1 bar',
+  '2 mesures': '2 bars',
+  '4 mesures': '4 bars',
+  '8 mesures': '8 bars',
+  'Commencer à la mesure': 'Start at bar',
+  'Lancer et taper': 'Start and tap',
+  Arrêter: 'Stop',
+  Fini: 'Done',
+  'Mesure {n} — tape (T)': 'Bar {n} — tap (T)',
+  '{n} points': '{n} points',
+  'mesure {n}': 'bar {n}',
+  'Retirer ce point': 'Remove this point',
+
   // ---- Messages venus du serveur ----
   "Aucun compte n'existe encore.": 'No account exists yet.',
   'Aucune bande-son.': 'No soundtrack.',

@@ -1,8 +1,10 @@
 import * as alphaTab from '@coderline/alphatab'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ErrorText, Field, Option, Select } from '../../components/ui/Field'
-import { avecDecompteAvant, depuis } from '../../lib/audio'
+import { avecDecompteAvant, decoderFichierAudio, depuis } from '../../lib/audio'
+import { deformerLeTemps } from '../../lib/calage'
 import {
   appliquerTempo,
   appliquerTheme,
@@ -12,6 +14,7 @@ import {
   curseurDepuisAncres,
   dureeDUnTemps,
   etendueDesPortees,
+  instantsDesMesures,
   barresDeMesure,
   largeurDeMesure,
   masquerEntete,
@@ -28,9 +31,12 @@ import { creerScene, type Feuille } from '../../lib/scene'
 import { themeParId } from '../../lib/themes'
 import type { Morceau, ReglagesGp } from '../../lib/types'
 import { Lecteur } from './Lecteur'
+import { PanneauCalage } from './PanneauCalage'
 import { PanneauExport } from './PanneauExport'
 import { PanneauMiseEnScene, PanneauVideo } from './PanneauVideo'
 import { useReglages } from './useReglages'
+import { useMorceaux } from '../../hooks/useMorceaux'
+import { messageOf } from '../../lib/api'
 
 /**
  * L'atelier d'une tablature Guitar Pro.
@@ -42,6 +48,8 @@ import { useReglages } from './useReglages'
  */
 export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: ArrayBuffer }) {
   const { reglages, modifier, enregistre } = useReglages(morceau)
+  const { deposerAudio, supprimerAudio } = useMorceaux()
+  const champAudio = useRef<HTMLInputElement>(null)
   const t = useT()
   /* La traduction rangée dans une référence, pour le seul effet de synthèse. Elle change quand
      on change de langue, et une dépendance de plus dans cet effet-là relancerait trois minutes
@@ -64,6 +72,19 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   const [etat, setEtat] = useState('Ouverture de la partition…')
   const [erreur, setErreur] = useState<string | null>(null)
   const [sonPret, setSonPret] = useState(false)
+  /* L'enregistrement joint, quand il y en a un : c'est lui qui remplace alors la synthèse,
+     et c'est sur lui que le calage fait tomber les mesures. */
+  const [enregistrement, setEnregistrement] = useState<AudioBuffer | null>(null)
+
+  async function envoyerAudio(fichier: File | undefined) {
+    if (!fichier) return
+    try {
+      await deposerAudio(morceau.id, fichier)
+      setErreur(null)
+    } catch (err) {
+      setErreur(messageOf(err, "La bande-son n'a pas pu être envoyée."))
+    }
+  }
 
   // ---- Le moteur, monté une fois pour toutes ----
 
@@ -200,33 +221,81 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     }
   }, [feuille, sonPret])
 
+  // ---- L'enregistrement joint, s'il y en a un ----
+
+  useEffect(() => {
+    if (!reglages.audio) {
+      setEnregistrement(null)
+      return
+    }
+    let vivant = true
+    fetch(`/api/morceaux/${morceau.id}/audio`, { credentials: 'include' })
+      .then((r) => r.arrayBuffer())
+      .then(decoderFichierAudio)
+      .then((buffer) => vivant && setEnregistrement(buffer))
+      .catch(() => vivant && setErreur("La bande-son n'a pas pu être décodée."))
+    return () => {
+      vivant = false
+    }
+    /* Le nom du fichier, et non l'objet qui le décrit : celui-ci est recréé à chaque
+       enregistrement des réglages, et s'y fier ferait retélécharger la bande-son au moindre
+       coup de curseur. Le nom, lui, ne change que quand le fichier change. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [morceau.id, reglages.audio?.nom])
+
   // ---- La scène, et donc l'aperçu comme la vidéo ----
 
   /* Le relevé du parcours, mis à part parce que l'image et le son en ont tous deux besoin :
      la scène pour placer le curseur, la bande-son pour savoir où la rogner. Le refaire deux
      fois voudrait dire échantillonner le morceau deux fois, et surtout risquer que les deux
      ne tombent pas d'accord sur l'instant de la première note. */
+  /* La déformation du temps, s'il y a des points de calage. Elle s'applique une fois, aux
+     ancres, et tout ce qui est en aval — curseur, découpe en fenêtres, tournements de page —
+     continue de travailler sans savoir que le temps a été tordu. C'est tout l'intérêt d'avoir
+     relevé le parcours sous forme de table plutôt que de le recalculer à chaque image. */
+  const calage = useMemo(() => reglages.calage ?? [], [reglages.calage])
+
   const parcours = useMemo(() => {
     const instance = api.current
     if (!feuille || !bande || !gp || !instance?.score) return null
     // Le rendu d'alphaTab porte au-dessus et en dessous des portées beaucoup de blanc. On
     // cadre sur ce qui se lit, sinon la bande qu'on a demandée est aux trois quarts vide.
     const etendue = etendueDesPortees(instance)
-    const ancres = ancresDeDefilement(
+    const brutes = ancresDeDefilement(
       instance,
       bande.reperes,
       pistesVisibles(instance.score, gp.piste),
       bande.dureeMs,
       etendue?.y0 ?? 0,
     )
+    const deformer = deformerLeTemps(calage)
+    const ancres = calage.length
+      ? brutes.map((ancre) => ({ ...ancre, tempsMs: deformer(ancre.tempsMs) }))
+      : brutes
     // La première note, et non le premier temps : une mesure de silence est faite de temps
     // qui ne sonnent pas, et c'est précisément elle qu'on veut pouvoir sauter.
     const premiere = ancres.find((a) => a.sonne)
-    return { etendue, ancres, premiereNoteMs: premiere ? premiere.tempsMs : 0 }
-  }, [feuille, bande, gp])
+    return {
+      etendue,
+      ancres,
+      premiereNoteMs: premiere ? premiere.tempsMs : 0,
+      mesures: instantsDesMesures(instance, bande.reperes),
+    }
+  }, [feuille, bande, gp, calage])
 
-  /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note. */
-  const debutMs = gp?.demarrerALaPremiereNote ? (parcours?.premiereNoteMs ?? 0) : 0
+  /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note.
+   *
+   *  Avec un enregistrement joint mais pas encore calé, on ne retranche rien : l'instant de la
+   *  première note est celui de la partition, et il ne désigne rien dans la reprise. Rogner là
+   *  couperait le début de l'enregistrement à un endroit arbitraire — un défaut qui ressemble
+   *  à un bug d'export alors qu'il ne vient que d'un réglage resté allumé. Une fois le calage
+   *  posé, l'instant est connu dans l'enregistrement et le rognage reprend son sens. */
+  const calageUtilisable = !enregistrement || calage.length > 0
+  const debutMs =
+    gp?.demarrerALaPremiereNote && calageUtilisable ? (parcours?.premiereNoteMs ?? 0) : 0
+
+  /** La durée de ce qu'on va filmer : l'enregistrement joint, ou la synthèse. */
+  const dureeSourceMs = enregistrement ? enregistrement.duration * 1000 : (bande?.dureeMs ?? 0)
 
   /* La durée d'un temps, qui donne sa longueur au décompte et l'écart entre ses clics. Elle
      vient de la partition et suit le curseur de tempo — ralentir le morceau ralentit le
@@ -254,7 +323,9 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     return creerScene({
       feuille: cadree,
       video: reglages.video,
-      dureeMs: bande.dureeMs - debutMs + decalageMs,
+      /* Avec un enregistrement joint, c'est lui qui fait la durée : la vidéo s'arrête quand
+         la reprise s'arrête, pas quand la partition aurait fini de se jouer. */
+      dureeMs: dureeSourceMs - debutMs + decalageMs,
       titre: morceau.titre,
       artiste: morceau.artiste,
       dureeTempsMs,
@@ -270,6 +341,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     bande,
     parcours,
     debutMs,
+    dureeSourceMs,
     dureeTempsMs,
     reglages.video,
     morceau.titre,
@@ -277,17 +349,21 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     gp,
   ])
 
+  /* L'enregistrement joint passe devant la synthèse : c'est bien lui qu'on veut entendre
+     sous la tablature, et c'est sur lui que le curseur a été calé. */
+  const source = enregistrement ?? bande?.audio ?? null
+
   const audio = useMemo(
     () =>
-      bande
+      source
         ? avecDecompteAvant(
-            depuis(bande.audio, debutMs),
+            depuis(source, debutMs),
             reglages.video.compteAvantTemps * dureeTempsMs,
             reglages.video.decompteSonore,
             dureeTempsMs,
           )
         : null,
-    [bande, debutMs, dureeTempsMs, reglages.video.compteAvantTemps, reglages.video.decompteSonore],
+    [source, debutMs, dureeTempsMs, reglages.video.compteAvantTemps, reglages.video.decompteSonore],
   )
 
   if (!gp) return <ErrorText>{t('Ce morceau n’a pas de réglages Guitar Pro.')}</ErrorText>
@@ -433,6 +509,46 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
               .
             </p>
           </Card>
+          {/* L'enregistrement joint et son calage. Ils vivent à côté de l'export parce que
+              c'est la bande-son de la vidéo qu'ils décident, et non la mise en scène. */}
+          <Card className="space-y-3">
+            <h2 className="font-medium text-slate-200">{t('Bande-son')}</h2>
+            <p className="text-sm text-slate-400">
+              {t(
+                'Par défaut, c’est alphaTab qui joue la partition. Joins ta reprise ou une bande d’accompagnement pour que la vidéo porte le vrai son — et que la tablature le suive.',
+              )}
+            </p>
+            <input
+              ref={champAudio}
+              type="file"
+              accept=".mp3,.ogg,.wav,.m4a,.flac"
+              className="hidden"
+              onChange={(e) => void envoyerAudio(e.target.files?.[0])}
+            />
+            {reglages.audio ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-950 px-3 py-2">
+                <span className="truncate text-sm text-slate-300">{reglages.audio.nom}</span>
+                <button
+                  onClick={() => void supprimerAudio(morceau.id)}
+                  className="shrink-0 text-sm text-slate-500 hover:text-red-400"
+                >
+                  {t('Retirer')}
+                </button>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={() => champAudio.current?.click()}>
+                Ajouter un fichier audio
+              </Button>
+            )}
+          </Card>
+
+          <PanneauCalage
+            audio={enregistrement}
+            mesures={parcours?.mesures ?? []}
+            calage={calage}
+            onChange={(points) => modifier((r) => ({ ...r, calage: points }))}
+          />
+
           <PanneauExport
             morceau={morceau}
             scene={scene}

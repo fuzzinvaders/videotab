@@ -662,8 +662,9 @@ async function handleApi(req, res, pathname) {
       // Toutes les vidéos du morceau, pas seulement la dernière : un export qu'on n'avait pas
       // pu effacer sur le moment traînerait sinon indéfiniment.
       store.balayerVideos(morceau.id);
-      if (morceau.reglages?.pdf?.audio) {
-        store.removeQuietly(store.audioPath(morceau.id, morceau.reglages.pdf.audio.ext));
+      const joint = morceau.reglages?.audio ?? morceau.reglages?.pdf?.audio;
+      if (joint) {
+        store.removeQuietly(store.audioPath(morceau.id, joint.ext));
       }
       return sendJson(res, 200, store.readLibrary());
     }
@@ -771,7 +772,10 @@ async function handleApi(req, res, pathname) {
   }
 
   if (action === "audio") {
-    const audio = morceau.reglages?.pdf?.audio ?? null;
+    /* L'enregistrement joint a déménagé de `pdf` à la racine des réglages : un PDF n'est pas
+       le seul à vouloir une vraie bande-son. On lit encore l'ancienne place pour les morceaux
+       d'avant, qui la quitteront au premier enregistrement de leurs réglages. */
+    const audio = morceau.reglages?.audio ?? morceau.reglages?.pdf?.audio ?? null;
 
     if (req.method === "GET" || req.method === "HEAD") {
       if (!audio) return sendJson(res, 404, { error: "Aucune bande-son." });
@@ -799,10 +803,8 @@ async function handleApi(req, res, pathname) {
         const cible2 = trouver(data, id.value);
         if (!cible2) return { ok: false, error: "Morceau introuvable." };
         const reglages = cible2.reglages ?? {};
-        reglages.pdf = {
-          ...(reglages.pdf ?? {}),
-          audio: { nom: nom.value, ext, taille },
-        };
+        reglages.audio = { nom: nom.value, ext, taille };
+        if (reglages.pdf) delete reglages.pdf.audio;
         return enregistrerReglages(data, id.value, reglages);
       });
     }
@@ -813,7 +815,11 @@ async function handleApi(req, res, pathname) {
         const cible2 = trouver(data, id.value);
         if (!cible2) return { ok: false, error: "Morceau introuvable." };
         const reglages = cible2.reglages ?? {};
-        reglages.pdf = { ...(reglages.pdf ?? {}), audio: null };
+        reglages.audio = null;
+        if (reglages.pdf) delete reglages.pdf.audio;
+        /* Les points de calage désignent des instants de ce fichier-là : sans lui ils ne
+           désignent plus rien, et les garder ferait décaler la prochaine bande-son. */
+        reglages.calage = [];
         return enregistrerReglages(data, id.value, reglages);
       });
     }

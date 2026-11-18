@@ -237,8 +237,20 @@ export function BandeDeFrappe({ frappe }: { frappe: Frappe }) {
   )
 }
 
+/**
+ * Ce que l'onde sait faire à la place de la main.
+ *
+ * Nulles quand elles n'ont rien sur quoi travailler — pas d'enregistrement, pas de point à
+ * recaler — et le bouton disparaît alors au lieu de se griser : un bouton éteint qu'on ne
+ * peut pas rallumer n'apprend rien.
+ */
+export interface OutilsDOnde {
+  borner: (() => void) | null
+  recaler: (() => void) | null
+}
+
 /** Les réglages de la frappe et les points qu'elle a posés : tout ce qui se consulte à froid. */
-export function PanneauCalage({ frappe }: { frappe: Frappe }) {
+export function PanneauCalage({ frappe, outils }: { frappe: Frappe; outils?: OutilsDOnde }) {
   const t = useT()
   const { calage, mesures, onChange } = frappe
 
@@ -278,6 +290,21 @@ export function PanneauCalage({ frappe }: { frappe: Frappe }) {
           'Le bouton de frappe est sous l’aperçu, pour que tu voies la tablature pendant que tu tapes. La lecture démarre deux mesures avant celle que tu vises — ou au tout début, décompte compris — pour te laisser entrer dans le mouvement.',
         )}
       </p>
+
+      {outils?.borner || outils?.recaler ? (
+        <div className="flex flex-wrap gap-2">
+          {outils.borner ? (
+            <Button variant="secondary" onClick={outils.borner}>
+              Deux points depuis le son
+            </Button>
+          ) : null}
+          {outils.recaler ? (
+            <Button variant="secondary" onClick={outils.recaler}>
+              Recaler sur les attaques
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Taper toutes les">

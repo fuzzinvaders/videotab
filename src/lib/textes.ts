@@ -399,6 +399,10 @@ export const ANGLAIS: Record<string, string> = {
   '8 mesures': '8 bars',
   'Commencer à la mesure': 'Start at bar',
   'Lancer et taper': 'Start and tap',
+  'Deux points depuis le son': 'Two points from the sound',
+  'Recaler sur les attaques': 'Snap to the attacks',
+  'Ce fichier ne sonne nulle part : rien à caler dessus.':
+    'This file never sounds: there is nothing to sync to.',
   Arrêter: 'Stop',
   Fini: 'Done',
   'Mesure {n} — tape (T)': 'Bar {n} — tap (T)',

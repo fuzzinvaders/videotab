@@ -6,6 +6,13 @@ import { ErrorText, Field, Option, Select } from '../../components/ui/Field'
 import { avecDecompteAvant, decoderFichierAudio, depuis } from '../../lib/audio'
 import { deformerLeTemps, instantDansLAudio } from '../../lib/calage'
 import {
+  attaquesExtremes,
+  bornesDuSon,
+  enveloppeDAttaques,
+  recalerSurLesAttaques,
+  signalDe,
+} from '../../lib/ondes'
+import {
   appliquerTempo,
   appliquerTheme,
   ancresDeDefilement,
@@ -284,6 +291,12 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
   /* La frappe vit ici plutôt que dans l'un des deux composants qui l'affichent : le bouton
      sur lequel on tape se tient sous l'aperçu, ses réglages dans la colonne, et les deux
      doivent parler de la même session. */
+  /* L'onde de l'enregistrement, relevée une fois. Trois minutes à quarante-huit kilohertz
+     font huit millions d'échantillons : c'est un parcours linéaire, quelques dizaines de
+     millisecondes, mais il n'y a aucune raison de le refaire à chaque rendu. */
+  const onde = useMemo(() => (enregistrement ? signalDe(enregistrement) : null), [enregistrement])
+  const enveloppe = useMemo(() => (onde ? enveloppeDAttaques(onde) : null), [onde])
+
   const frappe = useFrappe({
     actif: Boolean(enregistrement),
     commandes: commandesLecteur,
@@ -317,8 +330,71 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
     // La première note, et non le premier temps : une mesure de silence est faite de temps
     // qui ne sonnent pas, et c'est précisément elle qu'on veut pouvoir sauter.
     const premiere = ancres.find((a) => a.sonne)
-    return { etendue, ancres, premiereNoteMs: premiere ? premiere.tempsMs : 0 }
+    /* Les mêmes bornes, mais **non déformées** : ce sont celles de la partition, et c'est à
+       elles qu'on accroche un calage qu'on est en train de construire. Les prendre déjà
+       tordues reviendrait à caler le morceau sur lui-même. */
+    const premiereBrute = brutes.find((a) => a.sonne)
+    const derniereBrute = [...brutes].reverse().find((a) => a.sonne)
+    return {
+      etendue,
+      ancres,
+      premiereNoteMs: premiere ? premiere.tempsMs : 0,
+      premiereNoteBruteMs: premiereBrute ? premiereBrute.tempsMs : null,
+      derniereNoteBruteMs: derniereBrute ? derniereBrute.tempsMs : null,
+    }
   }, [feuille, bande, gp, calageAffiche])
+
+  const outils = useMemo(
+    () => ({
+      /* Deux points, tirés des bornes du son : la première note de la partition tombe là où
+         le fichier commence à sonner, la dernière là où il s'arrête. C'est le calage grossier
+         qu'on avait jusqu'ici en tapant deux fois — à ceci près qu'il suppose que
+         l'enregistrement couvre exactement le morceau, ni plus ni moins. */
+      borner:
+        onde && parcours?.premiereNoteBruteMs !== null && parcours?.derniereNoteBruteMs !== null
+          ? () => {
+              const debut = parcours?.premiereNoteBruteMs
+              const fin = parcours?.derniereNoteBruteMs
+              /* Attaque contre attaque d'abord : la dernière note commence à son attaque, et
+                 la résonance qui suit n'a rien à voir avec le tempo. Les bornes du son ne
+                 servent qu'en repli, quand le fichier n'a pas deux attaques franches. */
+              const attaques = enveloppe ? attaquesExtremes(enveloppe) : null
+              const bornes = attaques
+                ? { debutMs: attaques.premiereMs, finMs: attaques.derniereMs }
+                : bornesDuSon(onde)
+              if (!bornes || debut == null || fin == null || fin <= debut) {
+                setErreur('Ce fichier ne sonne nulle part : rien à caler dessus.')
+                return
+              }
+              setErreur(null)
+              modifier((r) => ({
+                ...r,
+                calage: [
+                  { partitionMs: debut, audioMs: bornes.debutMs },
+                  { partitionMs: fin, audioMs: bornes.finMs },
+                ],
+              }))
+            }
+          : null,
+      /* Chaque point posé va se ranger sur l'attaque voisine, s'il y en a une franche. C'est
+         ce qui efface le temps de réaction : on tape à peu près, et le son décide. */
+      recaler:
+        enveloppe && calage.length > 0
+          ? () => {
+              setErreur(null)
+              modifier((r) => ({ ...r, calage: recalerSurLesAttaques(calage, enveloppe) }))
+            }
+          : null,
+    }),
+    [
+      onde,
+      enveloppe,
+      calage,
+      parcours?.premiereNoteBruteMs,
+      parcours?.derniereNoteBruteMs,
+      modifier,
+    ],
+  )
 
   /** Ce qu'on retranche au début : rien, ou le silence qui précède la première note.
    *
@@ -632,7 +708,7 @@ export function AtelierGp({ morceau, octets }: { morceau: Morceau; octets: Array
             )}
           </Card>
 
-          <PanneauCalage frappe={frappe} />
+          <PanneauCalage frappe={frappe} outils={outils} />
 
           <PanneauExport
             morceau={morceau}

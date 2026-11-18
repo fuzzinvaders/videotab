@@ -358,6 +358,26 @@ versioning yet, so entries are grouped by the change that shipped them.
 
 ### Added
 
+- **The waveform can do part of the syncing.** Two buttons in the sync panel.
+
+  *Two points from the sound* sets a rough sync without tapping: the first note of the score
+  goes to the first clear attack in the file, the last note to the last one. Attack against
+  attack, not to the bounds of the sound — the last note starts at its attack, and the ring
+  that follows has nothing to do with the tempo; hooking one to the other skewed the whole
+  piece by nearly two percent on a test recording. It assumes the recording covers exactly
+  the piece, and says so in its name: it is a starting point, not a verdict.
+
+  *Snap to the attacks* moves each tapped point onto the nearest clear attack within 150 ms.
+  That wipes out reaction time and an unsteady hand in one go — what the ±20 ms buttons were
+  only nudging at. It fails cleanly where it should: on a held chord, on silence, on anything
+  without a clear attack, the point stays where you put it.
+
+  Neither claims to recognise bars. Blind beat detection in a cover with drums gets it wrong,
+  and wrong in the worst way — one beat taken off the pulse shifts everything by an eighth.
+  Both read only an energy envelope, gated so that a breath in the noise floor never passes
+  for a plucked string, and both are pure functions tried on fabricated signals with clicks at
+  known instants.
+
 - **The cursor can wait for its bar.** A recording often opens on something you do not play
   — a bar of percussion, a count-in, four beats of drums — and that has to be heard all the
   same. "The cursor comes in at bar N" leaves it playing: the tab is already parked where the
